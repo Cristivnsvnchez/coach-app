@@ -1,6 +1,6 @@
 // Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 // Pas de SDK : l'app n'a pas d'étape de build, on appelle l'API Messages en HTTP.
-import { state } from './store.js';
+import { state, save } from './store.js';
 import { getLang } from './i18n.js';
 
 export const MODELS = {
@@ -27,6 +27,49 @@ Règles :
 - Ne propose jamais moins de 1200 kcal/j (femme) ou 1500 kcal/j (homme) sans suivi médical, ni plus de 1 % de perte de poids par semaine.`;
 
 export const hasKey = () => !!state.settings.apiKey;
+
+// ---- Budget : coût suivi localement à partir de l'usage renvoyé par l'API ----
+// Tarifs publics en $ par million de tokens (entrée, sortie) ; recherche web : 10 $ / 1 000 requêtes.
+// Conversion €/$ approximative : la limite fixée dans la Console Anthropic reste la seule garantie côté serveur.
+export const PRICES = {
+  'claude-opus-5-5': [4, 20], 'claude-sonnet-5-5': [2, 10], 'claude-haiku-5-5': [0.1, 0.5],
+};
+const SEARCH_USD = 0.01;
+export const USD_TO_EUR = 0.92;
+const monthKey = () => new Date().toISOString().slice(0, 7);
+
+export function usage() {
+  const u = state.usage && state.usage.month === monthKey() ? state.usage : { month: monthKey(), usd: 0, calls: 0 };
+  const budget = Number(state.settings.budgetEur ?? 10);
+  return { ...u, eur: u.usd * USD_TO_EUR, budget };
+}
+
+// Coût d'une réponse de l'API (dollars).
+export function costUsd(model, u = {}) {
+  const [pin, pout] = PRICES[model] || PRICES['claude-opus-5-5'];
+  const input = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) * 1.25 + (u.cache_read_input_tokens || 0) * 0.1;
+  return (input * pin + (u.output_tokens || 0) * pout) / 1e6 + (u.server_tool_use?.web_search_requests || 0) * SEARCH_USD;
+}
+
+function record(usd) {
+  const u = usage();
+  state.usage = { month: u.month, usd: u.usd + usd, calls: u.calls + 1 };
+  save();
+}
+
+// Bloque la requête si le pire cas (toute la sortie consommée) dépasserait le budget du mois.
+function checkBudget(model, body, search) {
+  const u = usage();
+  if (!(u.budget > 0)) return;
+  const [pin, pout] = PRICES[model] || PRICES['claude-opus-5-5'];
+  const inTok = JSON.stringify(body.messages).length / 3;
+  const worst = ((inTok * pin + body.max_tokens * pout) / 1e6 + (search ? 6 * SEARCH_USD : 0)) * USD_TO_EUR;
+  if (u.eur + worst > u.budget) {
+    const err = new Error('Budget IA du mois atteint ({x} € sur {b} €). Augmente-le dans Profil ou attends le mois prochain.');
+    err.vars = { x: u.eur.toFixed(2), b: u.budget };
+    throw err;
+  }
+}
 
 // Contexte utilisateur compact injecté dans les demandes.
 export function userContext(extra = {}) {
@@ -56,6 +99,7 @@ export async function ask(messages, { search = false, json = null, maxTokens = 8
   const searchType = model === 'claude-haiku-5-5' ? 'web_search_20250305' : 'web_search_20260209';
   if (search) body.tools = [{ type: searchType, name: 'web_search', max_uses: 6, allowed_domains: ALLOWED_DOMAINS }];
   if (json) body.output_config.format = { type: 'json_schema', schema: json };
+  checkBudget(model, body, search);
 
   const content = [];
   let paused = false;
@@ -69,6 +113,7 @@ export async function ask(messages, { search = false, json = null, maxTokens = 8
       if (r.status === 400 && /credit|balance/i.test(msg)) throw new Error('Crédit API épuisé : recharge sur console.anthropic.com.');
       throw new Error(`Erreur API ${r.status} : ${msg}`);
     }
+    record(costUsd(j.model || model, j.usage));
     content.push(...(j.content || []));
     if (j.stop_reason === 'refusal') throw new Error('Demande refusée par le filtre de sécurité. Reformule ta question.');
     if (j.stop_reason === 'max_tokens' && json) throw new Error('Réponse trop longue, réessaie avec moins d\'aliments.');
@@ -90,6 +135,21 @@ export async function ask(messages, { search = false, json = null, maxTokens = 8
     }
   }
   return { text, sources: [...sources].map(([url, title]) => ({ url, title })), raw: content };
+}
+
+// Test de connexion : requête minimale sur le modèle le moins cher (≈ 0,0001 €).
+export async function testConnection() {
+  if (!hasKey()) throw new Error('Ajoute ta clé API Claude dans Profil.');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': state.settings.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 16, messages: [{ role: 'user', content: 'Réponds juste : OK' }] }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) throw new Error('Clé API invalide. Vérifie-la dans Profil.');
+  if (!r.ok) throw new Error(`Erreur API ${r.status} : ${j.error?.message || r.statusText}`);
+  record(costUsd('claude-haiku-5-5', j.usage));
+  return true;
 }
 
 // Extrait le dernier bloc ```json ... ``` d'un texte (ou null).

@@ -2,7 +2,7 @@
 import * as S from '../science.js';
 import { state, save, replace, today } from '../store.js';
 import { current } from '../metrics.js';
-import { MODELS } from '../ai.js';
+import { MODELS, usage, testConnection } from '../ai.js';
 import { esc, fmt, toast, nav, group } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, getLang, setLang } from '../i18n.js';
@@ -51,8 +51,13 @@ export function render(root, go) {
     <form data-f="ai">${group(t('Intelligence artificielle'), `<div class="cells">
       <label class="cell field"><span>${t('Clé API Claude')}</span><input name="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(st.apiKey)}"></label>
       ${sel('model', t('Modèle'), opt(MODELS, st.model))}
+      <label class="cell field"><span>${t('Budget mensuel (€)')}</span><input name="budgetEur" type="number" inputmode="decimal" min="0" step="1" value="${st.budgetEur ?? 10}"></label>
+      <div class="cell" style="display:block">${(() => { const u = usage(); const pct = u.budget ? Math.min(100, (u.eur / u.budget) * 100) : 0;
+        return `<div class="bar-head"><span>${t('Dépensé ce mois-ci')}</span><span>${fmt(u.eur, 2)} € / ${fmt(u.budget)} € · ${u.calls} ${t('requêtes')}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;${pct >= 80 ? 'background:var(--orange)' : ''}"></div></div>`; })()}</div>
+      <button type="button" class="cell action" data-a="test" style="border:0;width:100%;background:none;font:inherit">${t('Tester la connexion')}</button>
       <button class="cell action" style="border:0;width:100%;background:none;font:inherit">${t('Enregistrer')}</button></div>`,
-      t("La clé reste sur ce téléphone et n'est envoyée qu'à api.anthropic.com. Crée-la sur console.anthropic.com → API Keys, et fixe une limite de dépense mensuelle."))}</form>
+      t("La clé reste sur ce téléphone et n'est envoyée qu'à api.anthropic.com. Crée-la sur console.anthropic.com → API Keys, et fixe une limite de dépense mensuelle.") + ' ' + t("L'app bloque toute requête qui pourrait dépasser ton budget (estimation : tarifs publics, 1 $ ≈ 0,92 €). Pour une garantie absolue, fixe aussi la même limite dans console.anthropic.com → Billing → Limits."))}</form>
     ${group(t('Sauvegarde'), `<div class="cells">
       <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow">${t('Exporter')}</span>${icon('chevronRight', { cls: 'chev' })}</div>
       <label class="cell tap with-icon"><span class="badge bg-green">${icon('download')}</span><span class="grow">${t('Importer')}</span>${icon('chevronRight', { cls: 'chev' })}<input type="file" accept="application/json" hidden data-a="import"></label>
@@ -84,12 +89,21 @@ export function render(root, go) {
     e.preventDefault();
     state.settings.apiKey = e.target.apiKey.value.trim();
     state.settings.model = e.target.model.value;
+    state.settings.budgetEur = Math.max(0, parseFloat(String(e.target.budgetEur.value).replace(',', '.')) || 0);
     save(); toast(t('Réglages IA enregistrés'));
   };
   root.onclick = (e) => {
     const lg = e.target.closest('[data-lang]');
     if (lg) { setLang(lg.dataset.lang); return go('profile'); }
     const a = e.target.closest('[data-a]')?.dataset.a;
+    if (a === 'test') {
+      const f = root.querySelector('[data-f=ai]');
+      state.settings.apiKey = f.apiKey.value.trim(); save();
+      toast(t('Test en cours…'));
+      testConnection().then(() => { toast(t('Connexion OK ✓')); const y = root.scrollTop; render(root, go); root.scrollTop = y; })
+        .catch((err) => toast(t(err.message, err.vars)));
+      return;
+    }
     if (a === 'export') {
       const data = { ...state, settings: { ...state.settings, apiKey: '' } };
       const name = `coach-backup-${today()}.json`;

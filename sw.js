@@ -1,5 +1,5 @@
 // Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
-const VERSION = 'coach-v6';
+const VERSION = 'coach-v7';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/store.js', 'js/science.js', 'js/metrics.js', 'js/ui.js', 'js/i18n.js', 'js/icons.js', 'js/habits.js', 'js/workout.js', 'js/exercises.js', 'js/food.js', 'js/ai.js',

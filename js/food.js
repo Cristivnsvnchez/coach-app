@@ -62,52 +62,94 @@ export function entryFor(food, grams, meal) {
   };
 }
 
-// Scan code-barres : BarcodeDetector natif si dispo, sinon ZXing chargé à la demande.
-export async function startScan(video, onCode) {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-  video.srcObject = stream;
-  video.setAttribute('playsinline', '');
-  await video.play();
-  let stopped = false;
-  const stop = () => { stopped = true; stream.getTracks().forEach((t) => t.stop()); };
+// ---- Scan code-barres ----
+// iPhone/Safari n'a pas de BarcodeDetector : on utilise ZXing compilé en WebAssembly (moteur C++, embarqué dans vendor/).
+// Améliorations : caméra arrière haute résolution + autofocus continu, analyse limitée à la zone de visée,
+// lecture confirmée 2 fois (évite les faux positifs), lampe torche si l'appareil la propose.
 
-  if ('BarcodeDetector' in window) {
-    const det = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-    const tick = async () => {
-      if (stopped) return;
-      try { const c = await det.detect(video); if (c[0]) { stop(); return onCode(c[0].rawValue); } } catch {}
-      requestAnimationFrame(tick);
-    };
-    tick();
-    return stop;
-  }
-  if (!window.ZXing) {
-    await new Promise((ok, ko) => {
+const FORMATS = ['EAN13', 'EAN8', 'UPCA', 'UPCE'];
+let zxingReady = null;
+
+export function loadZXing() {
+  if (!zxingReady) {
+    zxingReady = new Promise((ok, ko) => {
+      if (window.ZXingWASM) return ok(window.ZXingWASM);
       const s = document.createElement('script');
-      s.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
-      s.onload = ok; s.onerror = () => ko(new Error('Lecteur code-barres non chargé (réseau ?)'));
+      s.src = 'vendor/zxing/reader.js';
+      s.onload = () => ok(window.ZXingWASM);
+      s.onerror = () => ko(new Error('Lecteur code-barres non chargé (réseau ?)'));
       document.head.appendChild(s);
-    });
+    }).then((Z) => {
+      Z.setZXingModuleOverrides({ locateFile: (path) => (path.endsWith('.wasm') ? 'vendor/zxing/' + path : path) });
+      return Z.prepareZXingModule({ fireImmediately: true }).then(() => Z);
+    }).catch((e) => { zxingReady = null; throw e; });
   }
-  const hints = new Map([[window.ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-    window.ZXing.BarcodeFormat.EAN_13, window.ZXing.BarcodeFormat.EAN_8, window.ZXing.BarcodeFormat.UPC_A, window.ZXing.BarcodeFormat.UPC_E]]]);
-  const reader = new window.ZXing.MultiFormatReader();
-  reader.setHints(hints);
+  return zxingReady;
+}
+
+// Décode une image (ImageData) : renvoie le texte du premier code valide, ou null.
+export async function decodeImage(imageData) {
+  const Z = await loadZXing();
+  const res = await Z.readBarcodes(imageData, { formats: FORMATS, tryHarder: true, tryRotate: true, maxNumberOfSymbols: 1 });
+  const hit = res.find((r) => r.isValid && r.text);
+  return hit ? hit.text : null;
+}
+
+// Démarre la caméra dans `video` ; onCode(ean) est appelé une seule fois. Renvoie { stop, torch? }.
+export async function startScan(video, onCode) {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Caméra non disponible dans ce navigateur');
+  const zx = loadZXing(); // chargement en parallèle de l'ouverture caméra
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+  });
+  video.setAttribute('playsinline', ''); video.muted = true;
+  video.srcObject = stream;
+  await video.play();
+  const track = stream.getVideoTracks()[0];
+  const caps = track.getCapabilities?.() || {};
+  if (caps.focusMode?.includes('continuous')) track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+
+  let stopped = false, last = null, busy = false;
+  const stop = () => { stopped = true; stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; };
+  const found = (code) => {
+    // Deux lectures identiques d'affilée avant de valider.
+    if (code !== last) { last = code; return; }
+    stop(); navigator.vibrate?.(60); onCode(code);
+  };
+
+  const native = 'BarcodeDetector' in window
+    ? await window.BarcodeDetector.getSupportedFormats?.().then((f) => f.includes('ean_13')).catch(() => false) : false;
+  const det = native ? new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }) : null;
+  if (!det) await zx;
+
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  const tick = () => {
+  const tick = async () => {
     if (stopped) return;
-    if (video.videoWidth) {
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
+    if (!busy && video.videoWidth) {
+      busy = true;
       try {
-        const lum = new window.ZXing.HTMLCanvasElementLuminanceSource(canvas);
-        const res = reader.decode(new window.ZXing.BinaryBitmap(new window.ZXing.HybridBinarizer(lum)));
-        if (res) { stop(); return onCode(res.getText()); }
+        if (det) {
+          const c = await det.detect(video);
+          if (c[0]) found(c[0].rawValue);
+        } else {
+          // Zone de visée : bande centrale (90 % de large, 45 % de haut), réduite à 1280 px max.
+          const vw = video.videoWidth, vh = video.videoHeight;
+          const sw = vw * 0.9, sh = vh * 0.45, sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+          const k = Math.min(1, 1280 / sw);
+          canvas.width = Math.round(sw * k); canvas.height = Math.round(sh * k);
+          ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+          const code = await decodeImage(ctx.getImageData(0, 0, canvas.width, canvas.height));
+          if (code) found(code);
+        }
       } catch {}
+      busy = false;
     }
-    setTimeout(tick, 200);
+    if (!stopped) setTimeout(tick, 120);
   };
   tick();
-  return stop;
+
+  const torch = caps.torch ? (on) => track.applyConstraints({ advanced: [{ torch: on }] }).catch(() => {}) : null;
+  return { stop, torch };
 }

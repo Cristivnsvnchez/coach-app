@@ -7,24 +7,31 @@ import { esc, sheet, group, fmtDate } from '../ui.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 
-export function habitsSection(date) {
+// Checklist repliable : une ligne résumé (x/y · série), qui se déplie sur les habitudes du jour.
+let expanded = false;
+export const toggleHabits = () => (expanded = !expanded);
+
+export function habitsCells(date) {
   const status = habitStatus(date);
   const rates = habitRates(60);
   const n = streak(rates, today());
   const done = status.filter((s) => s.done).length;
+  const pct = status.length ? done / status.length : 0;
+  const head = `<li class="cell tap" data-a="habits-toggle" role="button" aria-expanded="${expanded}">
+      <span class="mini-ring" style="--p:${Math.round(pct * 100)}%" aria-hidden="true"></span>
+      <div class="grow"><span class="t">${t('Checklist du jour')}</span><span class="s">${done}/${status.length}${n ? ' · ' + t('{n} jours de suite', { n }) : ''}</span></div>
+      ${icon(expanded ? 'chevronUp' : 'chevronDown', { cls: 'chev' })}</li>`;
+  if (!expanded) return head;
   const week = Array.from({ length: 7 }, (_, i) => isoDate(new Date(parseDate(today()).getTime() - (6 - i) * 86400000)));
-  const dots = `<div class="week">${week.map((d) => {
+  const dots = `<li class="cell sub" style="display:block"><div class="week">${week.map((d) => {
     const r = rates[d] ?? 0;
     return `<div class="wday ${d === date ? 'sel' : ''}"><span class="caption secondary">${fmtDate(d, { weekday: 'narrow' })}</span>
       <span class="wdot" style="--p:${Math.round(r * 100)}%" aria-label="${fmtDate(d, { weekday: 'long' })} ${Math.round(r * 100)} %"></span></div>`;
-  }).join('')}</div>`;
-  return group(`${t('Checklist du jour')}<b class="num">${done}/${status.length}</b>`, `<ul class="cells habits">
-      <li class="cell streak-row"><span class="badge bg-orange">${icon('flame')}</span><div class="grow"><span class="t headline">${t('{n} jours de suite', { n })}</span><span class="s">${t('Série : ≥ 80 % des habitudes cochées')}</span></div></li>
-      <li class="cell" style="display:block">${dots}</li>
-      ${status.map((h) => `<li class="cell ${h.tappable ? 'tap' : ''} ${h.done ? 'done' : ''}" ${h.tappable ? `data-habit="${esc(h.id)}" role="checkbox" aria-checked="${h.done}"` : ''}>
-        <span class="check"><span class="ring-o">${h.done ? icon('check') : ''}</span></span>
-        <div class="grow"><span class="t">${esc(t(h.name))}</span>${h.auto ? `<span class="s">${h.autoDone ? t('Validé automatiquement') : t('Se coche automatiquement')}</span>` : ''}</div></li>`).join('')}
-      <li class="cell action" data-a="habits-edit" role="button">${icon('pencil')} ${t('Modifier mes habitudes')}</li></ul>`);
+  }).join('')}</div></li>`;
+  return head + dots + status.map((h) => `<li class="cell sub habit ${h.tappable ? 'tap' : ''} ${h.done ? 'done' : ''}" ${h.tappable ? `data-habit="${esc(h.id)}" role="checkbox" aria-checked="${h.done}"` : ''}>
+      <span class="check"><span class="ring-o">${h.done ? icon('check') : ''}</span></span>
+      <div class="grow"><span class="t">${esc(t(h.name))}</span>${h.auto ? `<span class="s">${h.autoDone ? t('Validé automatiquement') : t('Se coche automatiquement')}</span>` : ''}</div></li>`).join('')
+    + `<li class="cell sub action" data-a="habits-edit" role="button">${t('Modifier mes habitudes')}</li>`;
 }
 
 // Clic sur une habitude manuelle : bascule la case du jour. Renvoie true si l'événement a été traité.
@@ -37,6 +44,7 @@ export function handleHabitClick(e, date, rerender) {
     return true;
   }
   if (e.target.closest('[data-a=habits-edit]')) { editHabits(rerender); return true; }
+  if (e.target.closest('[data-a=habits-toggle]')) { toggleHabits(); rerender(); return true; }
   return false;
 }
 

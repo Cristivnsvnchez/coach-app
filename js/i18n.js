@@ -173,6 +173,13 @@ const EN = {
   'Développé couché haltères': 'Dumbbell bench press', 'Écarté poulie': 'Cable fly', 'Pompes': 'Push-ups', 'Dips assistés': 'Assisted dips', 'Tractions': 'Pull-ups',
   'Tractions assistées': 'Assisted pull-ups', 'Tirage vertical': 'Lat pulldown', 'Tirage horizontal': 'Seated cable row', 'Développé épaules haltères': 'Dumbbell shoulder press',
   'Curl barre': 'Barbell curl', 'Curl marteau': 'Hammer curl', 'Barre au front': 'Skull crushers', 'Planche': 'Plank', 'Relevés de jambes': 'Leg raises', 'Crunch poulie': 'Cable crunch',
+  'Lampe': 'Flashlight', 'Place le code-barres dans le cadre, à 10–20 cm': 'Place the barcode inside the frame, 10–20 cm away',
+  'Caméra non disponible dans ce navigateur': 'Camera not available in this browser',
+  'Budget mensuel (€)': 'Monthly budget (€)', 'Dépensé ce mois-ci': 'Spent this month', 'requêtes': 'requests', 'Tester la connexion': 'Test connection',
+  'Test en cours…': 'Testing…', 'Connexion OK ✓': 'Connection OK ✓',
+  "L'app bloque toute requête qui pourrait dépasser ton budget (estimation : tarifs publics, 1 $ ≈ 0,92 €). Pour une garantie absolue, fixe aussi la même limite dans console.anthropic.com → Billing → Limits.": 'The app blocks any request that could exceed your budget (estimate: public prices, $1 ≈ €0.92). For a hard guarantee, also set the same limit at console.anthropic.com → Billing → Limits.',
+  'Budget IA du mois atteint ({x} € sur {b} €). Augmente-le dans Profil ou attends le mois prochain.': 'Monthly AI budget reached (€{x} of €{b}). Raise it in Profile or wait for next month.',
+  'Repas': 'Meals', 'série': 'set', 'Afficher la colonne RIR': 'Show RIR column', 'Masquer la colonne RIR': 'Hide RIR column',
   // Checklist
   'Checklist du jour': "Today's checklist", '{n} jours de suite': '{n}-day streak', 'Série : ≥ 80 % des habitudes cochées': 'Streak: ≥ 80% of habits checked',
   'Validé automatiquement': 'Checked automatically', 'Se coche automatiquement': 'Checks itself automatically', 'Modifier mes habitudes': 'Edit my habits',
@@ -190,14 +197,14 @@ const EN = {
 const KEY = 'coach.lang';
 let lang = 'fr';
 try { lang = localStorage.getItem(KEY) || ((navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en'); } catch {}
-document.documentElement.lang = lang;
+if (typeof document !== "undefined") document.documentElement.lang = lang;
 
 export const getLang = () => lang;
 export const locale = () => (lang === 'en' ? 'en-US' : 'fr-FR');
 
 export function setLang(l) {
   lang = l === 'en' ? 'en' : 'fr';
-  document.documentElement.lang = lang;
+  if (typeof document !== "undefined") document.documentElement.lang = lang;
   try { localStorage.setItem(KEY, lang); } catch {}
 }
 

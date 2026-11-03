@@ -90,19 +90,24 @@ export function openAddFood(meal, date, done) {
   };
 
   const doScan = async () => {
-    res.innerHTML = `<video class="scan" muted playsinline></video><p class="empty footnote">${t('Vise le code-barres')}</p>
+    res.innerHTML = `<div class="scan-wrap"><video class="scan" muted playsinline autoplay></video><div class="scan-guide"><span class="scan-line"></span></div>
+      <button class="icon-btn round scan-torch" data-a="torch" hidden aria-label="${t('Lampe')}">${icon('bolt')}</button></div>
+      <p class="empty footnote">${t('Place le code-barres dans le cadre, à 10–20 cm')}</p>
       <form class="row" data-f="ean"><input class="input" name="ean" inputmode="numeric" placeholder="${t('ou tape le code (EAN)')}"><button class="btn filled">${t('OK')}</button></form>`;
     const byCode = async (code) => {
       res.innerHTML = `<p class="empty footnote">${t('Recherche du produit…')}</p>`;
-      try { pickGrams(await lookupBarcode(code)); } catch (err) { res.innerHTML = `<p class="error">${esc(t(err.message))}</p>`; }
+      try { pickGrams(await lookupBarcode(code)); } catch (err) { res.innerHTML = `<p class="error">${esc(t(err.message, err.vars))}</p>`; }
     };
     res.querySelector('[data-f=ean]').onsubmit = (e) => { e.preventDefault(); scanId++; stopScan && stopScan(); byCode(e.target.ean.value); };
     const id = ++scanId;
     try {
-      const stop = await startScan(res.querySelector('video'), (code) => { if (id === scanId) byCode(code); });
-      if (id !== scanId) stop(); else stopScan = stop;
+      const cam = await startScan(res.querySelector('video'), (code) => { if (id === scanId) byCode(code); });
+      if (id !== scanId) return cam.stop();
+      stopScan = cam.stop;
+      const tb = res.querySelector('[data-a=torch]');
+      if (cam.torch && tb) { let on = false; tb.hidden = false; tb.onclick = () => { on = !on; cam.torch(on); tb.classList.toggle('on', on); }; }
     }
-    catch (err) { res.querySelector('video')?.remove(); res.insertAdjacentHTML('afterbegin', `<p class="error">${esc(t('Caméra indisponible : {e}', { e: t(err.message) }))}</p>`); }
+    catch (err) { res.querySelector('video')?.remove(); res.insertAdjacentHTML('afterbegin', `<p class="error">${esc(t('Caméra indisponible : {e}', { e: t(err.message, err.vars) }))}</p>`); }
   };
 
   const doAi = (prefill = '') => {
@@ -122,7 +127,7 @@ export function openAddFood(meal, date, done) {
       try {
         const out = await estimateMeal({ imageB64: file ? await imageToBase64(file) : null, description: desc });
         showAiResult(out);
-      } catch (err) { res.innerHTML = `<p class="error">${esc(t(err.message))}</p>`; }
+      } catch (err) { res.innerHTML = `<p class="error">${esc(t(err.message, err.vars))}</p>`; }
     };
   };
 

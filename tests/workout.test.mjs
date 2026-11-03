@@ -63,3 +63,11 @@ test('premier lancement : les routines par défaut sont créées', async () => {
   store.load();
   assert.ok(store.state.routines.length >= 3);
 });
+
+test('budget IA : coût d\'une réponse (tokens + recherches web)', async () => {
+  const ai = await import('../js/ai.js');
+  // Opus 5.5 : 10 000 tokens en entrée (4 $/M) + 2 000 en sortie (20 $/M) + 3 recherches (0,01 $) = 0,11 $
+  const c = ai.costUsd('claude-opus-5-5', { input_tokens: 10000, output_tokens: 2000, server_tool_use: { web_search_requests: 3 } });
+  assert.ok(Math.abs(c - 0.11) < 1e-9, String(c));
+  assert.ok(Math.abs(ai.costUsd('claude-haiku-5-5', { input_tokens: 1e6, output_tokens: 0 }) - 0.1) < 1e-9);
+});

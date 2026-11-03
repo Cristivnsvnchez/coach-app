@@ -74,7 +74,7 @@ async function send(root, go, text, { search = true, label = null } = {}) {
     if (data?.per_portion) msg.action = { type: 'recipe', data };
     else if (data?.days) msg.action = { type: 'program', data };
   } catch (err) {
-    msg.text = '⚠️ ' + t(err.message); msg.error = true;
+    msg.text = '⚠️ ' + t(err.message, err.vars); msg.error = true;
   }
   delete msg.pending; busy = false;
   state.chat = state.chat.slice(-60);
@@ -128,7 +128,7 @@ export function render(root, go, autoAction) {
       save(); toast(t('Ajouté au journal ✓'));
     }
     if (el.dataset.useprog) {
-      try { importProgram(m.action.data); toast(t('Programme activé ✓')); go('training'); } catch (err) { toast(err.message); }
+      try { importProgram(m.action.data); toast(t('Programme activé ✓')); go('training'); } catch (err) { toast(err.message, err.vars); }
     }
   };
   const runAction = (k) => {

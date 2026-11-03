@@ -82,11 +82,7 @@ export function renderSession(root, go, back) {
       left: `<button class="btn plain" data-a="discard">${t('Annuler')}</button>`,
       right: `<button class="btn filled" style="min-height:34px;border-radius:17px" data-a="finish">${t('Terminer')}</button>`,
     })}
-    <div class="cells live-stats stats">
-      <div><small>${t('Durée')}</small><b data-live="dur" class="num">${hms(Date.now() - active.start)}</b></div>
-      <div><small>${t('Volume')}</small><b class="num">${fmt(vol)} <span class="u">kg</span></b></div>
-      <div><small>${t('Séries')}</small><b class="num">${sets}</b></div>
-    </div>
+    <p class="live-line"><b data-live="dur">${hms(Date.now() - active.start)}</b> · ${fmt(vol)} kg · ${sets} ${t(sets > 1 ? 'séries' : 'série')}</p>
     <div class="rest" hidden role="timer"><div class="rest-bar"></div>
       <button class="icon-btn" data-a="rest-" aria-label="−15 s">−15</button>
       <span>${icon('timer')}<span class="rest-t num"></span></span>
@@ -123,6 +119,7 @@ function exerciseCard(ex, i, ssIndex) {
   const cols = W.EX_TYPES[ex.type]?.cols || ['kg', 'reps'];
   const hasKg = cols.includes('kg'), isDur = cols.includes('sec');
   const pr = prevRecords[ex.name] || W.exerciseRecords([], ex.name);
+  const rir = !!state.settings.showRir;
   let normalN = 0;
   const color = ex.supersetId ? SS_COLORS[ssIndex[ex.supersetId] % SS_COLORS.length] : null;
   return `<section class="group ex-card" ${color ? `style="--ss:${color}"` : ''}>
@@ -133,9 +130,9 @@ function exerciseCard(ex, i, ssIndex) {
         <button class="icon-btn" data-a="menu" data-i="${i}" aria-label="${t('Options')}">${icon('more')}</button>
       </div>
       ${ex.why ? `<p class="ex-why">${icon('chart')} ${esc(t(ex.why, ex.whyVars))}</p>` : ''}
-      <textarea class="ex-note input" rows="1" data-note="${i}" placeholder="${t('Ajouter une note…')}" aria-label="${t('Note')}">${esc(ex.note || '')}</textarea>
-      <div class="sets s2">
-        <div class="set head"><span>${t('Série')}</span><span>${t('Précédent')}</span>${hasKg ? `<span>${ex.type === 'assisted_bw' ? t('Aide') : ex.type === 'weighted_bw' ? '+kg' : 'kg'}</span>` : '<span></span>'}<span>${isDur ? 's' : t('reps')}</span><span>${t('RIR')}</span><span></span></div>
+      ${ex.note || ex.showNote ? `<textarea class="ex-note input" rows="1" data-note="${i}" placeholder="${t('Ajouter une note…')}" aria-label="${t('Note')}">${esc(ex.note || '')}</textarea>` : ''}
+      <div class="sets s2 ${rir ? 'with-rir' : ''}">
+        <div class="set head"><span>${t('Série')}</span><span>${t('Précédent')}</span>${hasKg ? `<span>${ex.type === 'assisted_bw' ? t('Aide') : ex.type === 'weighted_bw' ? '+kg' : 'kg'}</span>` : '<span></span>'}<span>${isDur ? 's' : t('reps')}</span>${rir ? `<span>${t('RIR')}</span>` : ''}<span></span></div>
         ${ex.sets.map((s, j) => {
           const label = W.SET_LABEL[s.type] || String(++normalN);
           const p = prevFor(prev, ex.sets, j);
@@ -146,7 +143,7 @@ function exerciseCard(ex, i, ssIndex) {
             <button class="prev" data-a="prev" data-i="${i}" data-j="${j}" ${p ? '' : 'disabled'}>${prevTxt}</button>
             ${hasKg ? `<input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${s.kg}" aria-label="kg">` : '<span></span>'}
             <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${s.reps}" aria-label="${isDur ? 's' : t('reps')}">
-            <input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${s.rir ?? ''}" aria-label="${t('RIR')}">
+            ${rir ? `<input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${s.rir ?? ''}" aria-label="${t('RIR')}">` : ''}
             <button class="check" data-a="done" data-i="${i}" data-j="${j}" aria-label="${t('Série faite')}" aria-pressed="${s.done}"><span class="ring-o">${s.done ? icon('check') : ''}</span></button>
             ${prs.length ? `<span class="pr-badge">${icon('trophy')} PR</span>` : ''}
           </div>`;
@@ -203,6 +200,8 @@ function exerciseMenu(i, keep) {
   const top = ex.sets.find((s) => s.type !== 'warmup')?.kg || 0;
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(ex.name))}</h3></div>
     ${group('', `<ul class="cells">
+      <li class="cell tap with-icon" data-m="note"><span class="badge">${icon('pencil')}</span><span class="grow">${t('Note')}</span></li>
+      <li class="cell tap with-icon" data-m="rir"><span class="badge">${icon('chart')}</span><span class="grow">${state.settings.showRir ? t('Masquer la colonne RIR') : t('Afficher la colonne RIR')}</span></li>
       <li class="cell tap with-icon" data-m="warmup"><span class="badge bg-orange">${icon('flame')}</span><span class="grow">${t('Ajouter les séries d\'échauffement')}</span></li>
       <li class="cell tap with-icon" data-m="plates"><span class="badge bg-blue">${icon('dumbbell')}</span><span class="grow">${t('Calculateur de disques')}</span></li>
       <li class="cell tap with-icon" data-m="superset"><span class="badge bg-purple">${icon('link')}</span><span class="grow">${ex.supersetId ? t('Retirer du superset') : t('Superset avec l\'exercice suivant')}</span></li>
@@ -221,6 +220,8 @@ function exerciseMenu(i, keep) {
       ex.sets = [...w, ...ex.sets.filter((x) => x.type !== 'warmup')];
     }
     if (m === 'plates') { s.close(); return platesSheet(top); }
+    if (m === 'note') ex.showNote = true;
+    if (m === 'rir') { state.settings.showRir = !state.settings.showRir; save(); }
     if (m === 'superset') {
       if (ex.supersetId) { const id = ex.supersetId; list.forEach((x) => { if (x.supersetId === id) x.supersetId = null; }); }
       else if (list[i + 1]) { const id = list[i + 1].supersetId || uid(); ex.supersetId = id; list[i + 1].supersetId = id; }
