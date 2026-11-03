@@ -28,7 +28,7 @@ export function load() {
   let raw = null;
   try {
     raw = localStorage.getItem(KEY);
-    if (raw) state = sanitize(JSON.parse(raw));
+    state = sanitize(raw ? JSON.parse(raw) : {}); // aussi au premier lancement : crée les routines par défaut
   } catch {
     // Données illisibles : on garde une copie brute avant de repartir de zéro.
     try { if (raw) localStorage.setItem(KEY + '.corrupt', raw); } catch {}

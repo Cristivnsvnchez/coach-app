@@ -56,3 +56,10 @@ test('échauffement : paliers croissants, sans doublon', () => {
   assert.deepEqual(w.map((s) => s.kg), [20, 50, 70, 85]);
   assert.ok(W.warmupSets(30).length <= 2);
 });
+
+test('premier lancement : les routines par défaut sont créées', async () => {
+  globalThis.localStorage = { getItem: () => null, setItem() {} };
+  const store = await import('../js/store.js?fresh');
+  store.load();
+  assert.ok(store.state.routines.length >= 3);
+});

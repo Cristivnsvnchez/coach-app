@@ -161,7 +161,7 @@ const EN = {
   'Monter': 'Move up', 'Descendre': 'Move down', "Remplacer l'exercice": 'Replace exercise', 'Supprimer la dernière série': 'Delete last set', "Retirer l'exercice": 'Remove exercise',
   "Renseigne d'abord la charge de travail": 'Enter your working weight first', 'Ajoute un exercice après celui-ci': 'Add an exercise after this one',
   'Séance n° {n}': 'Workout #{n}', 'Mettre à jour la routine avec cette séance': 'Update the routine with this workout', 'Enregistrer la séance': 'Save workout',
-  'sem.': 'wk', 'Repos': 'Rest', 'j': 'd', 'Ce mois-ci': 'This month', 'séances': 'workouts', 'Démarrer une séance vide': 'Start empty workout', 'Nouvelle routine': 'New routine',
+  'sem.': 'wk', 'Régularité': 'Streak', 'Repos': 'Rest', 'j': 'd', 'Ce mois-ci': 'This month', 'séances': 'workouts', 'Démarrer une séance vide': 'Start empty workout', 'Nouvelle routine': 'New routine',
   'Muscles — 7 derniers jours': 'Muscles — last 7 days',
   'Séries validées hors échauffement : muscle principal = 1, secondaires = 0,5. Cible 10–20 séries/muscle/semaine (Schoenfeld 2017).': 'Completed sets excluding warm-ups: primary muscle = 1, secondary = 0.5. Target 10–20 sets/muscle/week (Schoenfeld 2017).',
   'Exercices': 'Exercises', 'Outils': 'Tools', 'Mois précédent': 'Previous month', 'Mois suivant': 'Next month', 'Supprimer la séance': 'Delete workout',

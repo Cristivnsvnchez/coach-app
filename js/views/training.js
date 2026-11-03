@@ -26,7 +26,7 @@ export function render(root, go) {
   root.innerHTML = `
     ${nav(t('Entraînement'), { right: `<button class="btn plain bold" data-a="coach">${icon('sparkles')} ${t('Programme IA')}</button>` })}
     <div class="cells stats" style="margin-bottom:1.25rem">
-      <div><small>${t('Série')}</small><b>${streak} <span class="u">${t('sem.')}</span></b></div>
+      <div><small>${t('Régularité')}</small><b>${streak} <span class="u">${t('sem.')}</span></b></div>
       <div><small>${t('Repos')}</small><b>${rest ?? '–'} <span class="u">${t('j')}</span></b></div>
       <div><small>${t('Ce mois-ci')}</small><b>${ws.filter((w) => w.date.slice(0, 7) === today().slice(0, 7)).length} <span class="u">${t('séances')}</span></b></div>
     </div>
