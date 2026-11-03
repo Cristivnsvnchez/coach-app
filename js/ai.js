@@ -1,6 +1,7 @@
 // Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 // Pas de SDK : l'app n'a pas d'étape de build, on appelle l'API Messages en HTTP.
 import { state } from './store.js';
+import { getLang } from './i18n.js';
 
 export const MODELS = {
   'claude-opus-5-5': 'Claude Opus 5.5 — le plus fiable (~4 $/20 $ par M tokens)',
@@ -19,7 +20,7 @@ export const ALLOWED_DOMAINS = [
 
 export const SYSTEM = `Tu es le coach personnel de l'utilisateur : docteur en sciences du sport et diététicien-nutritionniste.
 Règles :
-- Réponds en français, de façon concise et actionnable (listes courtes, chiffres précis, unités métriques).
+- Réponds de façon concise et actionnable (listes courtes, chiffres précis, unités métriques).
 - Appuie-toi sur des preuves : méta-analyses, essais contrôlés, positions ISSN/ACSM/OMS/EFSA/ANSES. Quand tu cherches sur le web, cite tes sources (auteur, année, revue) et distingue le niveau de preuve.
 - Valeurs nutritionnelles : préfère Ciqual (ANSES) ou USDA FoodData Central ; indique la source.
 - Ne fais pas de diagnostic médical. Si l'utilisateur est mineur, enceinte/allaitante, a un trouble du comportement alimentaire, une maladie chronique ou un IMC < 18,5, recommande un professionnel de santé et reste prudent.
@@ -41,7 +42,8 @@ export async function ask(messages, { search = false, json = null, maxTokens = 8
   if (!hasKey()) throw new Error('Ajoute ta clé API Claude dans Profil.');
   if (!navigator.onLine) throw new Error('Pas de connexion internet.');
   const model = state.settings.model || 'claude-opus-5-5';
-  const body = { model, max_tokens: maxTokens, system: SYSTEM, messages: [...messages], output_config: { effort } };
+  const lang = getLang() === 'en' ? '\n- Réponds en ANGLAIS (English), unités métriques.' : '\n- Réponds en français.';
+  const body = { model, max_tokens: maxTokens, system: SYSTEM + lang, messages: [...messages], output_config: { effort } };
   const headers = {
     'content-type': 'application/json',
     'x-api-key': state.settings.apiKey,

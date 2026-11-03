@@ -2,9 +2,12 @@
 import * as S from '../science.js';
 import { state, save, today, uid } from '../store.js';
 import { weeklyVolume } from '../metrics.js';
-import { esc, fmt, fmtDate, toast, sheet } from '../ui.js';
+import { esc, fmt, fmtDate, toast, sheet, nav, group } from '../ui.js';
+import { icon } from '../icons.js';
+import { t } from '../i18n.js';
 
 // Programme par défaut : full body 3 j/sem (chaque muscle ≥ 2×/sem, Schoenfeld 2016).
+// Les noms restent en français (clés de l'historique) et sont traduits à l'affichage.
 export const DEFAULT_PROGRAM = {
   name: 'Full body 3 jours (débutant/intermédiaire)',
   days: [
@@ -66,14 +69,13 @@ function failedStreak(name, repMin) {
 function startSession(day) {
   active = { id: uid(), date: today(), dayName: day.name, start: Date.now(), exercises: day.exercises.map((ex) => {
     const prev = lastOf(ex.name);
-    let load = 0, reps = ex.repMin, why = 'Première fois : choisis une charge laissant 2–3 reps en réserve';
+    let load = 0, reps = ex.repMin, why = 'Première fois : choisis une charge laissant 2–3 reps en réserve', whyVars;
     if (prev) {
       const done = prev.ex.sets.filter((s) => s.done);
       const rir = Math.min(...done.map((s) => s.rir ?? 2));
-      const n = S.nextSet({ load: done[0]?.kg ?? 0, reps: done.map((s) => s.reps), repMin: ex.repMin, repMax: ex.repMax, rir, upper: ex.upper, failedSessions: failedStreak(ex.name, ex.repMin) });
-      ({ load, reps, why } = n);
+      ({ load, reps, why, whyVars } = S.nextSet({ load: done[0]?.kg ?? 0, reps: done.map((s) => s.reps), repMin: ex.repMin, repMax: ex.repMax, rir, upper: ex.upper, failedSessions: failedStreak(ex.name, ex.repMin) }));
     }
-    return { ...ex, why, sets: Array.from({ length: ex.sets }, () => ({ kg: load, reps, rir: 2, done: false })) };
+    return { ...ex, why, whyVars, sets: Array.from({ length: ex.sets }, () => ({ kg: load, reps, rir: 2, done: false })) };
   }) };
   persistActive();
 }
@@ -87,8 +89,8 @@ function restTimer(sec = 120) {
     if (!el) return clearInterval(timer);
     el.hidden = false;
     const left = Math.max(0, Math.round((end - Date.now()) / 1000));
-    el.querySelector('span').textContent = `Repos ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-    if (!left) { clearInterval(timer); el.hidden = true; navigator.vibrate?.(300); toast('Repos terminé 💪'); }
+    el.querySelector('.rest-t').textContent = t('Repos {t}', { t: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` });
+    if (!left) { clearInterval(timer); el.hidden = true; navigator.vibrate?.(300); toast(t('Repos terminé 💪')); }
   };
   tick(); timer = setInterval(tick, 1000);
 }
@@ -115,21 +117,17 @@ export function render(root, go) {
   })();
 
   root.innerHTML = `
-    <header class="top"><h1>Entraînement</h1></header>
-    <section class="card">
-      <div class="meal-head"><b>${esc(prog.name)}</b><button class="btn ghost small" data-a="coach">✨ Nouveau programme IA</button></div>
-      <ul class="list">${prog.days.map((d, i) => `<li data-day="${i}"><div><b>${esc(d.name)}${i === nextDay ? ' · <span class="accent">prochaine</span>' : ''}</b><small>${d.exercises.map((e) => esc(e.name)).join(' · ')}</small></div><span class="btn small">Démarrer</span></li>`).join('')}</ul>
-    </section>
-    <section class="card"><b>Volume de la semaine</b><p class="muted small">Séries effectuées / cible 10–20 par muscle (Schoenfeld 2017)</p>
-      <div class="vol">${Object.entries(vol).map(([m, n]) => `<div class="vol-row"><span>${m}</span><div class="bar-track"><div class="bar-fill ${n >= 10 ? 'ok' : ''}" style="width:${Math.min(100, (n / 20) * 100)}%"></div></div><span>${n}</span></div>`).join('')}</div>
-    </section>
-    <section class="card"><b>Records (1RM estimé, Epley)</b>
-      <ul class="list">${recs.slice(0, 8).map(([n, r]) => `<li><div><b>${esc(n)}</b><small>${fmt(r.kg, 1)} kg × ${r.reps} · ${fmtDate(r.date)}</small></div><b>${fmt(r.e1, 1)} kg</b></li>`).join('') || '<li class="muted">Termine une séance pour voir tes records.</li>'}</ul>
-    </section>
-    <section class="card"><b>Historique</b>
-      <ul class="list">${[...state.workouts].reverse().slice(0, 10).map((w) => `<li><div><b>${esc(w.dayName)}</b><small>${fmtDate(w.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${w.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0)} séries · ${fmt(w.minutes || 0)} min</small></div></li>`).join('') || '<li class="muted">Aucune séance.</li>'}</ul>
-    </section>
-    <p class="muted small center">OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem.</p>`;
+    ${nav(t('Entraînement'), { right: `<button class="btn plain bold" data-a="coach">${icon('sparkles')} ${t('Nouveau programme IA')}</button>` })}
+    ${group(esc(t(prog.name)), `<ul class="cells">${prog.days.map((d, i) => `<li class="cell tap with-icon" data-day="${i}">
+      <span class="badge ${i === nextDay ? 'bg-green' : 'bg-blue'}">${icon('dumbbell')}</span>
+      <div class="grow"><span class="t headline">${esc(t(d.name))}${i === nextDay ? ` · <span class="tint">${t('prochaine')}</span>` : ''}</span>
+      <span class="s" style="white-space:normal">${d.exercises.map((e) => esc(t(e.name))).join(' · ')}</span></div>
+      <span class="btn filled" style="min-height:34px;padding:0 .8rem;border-radius:17px">${t('Démarrer')}</span></li>`).join('')}</ul>`)}
+    ${group(t('Volume de la semaine'), `<div class="cells"><div class="vol">${Object.entries(vol).map(([m, n]) => `<div class="vol-row"><span>${t(m)}</span><div class="bar-track"><div class="bar-fill ${n >= 10 ? 'ok' : ''}" style="width:${Math.min(100, (n / 20) * 100)}%"></div></div><span>${n}</span></div>`).join('')}</div></div>`,
+      t('Séries effectuées / cible 10–20 par muscle (Schoenfeld 2017)'))}
+    ${group(t('Records (1RM estimé, Epley)'), `<ul class="cells">${recs.slice(0, 8).map(([n, r]) => `<li class="cell"><div class="grow"><span class="t">${esc(t(n))}</span><span class="s num">${fmt(r.kg, 1)} kg × ${r.reps} · ${fmtDate(r.date)}</span></div><span class="val headline">${fmt(r.e1, 1)} kg</span></li>`).join('') || `<li class="empty">${t('Termine une séance pour voir tes records.')}</li>`}</ul>`)}
+    ${group(t('Historique'), `<ul class="cells">${[...state.workouts].reverse().slice(0, 10).map((w) => `<li class="cell"><div class="grow"><span class="t">${esc(t(w.dayName))}</span><span class="s num">${fmtDate(w.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${w.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0)} ${t('séries')} · ${fmt(w.minutes || 0)} min</span></div></li>`).join('') || `<li class="empty">${t('Aucune séance.')}</li>`}</ul>`,
+      t("OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem."))}`;
 
   root.onclick = (e) => {
     const d = e.target.closest('[data-day]');
@@ -140,38 +138,40 @@ export function render(root, go) {
 
 function renderSession(root, go) {
   root.innerHTML = `
-    <header class="top"><button class="icon" data-a="cancel" aria-label="Annuler">✕</button><h1>${esc(active.dayName)}</h1><button class="btn primary small" data-a="finish">Terminer</button></header>
-    <div class="rest" hidden><span></span><button class="btn small ghost" data-a="skip">Passer</button></div>
-    ${active.exercises.map((ex, i) => `<section class="card ex">
-      <div class="meal-head"><b>${esc(ex.name)}</b><small class="muted">${ex.repMin}–${ex.repMax} reps · ${esc(ex.muscle)}</small></div>
-      <p class="muted small">↗ ${esc(ex.why)}</p>
-      <div class="sets"><div class="set head"><span>#</span><span>kg</span><span>reps</span><span>RIR</span><span>✓</span></div>
+    ${nav(t(active.dayName), {
+      left: `<button class="btn plain" data-a="cancel">${t('Annuler')}</button>`,
+      right: `<button class="btn plain bold" data-a="finish">${t('Terminer')}</button>`,
+    })}
+    <div class="rest" hidden role="timer"><span>${icon('timer')}<span class="rest-t"></span></span><button class="btn plain" data-a="skip">${t('Passer')}</button></div>
+    ${active.exercises.map((ex, i) => group('', `<div class="cells">
+      <div class="ex-head"><span class="headline">${esc(t(ex.name))}</span><span class="footnote secondary">${ex.repMin}–${ex.repMax} ${t('reps')} · ${esc(t(ex.muscle))}</span></div>
+      <p class="ex-why">${icon('chart')} ${esc(t(ex.why, ex.whyVars))}</p>
+      <div class="sets"><div class="set head"><span>#</span><span>kg</span><span>${t('reps')}</span><span>${t('RIR')}</span><span></span></div>
       ${ex.sets.map((s, j) => `<div class="set ${s.done ? 'done' : ''}"><span>${j + 1}</span>
-        <input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${s.kg}">
-        <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${s.reps}">
-        <input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${s.rir}">
-        <button class="check" data-done="${i}-${j}" aria-label="Série faite">${s.done ? '✓' : ''}</button></div>`).join('')}</div>
-      <button class="btn ghost small" data-addset="${i}">＋ Série</button>
-    </section>`).join('')}
-    <p class="muted small center">RIR = répétitions en réserve (vise 1–3). Le minuteur de repos démarre à chaque série validée.</p>`;
+        <input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${s.kg}" aria-label="kg, ${t('Série')} ${j + 1}">
+        <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${s.reps}" aria-label="${t('reps')}, ${t('Série')} ${j + 1}">
+        <input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${s.rir}" aria-label="${t('RIR')}, ${t('Série')} ${j + 1}">
+        <button class="check" data-done="${i}-${j}" aria-label="${t('Série faite')}" aria-pressed="${s.done}"><span class="ring-o">${s.done ? icon('check') : ''}</span></button></div>`).join('')}</div>
+      <div class="cell action" data-addset="${i}" role="button">${icon('plus')} ${t('Série')}</div></div>`)).join('')}
+    <p class="group-foot center">${t('RIR = répétitions en réserve (vise 1–3). Le minuteur de repos démarre à chaque série validée.')}</p>`;
 
   root.oninput = (e) => {
-    const t = e.target; if (!t.dataset.k) return;
-    active.exercises[t.dataset.i].sets[t.dataset.j][t.dataset.k] = parseFloat(t.value.replace(',', '.')) || 0;
+    const el = e.target; if (!el.dataset.k) return;
+    active.exercises[el.dataset.i].sets[el.dataset.j][el.dataset.k] = parseFloat(el.value.replace(',', '.')) || 0;
     persistActive();
   };
   root.onclick = (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
-    if (a === 'cancel') { if (confirm('Abandonner la séance ?')) { active = null; persistActive(); clearInterval(timer); render(root, go); } return; }
+    if (a === 'cancel') { if (confirm(t('Abandonner la séance ?'))) { active = null; persistActive(); clearInterval(timer); render(root, go); } return; }
     if (a === 'skip') { clearInterval(timer); document.querySelector('.rest').hidden = true; return; }
     if (a === 'finish') {
       const done = active.exercises.reduce((n, ex) => n + ex.sets.filter((s) => s.done).length, 0);
-      if (!done) return toast('Valide au moins une série');
+      if (!done) return toast(t('Valide au moins une série'));
       clearInterval(timer);
       const w = { ...active, minutes: Math.round((Date.now() - active.start) / 60000) };
-      w.exercises = w.exercises.map(({ why, ...ex }) => ex);
+      w.exercises = w.exercises.map(({ why, whyVars, ...ex }) => ex);
       state.workouts.push(w); save(); active = null; persistActive();
-      sheet(`<h3>Séance terminée 🎉</h3><p>${done} séries en ${w.minutes} min. Les charges de la prochaine séance sont calculées automatiquement.</p>`);
+      sheet(`<div class="sheet-head"><h3 class="title2">${t('Séance terminée 🎉')}</h3></div><p>${t('{n} séries en {m} min. Les charges de la prochaine séance sont calculées automatiquement.', { n: done, m: w.minutes })}</p>`);
       return render(root, go);
     }
     const dn = e.target.closest('[data-done]');
@@ -180,18 +180,23 @@ function renderSession(root, go) {
       const s = active.exercises[i].sets[j];
       s.done = !s.done;
       persistActive();
+      const y = root.scrollTop;
       renderSession(root, go);
+      root.scrollTop = y;
       if (s.done) restTimer(active.exercises[i].upper ? 90 : 150);
       return;
     }
     const as = e.target.closest('[data-addset]');
-    if (as) { const sets = active.exercises[+as.dataset.addset].sets; sets.push({ ...sets[sets.length - 1], done: false }); persistActive(); renderSession(root, go); }
+    if (as) {
+      const sets = active.exercises[+as.dataset.addset].sets; sets.push({ ...sets[sets.length - 1], done: false });
+      persistActive(); const y = root.scrollTop; renderSession(root, go); root.scrollTop = y;
+    }
   };
 }
 
 // Import d'un programme généré par l'IA (validation minimale).
 export function importProgram(p) {
-  if (!p?.days?.length) throw new Error('Programme invalide');
+  if (!p?.days?.length) throw new Error(t('Programme invalide'));
   state.program = {
     name: String(p.name || 'Programme IA'),
     days: p.days.map((d) => ({ name: String(d.name), exercises: (d.exercises || []).map((e) => ({

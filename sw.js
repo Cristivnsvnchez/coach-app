@@ -1,8 +1,8 @@
 // Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
-const VERSION = 'coach-v2';
+const VERSION = 'coach-v3';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
-  'js/app.js', 'js/store.js', 'js/science.js', 'js/metrics.js', 'js/ui.js', 'js/food.js', 'js/ai.js',
+  'js/app.js', 'js/store.js', 'js/science.js', 'js/metrics.js', 'js/ui.js', 'js/i18n.js', 'js/icons.js', 'js/food.js', 'js/ai.js',
   'js/views/today.js', 'js/views/addfood.js', 'js/views/weight.js', 'js/views/training.js', 'js/views/coach.js', 'js/views/profile.js',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
 ];

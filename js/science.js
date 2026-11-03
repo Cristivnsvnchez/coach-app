@@ -166,7 +166,7 @@ export function nextSet({ load, reps, repMin, repMax, rir = 2, upper = true, fai
   if (failedSessions >= 2) return { load: round05(load * 0.9), reps: repMin, why: 'Décharge −10 % après 2 séances ratées' };
   if (reps.length && reps.every((r) => r >= repMax) && rir >= 1) {
     const inc = upper ? 1.025 : 1.05;
-    return { load: Math.max(round05(load * inc), load + (upper ? 1 : 2.5)), reps: repMin, why: `Toutes les séries à ${repMax} reps → charge augmentée` };
+    return { load: Math.max(round05(load * inc), load + (upper ? 1 : 2.5)), reps: repMin, why: 'Toutes les séries à {n} reps → charge augmentée', whyVars: { n: repMax } };
   }
   const minDone = reps.length ? Math.min(...reps) : repMin;
   return { load, reps: Math.min(repMax, Math.max(repMin, minDone + 1)), why: 'Même charge, +1 rep' };

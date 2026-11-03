@@ -1,0 +1,171 @@
+// Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
+// Interpolation : t('Patiente {n} s', { n: 5 }).
+
+const EN = {
+  // Navigation
+  "Aujourd'hui": 'Today', 'Poids': 'Weight', 'Sport': 'Training', 'Coach': 'Coach', 'Profil': 'Profile',
+  'Entraînement': 'Training',
+  // Aujourd'hui
+  'Jour précédent': 'Previous day', 'Jour suivant': 'Next day',
+  'Complète ton profil': 'Complete your profile',
+  'Âge, taille, poids, activité et objectif pour calculer tes besoins.': 'Age, height, weight, activity and goal to calculate your needs.',
+  'Compléter': 'Complete',
+  'Objectifs chiffrés désactivés': 'Numeric targets disabled',
+  'Ta situation (âge < 18 ans, grossesse/allaitement, trouble alimentaire ou pathologie) nécessite un suivi par un professionnel de santé. Le journal reste disponible.':
+    'Your situation (under 18, pregnancy/breastfeeding, eating disorder or medical condition) requires follow-up by a health professional. The food log remains available.',
+  'kcal restantes': 'kcal left', 'kcal en trop': 'kcal over',
+  'Protéines': 'Protein', 'Glucides': 'Carbs', 'Lipides': 'Fat', 'Fibres': 'Fiber',
+  'Objectif': 'Goal', 'mangé': 'eaten', 'dépense adaptative': 'adaptive expenditure', 'dépense estimée': 'estimated expenditure',
+  'plancher de sécurité appliqué': 'safety floor applied',
+  'Eau': 'Water', '(boissons + aliments)': '(drinks + food)',
+  'Petit-déjeuner': 'Breakfast', 'Déjeuner': 'Lunch', 'Dîner': 'Dinner', 'Collations': 'Snacks',
+  'Ajouter': 'Add', 'Supprimer': 'Delete', 'Copier les repas de la veille': "Copy yesterday's meals",
+  'Rien à copier pour la veille': 'Nothing to copy from yesterday', '{n} aliments copiés': '{n} foods copied',
+  // Ajout d'aliment
+  'Ajouter — {meal}': 'Add — {meal}', 'Rechercher un aliment': 'Search for a food', 'OK': 'Go',
+  'Code-barres': 'Barcode', 'Photo / texte IA': 'AI photo / text', 'Manuel': 'Manual',
+  'Favoris': 'Favorites', 'Récents': 'Recent',
+  "Cherche un aliment, scanne un code-barres ou décris ton repas à l'IA.": 'Search for a food, scan a barcode or describe your meal to the AI.',
+  'Ajouté ✓': 'Added ✓', '{n} aliments ajoutés': '{n} foods added',
+  'Quantité (g)': 'Quantity (g)', 'Favori': 'Favorite',
+  'Recherche…': 'Searching…', 'Mes aliments': 'My foods',
+  'Recherche en ligne possible dans {n} s (limite Open Food Facts).': 'Online search available in {n} s (Open Food Facts limit).',
+  'Recherche Open Food Facts indisponible pour le moment.': 'Open Food Facts search is unavailable right now.',
+  "Estimer « {q} » avec l'IA (Ciqual/USDA)": 'Estimate “{q}” with AI (Ciqual/USDA)',
+  'Vise le code-barres': 'Point at the barcode', 'ou tape le code (EAN)': 'or type the code (EAN)',
+  'Recherche du produit…': 'Looking up product…', 'Caméra indisponible : {e}': 'Camera unavailable: {e}',
+  "Ajoute ta clé API Claude dans Profil pour utiliser l'IA.": 'Add your Claude API key in Profile to use AI.',
+  'Prendre / choisir une photo': 'Take / choose a photo',
+  "Ex : 150 g de poulet, riz basmati, une cuillère d'huile d'olive": 'E.g. 150 g chicken, basmati rice, a spoon of olive oil',
+  'Estimer': 'Estimate', 'Ajoute une photo ou une description': 'Add a photo or a description',
+  'Analyse en cours… (10–30 s)': 'Analyzing… (10–30 s)', 'Estimation IA — modifie si besoin': 'AI estimate — edit if needed',
+  'grammes': 'grams', 'Tout ajouter': 'Add all', 'Nom': 'Name', 'Ex : Skyr nature': 'E.g. Plain skyr',
+  'kcal /100 g': 'kcal /100 g', 'Portion (g)': 'Serving (g)', "Créer l'aliment": 'Create food',
+  'Estimation IA': 'AI estimate', 'Perso': 'Custom',
+  // Poids
+  'Poids du jour (kg)': "Today's weight (kg)", 'Enregistrer': 'Save', 'Tendance': 'Trend', 'Vitesse': 'Rate',
+  'kg/sem': 'kg/wk', '1 an': '1 yr', '{n} j': '{n} d',
+  'Ajoute au moins 2 pesées pour voir la courbe.': 'Add at least 2 weigh-ins to see the chart.',
+  "Points : pesées brutes · ligne : tendance lissée (moyenne exponentielle). Les variations d'un jour à l'autre sont surtout de l'eau : regarde la tendance.":
+    'Dots: raw weigh-ins · line: smoothed trend (exponential average). Day-to-day swings are mostly water: watch the trend.',
+  'Poids de référence pour {h} cm': 'Reference weight for {h} cm',
+  'Fourchette santé (IMC 18,5–24,9, OMS)': 'Healthy range (BMI 18.5–24.9, WHO)',
+  'Formules cliniques (Devine, Robinson, Hamwi) : {a} – {b} kg': 'Clinical formulas (Devine, Robinson, Hamwi): {a} – {b} kg',
+  ' (peu fiables sous 152 cm)': ' (unreliable under 152 cm)',
+  "L'IMC ignore la masse musculaire : si tu es musclé, vise plutôt un % de masse grasse.": 'BMI ignores muscle mass: if you are muscular, target a body-fat % instead.',
+  'Mon poids cible (kg)': 'My target weight (kg)', 'Définir': 'Set',
+  'Renseigne taille et sexe dans Profil': 'Enter height and sex in Profile',
+  'Timeline': 'Timeline', 'Arrivée estimée': 'Estimated arrival', 'vitesse réelle': 'actual rate', 'rythme prévu': 'planned rate',
+  "Pas d'estimation : la tendance va dans le mauvais sens ou le rythme est nul.": 'No estimate: the trend is going the wrong way or the rate is zero.',
+  '✓ atteint': '✓ reached',
+  'Projection indicative : la perte ralentit avec le temps (adaptation métabolique, Hall 2011). Recalculée à chaque pesée.':
+    'Indicative projection: loss slows over time (metabolic adaptation, Hall 2011). Recalculated at every weigh-in.',
+  'Historique': 'History', 'Aucune pesée.': 'No weigh-ins yet.', 'tendance': 'trend',
+  'Poids invalide': 'Invalid weight', 'Pesée enregistrée': 'Weigh-in saved', 'Attention : sous la fourchette santé': 'Warning: below the healthy range',
+  'Supprimer cette pesée ?': 'Delete this weigh-in?',
+  // Entraînement
+  'Nouveau programme IA': 'New AI program', 'prochaine': 'next', 'Démarrer': 'Start',
+  'Volume de la semaine': 'Weekly volume', 'Séries effectuées / cible 10–20 par muscle (Schoenfeld 2017)': 'Sets done / target 10–20 per muscle (Schoenfeld 2017)',
+  'Records (1RM estimé, Epley)': 'Records (estimated 1RM, Epley)', 'Termine une séance pour voir tes records.': 'Finish a workout to see your records.',
+  'séries': 'sets', 'Aucune séance.': 'No workouts yet.',
+  "OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem.": 'WHO 2020: 150–300 min moderate activity/week + strength training ≥ 2 days/week.',
+  'Annuler': 'Cancel', 'Terminer': 'Finish', 'Passer': 'Skip', 'Repos {t}': 'Rest {t}', 'Repos terminé 💪': 'Rest over 💪',
+  'reps': 'reps', 'RIR': 'RIR', 'Série': 'Set', 'Série faite': 'Set done',
+  'RIR = répétitions en réserve (vise 1–3). Le minuteur de repos démarre à chaque série validée.': 'RIR = reps in reserve (aim for 1–3). The rest timer starts each time you check a set.',
+  'Abandonner la séance ?': 'Discard this workout?', 'Valide au moins une série': 'Check at least one set',
+  'Séance terminée 🎉': 'Workout complete 🎉',
+  '{n} séries en {m} min. Les charges de la prochaine séance sont calculées automatiquement.': '{n} sets in {m} min. Next session loads are calculated automatically.',
+  'Première fois : choisis une charge laissant 2–3 reps en réserve': 'First time: pick a load leaving 2–3 reps in reserve',
+  'Décharge −10 % après 2 séances ratées': 'Deload −10% after 2 missed sessions',
+  'Toutes les séries à {n} reps → charge augmentée': 'All sets at {n} reps → load increased',
+  'Même charge, +1 rep': 'Same load, +1 rep',
+  'Poids du corps : passe à une variante plus difficile ou ajoute du lest': 'Bodyweight: move to a harder variation or add weight',
+  'Poids du corps : +1 rep': 'Bodyweight: +1 rep',
+  'Programme invalide': 'Invalid program',
+  // Muscles
+  'Pectoraux': 'Chest', 'Dos': 'Back', 'Épaules': 'Shoulders', 'Biceps': 'Biceps', 'Triceps': 'Triceps',
+  'Quadriceps': 'Quads', 'Ischios': 'Hamstrings', 'Fessiers': 'Glutes', 'Mollets': 'Calves', 'Abdos': 'Abs',
+  // Coach
+  'Effacer': 'Clear', "Active l'IA": 'Turn on AI',
+  'Colle ta clé API Claude dans Profil (console.anthropic.com → API Keys). Coût : quelques centimes par demande.':
+    'Paste your Claude API key in Profile (console.anthropic.com → API Keys). Cost: a few cents per request.',
+  'Ajouter ma clé': 'Add my key', 'Recette pour mes macros restantes': 'Recipe for my remaining macros',
+  'Générer mon programme': 'Generate my program', 'Bilan de ma semaine': 'My weekly review',
+  'Recherche dans la littérature…': 'Searching the literature…', 'source(s)': 'source(s)',
+  '1 portion ({k} kcal)': '1 serving ({k} kcal)', 'Utiliser ce programme': 'Use this program',
+  "Pose une question (nutrition, entraînement, récupération…) ou choisis une action ci-dessus. Les réponses s'appuient sur PubMed, ANSES, EFSA, OMS et sont sourcées.":
+    'Ask a question (nutrition, training, recovery…) or pick an action above. Answers draw on PubMed, EFSA, WHO and national agencies, with sources.',
+  'Ta question au coach…': 'Ask your coach…', 'Recherche scientifique': 'Scientific search', 'Envoyer': 'Send',
+  'Effacer la conversation ?': 'Clear the conversation?', 'Ajoute ta clé API dans Profil': 'Add your API key in Profile',
+  "Complète ton profil d'abord": 'Complete your profile first', 'Ajouté au journal ✓': 'Added to log ✓',
+  'Programme activé ✓': 'Program activated ✓', 'Réponse du coach prête ✓': 'Coach reply ready ✓',
+  // Profil
+  'Sexe': 'Sex', 'Homme': 'Male', 'Femme': 'Female', 'Âge': 'Age', 'Taille (cm)': 'Height (cm)', 'Poids (kg)': 'Weight (kg)',
+  '% masse grasse (optionnel, plus précis)': 'Body fat % (optional, more accurate)', 'Activité': 'Activity', 'Rythme': 'Rate',
+  'Séances / sem': 'Sessions / week', 'Matériel': 'Equipment', 'Salle complète': 'Full gym', 'Haltères à la maison': 'Dumbbells at home', 'Poids du corps': 'Bodyweight',
+  'Régime / préférences': 'Diet / preferences', 'Ex : végétarien, halal, pas de poisson': 'E.g. vegetarian, halal, no fish',
+  'Allergies / intolérances': 'Allergies / intolerances',
+  'Grossesse/allaitement, trouble du comportement alimentaire ou pathologie chronique': 'Pregnancy/breastfeeding, eating disorder or chronic condition',
+  'Mes informations': 'About me', 'Mon objectif': 'My goal', 'Préférences': 'Preferences',
+  'Tes besoins calculés': 'Your calculated needs', 'Dépense': 'Expenditure', 'adaptative ({n} j)': 'adaptive ({n} d)', 'formule': 'formula', 'kcal/j': 'kcal/day',
+  "Formule de départ : Mifflin-St Jeor{k} × niveau d'activité FAO/OMS. Après 10 jours de saisie et des pesées sur ≥ 7 jours, la dépense s'ajuste à tes résultats réels (apport moyen − variation de la tendance × 7700 kcal/kg).":
+    'Starting formula: Mifflin-St Jeor{k} × FAO/WHO activity level. After 10 logged days and weigh-ins over ≥ 7 days, expenditure adapts to your real results (average intake − trend change × 7700 kcal/kg).',
+  'Intelligence artificielle': 'Artificial intelligence', 'Clé API Claude': 'Claude API key', 'Modèle': 'Model',
+  "La clé reste sur ce téléphone et n'est envoyée qu'à api.anthropic.com. Crée-la sur console.anthropic.com → API Keys, et fixe une limite de dépense mensuelle.":
+    'The key stays on this phone and is only sent to api.anthropic.com. Create it at console.anthropic.com → API Keys, and set a monthly spend limit.',
+  'Sauvegarde': 'Backup', 'Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).': 'Your data lives only on this phone. Export it regularly (Files / iCloud Drive).',
+  'Exporter': 'Export', 'Importer': 'Import', 'Tout effacer': 'Erase all data',
+  'Références scientifiques': 'Scientific references', 'Cette app ne remplace pas un avis médical.': 'This app does not replace medical advice.',
+  'Profil enregistré': 'Profile saved', 'Réglages IA enregistrés': 'AI settings saved',
+  "Effacer TOUTES les données de l'app ? (irréversible)": 'Erase ALL app data? (cannot be undone)',
+  'Fichier non reconnu': 'Unrecognized file', 'Remplacer les données actuelles par cette sauvegarde ?': 'Replace current data with this backup?',
+  'Sauvegarde restaurée': 'Backup restored', 'Import impossible : {e}': 'Import failed: {e}',
+  'Langue': 'Language', '{r} % du poids / semaine': '{r}% of body weight / week',
+  'Stockage plein : exporte tes données depuis Profil.': 'Storage full: export your data from Profile.',
+  // Science
+  'Sédentaire (bureau, peu de marche)': 'Sedentary (desk job, little walking)', 'Légèrement actif (marche, 1–2 séances/sem)': 'Lightly active (walking, 1–2 sessions/wk)',
+  'Actif (3–4 séances/sem)': 'Active (3–4 sessions/wk)', 'Très actif (5–6 séances/sem)': 'Very active (5–6 sessions/wk)',
+  'Extrêmement actif (travail physique + sport)': 'Extremely active (physical job + sport)',
+  'Perte de gras': 'Fat loss', 'Maintien / recomposition': 'Maintenance / recomp', 'Prise de muscle': 'Muscle gain',
+  // Erreurs IA / aliments
+  'Ajoute ta clé API Claude dans Profil.': 'Add your Claude API key in Profile.', 'Pas de connexion internet.': 'No internet connection.',
+  'Clé API invalide. Vérifie-la dans Profil.': 'Invalid API key. Check it in Profile.', 'Trop de requêtes, réessaie dans une minute.': 'Too many requests, try again in a minute.',
+  'Crédit API épuisé : recharge sur console.anthropic.com.': 'API credit exhausted: top up at console.anthropic.com.',
+  'Demande refusée par le filtre de sécurité. Reformule ta question.': 'Request declined by the safety filter. Rephrase your question.',
+  "Réponse trop longue, réessaie avec moins d'aliments.": 'Response too long, try again with fewer foods.',
+  'La recherche a pris trop de temps. Réessaie ou décoche 🔬.': 'The search took too long. Try again or turn off scientific search.',
+  "Réponse de l'IA illisible, réessaie.": 'Unreadable AI response, try again.',
+  'Produit introuvable dans Open Food Facts': 'Product not found in Open Food Facts', 'Pas de valeurs nutritionnelles pour ce produit': 'No nutrition values for this product',
+  'Lecteur code-barres non chargé (réseau ?)': 'Barcode reader failed to load (network?)',
+  // Programme par défaut
+  'Full body 3 jours (débutant/intermédiaire)': 'Full body 3 days (beginner/intermediate)', 'Jour A': 'Day A', 'Jour B': 'Day B', 'Jour C': 'Day C',
+  'Squat': 'Squat', 'Développé couché': 'Bench press', 'Rowing barre': 'Barbell row', 'Élévations latérales': 'Lateral raises', 'Curl haltères': 'Dumbbell curl',
+  'Soulevé de terre roumain': 'Romanian deadlift', 'Développé militaire': 'Overhead press', 'Tractions / tirage vertical': 'Pull-ups / lat pulldown',
+  'Fentes bulgares': 'Bulgarian split squat', 'Extensions triceps': 'Triceps extensions', 'Presse à cuisses': 'Leg press',
+  'Développé incliné haltères': 'Incline dumbbell press', 'Rowing haltère': 'Dumbbell row', 'Leg curl': 'Leg curl', 'Mollets debout': 'Standing calf raise', 'Gainage / crunch': 'Plank / crunch',
+  'Programme IA': 'AI program',
+  'Claude Opus 5.5 — le plus fiable (~4 $/20 $ par M tokens)': 'Claude Opus 5.5 — most reliable (~$4/$20 per M tokens)',
+  'Claude Sonnet 5.5 — bon compromis (~2 $/10 $)': 'Claude Sonnet 5.5 — good balance (~$2/$10)',
+  'Claude Haiku 5.5 — le moins cher (~0,10 $/0,50 $)': 'Claude Haiku 5.5 — cheapest (~$0.10/$0.50)',
+  'Open Food Facts': 'Open Food Facts', 'Recette IA': 'AI recipe',
+};
+
+const KEY = 'coach.lang';
+let lang = 'fr';
+try { lang = localStorage.getItem(KEY) || ((navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en'); } catch {}
+document.documentElement.lang = lang;
+
+export const getLang = () => lang;
+export const locale = () => (lang === 'en' ? 'en-US' : 'fr-FR');
+
+export function setLang(l) {
+  lang = l === 'en' ? 'en' : 'fr';
+  document.documentElement.lang = lang;
+  try { localStorage.setItem(KEY, lang); } catch {}
+}
+
+export function t(fr, vars) {
+  let s = lang === 'en' ? (EN[fr] ?? fr) : fr;
+  if (vars) s = s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+  return s;
+}

@@ -4,19 +4,21 @@ import { current, weeklyVolume, observedKgPerWeek } from '../metrics.js';
 import { ask, hasKey, userContext, extractJson, stripJson } from '../ai.js';
 import { importProgram } from './training.js';
 import { MEALS } from './addfood.js';
-import { esc, md, toast, fmt } from '../ui.js';
+import { esc, md, toast, fmt, nav } from '../ui.js';
+import { icon } from '../icons.js';
+import { t } from '../i18n.js';
 import { MUSCLES, isoDate } from '../science.js';
 
 let busy = false;
 
 const RECIPE_FORMAT = 'Termine par un bloc ```json {"name": string, "portions": number, "per_portion": {"kcal": number, "p": number, "c": number, "f": number, "fib": number}} ``` (valeurs par portion, en grammes pour p/c/f/fib).';
-const PROGRAM_FORMAT = `Termine par un bloc \`\`\`json {"name": string, "days": [{"name": string, "exercises": [{"name": string, "muscle": un de ${JSON.stringify(MUSCLES)}, "sets": number, "repMin": number, "repMax": number, "upper": boolean}]}]} \`\`\``;
+const PROGRAM_FORMAT = `Termine par un bloc \`\`\`json {"name": string, "days": [{"name": string, "exercises": [{"name": string, "muscle": une de ces clés exactes ${JSON.stringify(MUSCLES)}, "sets": number, "repMin": number, "repMax": number, "upper": boolean}]}]} \`\`\``;
 
 function remaining() {
   const { targets } = current();
   if (!targets) return null;
-  const t = sum(dayLog().meals);
-  return { kcal: targets.kcal - t.kcal, proteines_g: targets.protein - t.p, glucides_g: targets.carbs - t.c, lipides_g: targets.fat - t.f, fibres_g: targets.fiber - t.fib };
+  const s = sum(dayLog().meals);
+  return { kcal: targets.kcal - s.kcal, proteines_g: targets.protein - s.p, glucides_g: targets.carbs - s.c, lipides_g: targets.fat - s.f, fibres_g: targets.fiber - s.fib };
 }
 
 function weekSummary() {
@@ -35,27 +37,28 @@ function weekSummary() {
 
 export const ACTIONS = {
   recette: {
-    label: '🍽️ Recette pour mes macros restantes',
-    prompt: () => `Propose UNE recette simple (≤ 30 min, ingrédients de supermarché français) qui s'insère dans mes macros restantes aujourd'hui : ${JSON.stringify(remaining())}. Donne ingrédients avec grammages, étapes courtes, et macros par portion calculées à partir de Ciqual/USDA. Si utile, cite une étude sur un point nutritionnel clé (ex : répartition protéique). ${RECIPE_FORMAT}`,
+    label: 'Recette pour mes macros restantes', icon: 'meal',
+    prompt: () => `Propose UNE recette simple (≤ 30 min, ingrédients de supermarché courants) qui s'insère dans mes macros restantes aujourd'hui : ${JSON.stringify(remaining())}. Donne ingrédients avec grammages, étapes courtes, et macros par portion calculées à partir de Ciqual/USDA. Si utile, cite une étude sur un point nutritionnel clé (ex : répartition protéique). ${RECIPE_FORMAT}`,
     search: true,
   },
   programme: {
-    label: '🏋️ Générer mon programme',
+    label: 'Générer mon programme', icon: 'dumbbell',
     prompt: () => `Conçois mon programme de musculation fondé sur les preuves (volume 10–20 séries/muscle/sem, fréquence ≥ 2×/sem par muscle, plages de reps et RIR adaptés à mon objectif). Tiens compte de mon nombre de séances par semaine et de mon matériel. Explique brièvement les choix avec références (Schoenfeld, ACSM…). ${PROGRAM_FORMAT}`,
     search: true,
   },
   bilan: {
-    label: '📊 Bilan de ma semaine',
+    label: 'Bilan de ma semaine', icon: 'chart',
     prompt: () => `Fais mon bilan hebdomadaire à partir de ces données : ${JSON.stringify(weekSummary())}. 1) Ce qui va bien, 2) ce qui bloque, 3) 3 ajustements concrets max (kcal, macros, entraînement) avec la raison scientifique. Rappelle que la tendance de poids prime sur les pesées isolées.`,
     search: false,
   },
 };
 
-async function send(root, go, text, { search = true } = {}) {
+async function send(root, go, text, { search = true, label = null } = {}) {
   if (busy) return;
-  if (!hasKey()) { toast('Ajoute ta clé API dans Profil'); return go('profile'); }
+  if (!hasKey()) { toast(t('Ajoute ta clé API dans Profil')); return go('profile'); }
   busy = true;
-  state.chat.push({ id: uid(), role: 'user', text });
+  // `label` = texte court affiché dans la bulle (l'invite complète part à l'API).
+  state.chat.push({ id: uid(), role: 'user', text, label });
   state.chat.push({ id: uid(), role: 'assistant', text: '', pending: true });
   render(root, go);
   const history = state.chat.filter((m) => !m.pending).slice(-10).map((m) => ({ role: m.role, content: m.text || '…' }));
@@ -71,31 +74,32 @@ async function send(root, go, text, { search = true } = {}) {
     if (data?.per_portion) msg.action = { type: 'recipe', data };
     else if (data?.days) msg.action = { type: 'program', data };
   } catch (err) {
-    msg.text = '⚠️ ' + err.message; msg.error = true;
+    msg.text = '⚠️ ' + t(err.message); msg.error = true;
   }
   delete msg.pending; busy = false;
   state.chat = state.chat.slice(-60);
   save();
   // L'utilisateur a pu changer d'onglet pendant la requête.
   if (root.dataset.view === 'coach') render(root, go);
-  else toast('Réponse du coach prête ✓');
+  else toast(t('Réponse du coach prête ✓'));
 }
 
 export function render(root, go, autoAction) {
   root.innerHTML = `
-    <header class="top"><h1>Coach</h1><button class="btn ghost small" data-a="clear">Effacer</button></header>
-    ${!hasKey() ? `<div class="card cta"><b>Active l'IA</b><p class="muted">Colle ta clé API Claude dans Profil (console.anthropic.com → API Keys). Coût : quelques centimes par demande.</p><button class="btn primary" data-a="profile">Ajouter ma clé</button></div>` : ''}
-    <div class="chips wrap">${Object.entries(ACTIONS).map(([k, a]) => `<button class="chip" data-act="${k}">${a.label}</button>`).join('')}</div>
-    <div class="chat">${state.chat.map((m) => `<div class="msg ${m.role} ${m.error ? 'err' : ''}">
-      ${m.pending ? '<span class="dots"><i></i><i></i><i></i></span><small class="muted">Recherche dans la littérature…</small>' : m.role === 'user' ? esc(m.text.length > 280 ? m.text.slice(0, 280) + '…' : m.text) : md(m.text)}
-      ${m.sources?.length ? `<details class="sources"><summary>${m.sources.length} source(s)</summary><ol>${m.sources.filter((s) => /^https?:/i.test(s.url)).map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ol></details>` : ''}
-      ${m.action?.type === 'recipe' ? `<div class="row"><select data-meal="${m.id}">${Object.entries(MEALS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select><button class="btn small primary" data-addrecipe="${m.id}">＋ 1 portion (${fmt(m.action.data.per_portion.kcal)} kcal)</button></div>` : ''}
-      ${m.action?.type === 'program' ? `<button class="btn small primary" data-useprog="${m.id}">Utiliser ce programme</button>` : ''}
-    </div>`).join('') || '<p class="muted center">Pose une question (nutrition, entraînement, récupération…) ou choisis une action ci-dessus. Les réponses s\'appuient sur PubMed, ANSES, EFSA, OMS et sont sourcées.</p>'}</div>
+    ${nav(t('Coach'), { right: state.chat.length ? `<button class="btn plain" data-a="clear">${t('Effacer')}</button>` : '' })}
+    ${!hasKey() ? `<div class="cta"><b class="headline">${t("Active l'IA")}</b><p>${t('Colle ta clé API Claude dans Profil (console.anthropic.com → API Keys). Coût : quelques centimes par demande.')}</p><button class="btn filled" data-a="profile">${t('Ajouter ma clé')}</button></div>` : ''}
+    <div class="chips">${Object.entries(ACTIONS).map(([k, a]) => `<button class="chip" data-act="${k}">${icon(a.icon)} ${t(a.label)}</button>`).join('')}</div>
+    <div class="chat" aria-live="polite">${state.chat.map((m) => `<div class="msg ${m.role} ${m.error ? 'err' : ''}">
+      ${m.pending ? `<span class="typing-dots" aria-label="${t('Recherche dans la littérature…')}"><i></i><i></i><i></i></span>`
+        : m.role === 'user' ? `<span class="ut">${esc(m.label ? t(m.label) : m.text.length > 280 ? m.text.slice(0, 280) + '…' : m.text)}</span>` : md(m.text)}
+      ${m.sources?.length ? `<details class="sources"><summary>${icon('flask')} ${m.sources.length} ${t('source(s)')}</summary><ol>${m.sources.filter((s) => /^https?:/i.test(s.url)).map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ol></details>` : ''}
+      ${m.action?.type === 'recipe' ? `<div class="row"><select class="input" data-meal="${m.id}" aria-label="${t('Ajouter')}">${Object.entries(MEALS).map(([k, l]) => `<option value="${k}">${t(l)}</option>`).join('')}</select><button class="btn filled" data-addrecipe="${m.id}">${icon('plus')} ${t('1 portion ({k} kcal)', { k: fmt(m.action.data.per_portion.kcal) })}</button></div>` : ''}
+      ${m.action?.type === 'program' ? `<div class="row"><button class="btn filled" data-useprog="${m.id}">${t('Utiliser ce programme')}</button></div>` : ''}
+    </div>`).join('') || `<p class="empty footnote">${t("Pose une question (nutrition, entraînement, récupération…) ou choisis une action ci-dessus. Les réponses s'appuient sur PubMed, ANSES, EFSA, OMS et sont sourcées.")}</p>`}</div>
     <form class="composer" data-f="chat">
-      <textarea name="q" rows="1" placeholder="Ta question au coach…" ${busy ? 'disabled' : ''}></textarea>
-      <label class="toggle" title="Recherche scientifique"><input type="checkbox" name="s" checked> 🔬</label>
-      <button class="btn primary" ${busy ? 'disabled' : ''} aria-label="Envoyer">↑</button></form>`;
+      <label class="sci" title="${t('Recherche scientifique')}">${icon('flask')}<input type="checkbox" name="s" checked aria-label="${t('Recherche scientifique')}"></label>
+      <textarea name="q" rows="1" placeholder="${t('Ta question au coach…')}" ${busy ? 'disabled' : ''} aria-label="${t('Ta question au coach…')}"></textarea>
+      <button class="send" ${busy ? 'disabled' : ''} aria-label="${t('Envoyer')}">${icon('send')}</button></form>`;
 
   requestAnimationFrame(() => root.scrollTo?.(0, root.scrollHeight));
   const form = root.querySelector('[data-f=chat]');
@@ -111,25 +115,26 @@ export function render(root, go, autoAction) {
     if (q) send(root, go, q, { search: form.s.checked });
   };
   root.onclick = (e) => {
-    const t = e.target.closest('[data-a],[data-act],[data-addrecipe],[data-useprog]');
-    if (!t) return;
-    if (t.dataset.a === 'profile') return go('profile');
-    if (t.dataset.a === 'clear') { if (confirm('Effacer la conversation ?')) { state.chat = []; save(); render(root, go); } return; }
-    if (t.dataset.act) {
-      const a = ACTIONS[t.dataset.act];
-      if (t.dataset.act === 'recette' && !remaining()) { toast('Complète ton profil d\'abord'); return go('profile'); }
-      return send(root, go, a.prompt(), { search: a.search });
-    }
-    const m = state.chat.find((x) => x.id === (t.dataset.addrecipe || t.dataset.useprog));
+    const el = e.target.closest('[data-a],[data-act],[data-addrecipe],[data-useprog]');
+    if (!el) return;
+    if (el.dataset.a === 'profile') return go('profile');
+    if (el.dataset.a === 'clear') { if (confirm(t('Effacer la conversation ?'))) { state.chat = []; save(); render(root, go); } return; }
+    if (el.dataset.act) return runAction(el.dataset.act);
+    const m = state.chat.find((x) => x.id === (el.dataset.addrecipe || el.dataset.useprog));
     if (!m) return;
-    if (t.dataset.addrecipe) {
+    if (el.dataset.addrecipe) {
       const d = m.action.data, pp = d.per_portion, meal = root.querySelector(`[data-meal="${m.id}"]`).value;
       dayLog().meals.push({ id: uid(), meal, name: d.name + ' (1 portion)', grams: 0, source: 'Recette IA', kcal: Math.round(pp.kcal), p: pp.p, c: pp.c, f: pp.f, fib: pp.fib || 0 });
-      save(); toast('Ajouté au journal ✓');
+      save(); toast(t('Ajouté au journal ✓'));
     }
-    if (t.dataset.useprog) {
-      try { importProgram(m.action.data); toast('Programme activé ✓'); go('training'); } catch (err) { toast(err.message); }
+    if (el.dataset.useprog) {
+      try { importProgram(m.action.data); toast(t('Programme activé ✓')); go('training'); } catch (err) { toast(err.message); }
     }
   };
-  if (autoAction && ACTIONS[autoAction] && hasKey()) send(root, go, ACTIONS[autoAction].prompt(), { search: ACTIONS[autoAction].search });
+  const runAction = (k) => {
+    const a = ACTIONS[k];
+    if (k === 'recette' && !remaining()) { toast(t("Complète ton profil d'abord")); return go('profile'); }
+    send(root, go, a.prompt(), { search: a.search, label: a.label });
+  };
+  if (autoAction && ACTIONS[autoAction] && hasKey()) runAction(autoAction);
 }

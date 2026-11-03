@@ -1,8 +1,10 @@
 // Onglet Aujourd'hui : kcal restantes, macros, eau, repas.
-import { state, save, dayLog, sum, today } from '../store.js';
+import { state, save, dayLog, sum, today, uid } from '../store.js';
 import { current } from '../metrics.js';
 import { isoDate, parseDate } from '../science.js';
-import { esc, fmt, ring, bar, fmtDate, toast } from '../ui.js';
+import { esc, fmt, ring, bar, fmtDate, toast, nav, group } from '../ui.js';
+import { icon } from '../icons.js';
+import { t } from '../i18n.js';
 import { openAddFood, MEALS } from './addfood.js';
 
 let date = null;
@@ -16,39 +18,46 @@ export function render(root, go) {
   const { targets, energy, blocked } = current();
   const shift = (n) => { const d = parseDate(date); d.setDate(d.getDate() + n); date = isoDate(d); render(root, go); };
   const isToday = date === today();
+  const title = isToday ? t("Aujourd'hui") : fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long' });
+  const left = targets ? Math.abs(targets.kcal - tot.kcal) : 0;
 
   root.innerHTML = `
-    <header class="top"><button class="icon" data-a="prev" aria-label="Jour précédent">‹</button>
-      <h1>${isToday ? "Aujourd'hui" : esc(fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long' }))}</h1>
-      <button class="icon" data-a="next" aria-label="Jour suivant" ${isToday ? 'disabled' : ''}>›</button></header>
-    ${blocked ? `<div class="card cta"><b>Objectifs chiffrés désactivés</b><p class="muted">Ta situation (âge < 18 ans, grossesse/allaitement, trouble alimentaire ou pathologie) nécessite un suivi par un professionnel de santé. Le journal reste disponible.</p></div>` : !targets ? `<div class="card cta"><b>Complète ton profil</b><p class="muted">Âge, taille, poids, activité et objectif pour calculer tes besoins.</p><button class="btn primary" data-a="profile">Compléter</button></div>` : `
-    <section class="card summary">
-      ${ring(tot.kcal, targets.kcal, fmt(Math.abs(targets.kcal - tot.kcal)), tot.kcal > targets.kcal ? 'kcal en trop' : 'kcal restantes')}
-      <div class="macros">
-        ${bar('Protéines', tot.p, targets.protein, 'g', 'p')}
-        ${bar('Glucides', tot.c, targets.carbs, 'g', 'c')}
-        ${bar('Lipides', tot.f, targets.fat, 'g', 'f')}
-        ${bar('Fibres', tot.fib, targets.fiber, 'g', 'fib')}
-      </div>
-      <p class="muted small span">Objectif ${fmt(targets.kcal)} kcal · mangé ${fmt(tot.kcal)} · dépense ${energy.method === 'adaptatif' ? 'adaptative' : 'estimée'} ${fmt(targets.tdee)} kcal${targets.floored ? ' · plancher de sécurité appliqué' : ''}</p>
-    </section>`}
-    <section class="card water">
-      <div><b>Eau</b><small class="muted block">${fmt(log.water / 1000, 2)} / ${fmt(targets?.waterL ?? 2, 1)} L (boissons + aliments)</small></div>
-      <div class="row"><button class="btn ghost" data-a="water-">−</button><button class="btn" data-a="water+">+ 250 ml</button></div>
-    </section>
+    ${nav(title, {
+      left: `<button class="icon-btn" data-a="prev" aria-label="${t('Jour précédent')}">${icon('chevronLeft')}</button>`,
+      right: `<button class="icon-btn" data-a="next" aria-label="${t('Jour suivant')}" ${isToday ? 'disabled' : ''}>${icon('chevronRight')}</button>`,
+    })}
+    ${blocked ? `<div class="cta"><b class="headline">${t('Objectifs chiffrés désactivés')}</b><p>${t('Ta situation (âge < 18 ans, grossesse/allaitement, trouble alimentaire ou pathologie) nécessite un suivi par un professionnel de santé. Le journal reste disponible.')}</p></div>`
+    : !targets ? `<div class="cta"><b class="headline">${t('Complète ton profil')}</b><p>${t('Âge, taille, poids, activité et objectif pour calculer tes besoins.')}</p><button class="btn filled" data-a="profile">${t('Compléter')}</button></div>`
+    : group('', `
+      <div class="summary">
+        ${ring(tot.kcal, targets.kcal, fmt(left), tot.kcal > targets.kcal ? t('kcal en trop') : t('kcal restantes'))}
+        <div class="macros">
+          ${bar(t('Protéines'), tot.p, targets.protein, 'g', 'p')}
+          ${bar(t('Glucides'), tot.c, targets.carbs, 'g', 'c')}
+          ${bar(t('Lipides'), tot.f, targets.fat, 'g', 'f')}
+          ${bar(t('Fibres'), tot.fib, targets.fiber, 'g', 'fib')}
+        </div>
+      </div>`,
+      `${t('Objectif')} ${fmt(targets.kcal)} kcal · ${t('mangé')} ${fmt(tot.kcal)} · ${energy.method === 'adaptatif' ? t('dépense adaptative') : t('dépense estimée')} ${fmt(targets.tdee)} kcal${targets.floored ? ' · ' + t('plancher de sécurité appliqué') : ''}`)}
+    ${group('', `<div class="cells"><div class="cell with-icon">
+      <span class="badge bg-teal">${icon('drop')}</span>
+      <div class="grow"><span class="t headline">${t('Eau')}</span><span class="s num">${fmt(log.water / 1000, 2)} / ${fmt(targets?.waterL ?? 2, 1)} L ${t('(boissons + aliments)')}</span></div>
+      <div class="stepper"><button class="icon-btn round" data-a="water-" aria-label="−250 ml">${icon('minus')}</button><button class="icon-btn round" data-a="water+" aria-label="+250 ml">${icon('plus')}</button></div>
+    </div></div>`)}
     ${Object.entries(MEALS).map(([k, label]) => {
       const items = log.meals.filter((m) => m.meal === k);
-      const t = sum(items);
-      return `<section class="card meal"><div class="meal-head"><b>${label}</b><span class="muted">${fmt(t.kcal)} kcal</span></div>
-        ${items.length ? `<ul class="list">${items.map((m) => `<li><div><b>${esc(m.name)}</b><small>${fmt(m.grams)} g · ${fmt(m.kcal)} kcal · P ${fmt(m.p, 1)} g</small></div><button class="icon del" data-del="${esc(m.id)}" aria-label="Supprimer">✕</button></li>`).join('')}</ul>` : ''}
-        <button class="btn ghost wide" data-add="${k}">＋ Ajouter</button></section>`;
+      const s = sum(items);
+      return group(`${t(label)}<b class="num">${fmt(s.kcal)} kcal</b>`, `<ul class="cells">
+        ${items.map((m) => `<li class="cell"><div class="grow"><span class="t">${esc(m.name)}</span><span class="s num">${m.grams ? fmt(m.grams) + ' g · ' : ''}${fmt(m.kcal)} kcal · P ${fmt(m.p, 1)} g</span></div>
+          <button class="icon-btn" data-del="${esc(m.id)}" aria-label="${t('Supprimer')} ${esc(m.name)}">${icon('trash')}</button></li>`).join('')}
+        <li class="cell action" data-add="${k}" role="button">${icon('plus')} ${t('Ajouter')}</li></ul>`);
     }).join('')}
-    <button class="btn ghost wide" data-a="copy">⧉ Copier les repas de la veille</button>`;
+    ${group('', `<div class="cells"><div class="cell action" data-a="copy" role="button">${icon('copy')} ${t('Copier les repas de la veille')}</div></div>`)}`;
 
   root.onclick = (e) => {
-    const t = e.target.closest('[data-a],[data-add],[data-del]');
-    if (!t) return;
-    const a = t.dataset.a;
+    const el = e.target.closest('[data-a],[data-add],[data-del]');
+    if (!el) return;
+    const a = el.dataset.a;
     if (a === 'prev') return shift(-1);
     if (a === 'next') return shift(1);
     if (a === 'profile') return go('profile');
@@ -56,11 +65,11 @@ export function render(root, go) {
     if (a === 'copy') {
       const d = parseDate(date); d.setDate(d.getDate() - 1);
       const prev = state.logs[isoDate(d)];
-      if (!prev?.meals.length) return toast('Rien à copier pour la veille');
-      prev.meals.forEach((m) => log.meals.push({ ...m, id: Math.random().toString(36).slice(2, 10) }));
-      save(); toast(`${prev.meals.length} aliments copiés`); return render(root, go);
+      if (!prev?.meals.length) return toast(t('Rien à copier pour la veille'));
+      prev.meals.forEach((m) => log.meals.push({ ...m, id: uid() }));
+      save(); toast(t('{n} aliments copiés', { n: prev.meals.length })); return render(root, go);
     }
-    if (t.dataset.add) return openAddFood(t.dataset.add, date, () => render(root, go));
-    if (t.dataset.del) { log.meals = log.meals.filter((m) => m.id !== t.dataset.del); save(); render(root, go); }
+    if (el.dataset.add) return openAddFood(el.dataset.add, date, () => render(root, go));
+    if (el.dataset.del) { log.meals = log.meals.filter((m) => m.id !== el.dataset.del); save(); render(root, go); }
   };
 }
