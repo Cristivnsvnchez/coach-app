@@ -117,6 +117,23 @@ export function targets(profile, tdee = profile && isProfileComplete(profile) ? 
   };
 }
 
+// Objectifs personnalisés : l'utilisateur peut remplacer kcal / protéines / lipides / glucides.
+// Champs vides = valeur calculée. Glucides vides = reste des kcal. Plancher de sécurité toujours appliqué.
+export function applyCustom(t, custom, sex) {
+  if (!t || !custom?.enabled) return t;
+  const n = (v) => (Number(v) > 0 ? Number(v) : null);
+  const floor = sex === 'F' ? 1200 : 1500;
+  const protein = n(custom.protein) ?? t.protein, fat = n(custom.fat) ?? t.fat;
+  let kcal = n(custom.kcal), carbs = n(custom.carbs);
+  if (!kcal) kcal = carbs ? protein * 4 + fat * 9 + carbs * 4 : t.kcal;
+  let floored = false;
+  if (kcal < floor) { kcal = floor; floored = true; }
+  if (!carbs) carbs = Math.max(0, (kcal - protein * 4 - fat * 9) / 4);
+  return { ...t, kcal: Math.round(kcal), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs),
+    fiber: Math.max(30, Math.round((14 * kcal) / 1000)), floored, custom: true,
+    mismatch: Math.abs(protein * 4 + fat * 9 + carbs * 4 - kcal) > 50 }; // macros incohérentes avec les kcal saisies
+}
+
 // Poids de référence : fourchette IMC OMS + formules Devine 1974, Robinson 1983, Hamwi 1964.
 export function idealRange({ height, sex }) {
   const m2 = (height / 100) ** 2;

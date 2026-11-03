@@ -21,6 +21,7 @@ const empty = () => ({
   habitLog: {},   // 'YYYY-MM-DD' -> { habitId: true } (cases cochées à la main)
   routines: [],   // [{ id, name, folder, exercises: [{ name, muscle, secondary, type, sets, repMin, repMax, rest, upper }] }]
   customExercises: [], // [{ name, muscle, secondary, equipment, type, upper }]
+  plan: null,     // programme daté : { id, name, goal, start, end, weeks, weekdays, deloadEvery, phases, routineIds }
 });
 
 export let state = empty();
@@ -50,6 +51,7 @@ function sanitize(data) {
   for (const k of ['weights', 'workouts', 'chat', 'favorites', 'habits', 'routines', 'customExercises']) if (!Array.isArray(out[k])) out[k] = base[k];
   for (const k of ['profile', 'settings', 'foods', 'logs', 'habitLog']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   out.settings = { ...base.settings, ...out.settings };
+  if (out.plan && (!Array.isArray(out.plan.routineIds) || !Array.isArray(out.plan.weekdays))) out.plan = null;
   for (const d in out.logs) {
     const l = out.logs[d];
     if (!l || !Array.isArray(l.meals)) out.logs[d] = { meals: [], water: Number(l?.water) || 0 };

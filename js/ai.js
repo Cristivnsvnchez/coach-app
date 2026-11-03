@@ -24,7 +24,11 @@ Règles :
 - Appuie-toi sur des preuves : méta-analyses, essais contrôlés, positions ISSN/ACSM/OMS/EFSA/ANSES. Quand tu cherches sur le web, cite tes sources (auteur, année, revue) et distingue le niveau de preuve.
 - Valeurs nutritionnelles : préfère Ciqual (ANSES) ou USDA FoodData Central ; indique la source.
 - Ne fais pas de diagnostic médical. Si l'utilisateur est mineur, enceinte/allaitante, a un trouble du comportement alimentaire, une maladie chronique ou un IMC < 18,5, recommande un professionnel de santé et reste prudent.
-- Ne propose jamais moins de 1200 kcal/j (femme) ou 1500 kcal/j (homme) sans suivi médical, ni plus de 1 % de perte de poids par semaine.`;
+- Ne propose jamais moins de 1200 kcal/j (femme) ou 1500 kcal/j (homme) sans suivi médical, ni plus de 1 % de perte de poids par semaine.
+Posture de coach :
+- Tu raisonnes comme un préparateur physique expérimenté : périodisation, surcharge progressive, gestion de la fatigue, récupération, technique, adhérence.
+- Avant de proposer un plan ou un conseil personnalisé, vérifie que tu connais l'essentiel : objectif précis et échéance, niveau et historique d'entraînement, jours et durée disponibles, blessures ou douleurs, matériel, sommeil/stress, préférences. S'il manque une information qui changerait vraiment ta réponse, pose d'abord 1 à 3 questions courtes et précises (avec des choix quand c'est possible) et attends la réponse.
+- Explique brièvement le « pourquoi » de chaque choix, en langage simple, puis donne l'action concrète.`;
 
 export const hasKey = () => !!state.settings.apiKey;
 
@@ -189,4 +193,36 @@ export async function estimateMeal({ imageB64, description }) {
 Si une quantité est incertaine, prends une portion standard et dis-le dans "note" (1 phrase).` });
   const r = await ask([{ role: 'user', content }], { json: MEAL_SCHEMA, maxTokens: 4000, effort: 'low' });
   try { return JSON.parse(r.text); } catch { throw new Error('Réponse de l\'IA illisible, réessaie.'); }
+}
+
+// ---- Programme : questions du coach puis génération (sorties JSON structurées) ----
+const Q_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['questions'],
+  properties: { questions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['q', 'options'],
+    properties: { q: { type: 'string' }, options: { type: 'array', items: { type: 'string' } } } } } },
+};
+
+// Le coach lit le brief et pose 0 à 3 questions déterminantes (avec options de réponse si possible).
+export async function programQuestions(brief) {
+  const r = await ask([{ role: 'user', content: `Je veux un programme d'entraînement. Voici mon brief : ${JSON.stringify(brief)}. Contexte : ${userContext()}.
+Avant de concevoir quoi que ce soit, pose-moi uniquement les questions (0 à 3) dont la réponse changerait vraiment le programme (ex. blessure à préciser, expérience sur les mouvements de base, échéance ou épreuve précise, préférence d'exercices, sport pratiqué à côté). Fournis 2 à 4 options courtes quand c'est pertinent (sinon une liste vide). Si le brief est complet, renvoie une liste vide.` }],
+  { json: Q_SCHEMA, maxTokens: 2000, effort: 'medium' });
+  try { return JSON.parse(r.text).questions.slice(0, 3); } catch { throw new Error("Réponse de l'IA illisible, réessaie."); }
+}
+
+export async function programGenerate(brief, answers, muscles, library) {
+  const schema = {
+    type: 'object', additionalProperties: false, required: ['name', 'rationale', 'days'],
+    properties: {
+      name: { type: 'string' }, rationale: { type: 'string' },
+      days: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['name', 'exercises'], properties: {
+        name: { type: 'string' },
+        exercises: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['name', 'muscle', 'sets', 'repMin', 'repMax', 'rest'], properties: {
+          name: { type: 'string' }, muscle: { type: 'string', enum: muscles }, sets: { type: 'integer' }, repMin: { type: 'integer' }, repMax: { type: 'integer' }, rest: { type: 'integer' } } } } } } },
+    },
+  };
+  const r = await ask([{ role: 'user', content: `Conçois mon programme. Brief : ${JSON.stringify(brief)}. Réponses à tes questions : ${JSON.stringify(answers)}. Contexte : ${userContext()}.
+Contraintes : exactement ${brief.weekdays.length} séances différentes ou moins (elles tourneront sur mes jours), chaque séance tient en ${brief.minutes} min échauffement compris, 10–20 séries/muscle/semaine pour l'hypertrophie, fréquence ≥ 2×/semaine par muscle si possible, adapte aux blessures. Utilise de préférence ces noms d'exercices exacts : ${library.join(', ')}. "rest" en secondes. "rationale" : 3 à 5 phrases simples expliquant les choix (structure, volume, progression, décharges).` }],
+  { json: schema, maxTokens: 6000, effort: 'high' });
+  try { return JSON.parse(r.text); } catch { throw new Error("Réponse de l'IA illisible, réessaie."); }
 }

@@ -3,7 +3,7 @@ import * as S from '../science.js';
 import { state, save, replace, today } from '../store.js';
 import { current } from '../metrics.js';
 import { MODELS, usage, testConnection } from '../ai.js';
-import { esc, fmt, toast, nav, group } from '../ui.js';
+import { esc, fmt, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, getLang, setLang } from '../i18n.js';
 
@@ -12,7 +12,7 @@ const rateOpts = (goal, sel) => opt(Object.fromEntries((S.GOALS[goal]?.rates || 
 
 export function render(root, go) {
   const p = state.profile, st = state.settings;
-  const { targets, energy } = current();
+  const { targets, energy, auto } = current();
   const num = (name, label, val, attrs = '') => `<label class="cell field"><span>${label}</span><input name="${name}" type="number" inputmode="decimal" value="${val ?? ''}" ${attrs}></label>`;
   const sel = (name, label, options) => `<label class="cell field"><span>${label}</span><select name="${name}">${options}</select></label>`;
   const txt = (name, label, val, ph = '') => `<label class="cell field"><span>${label}</span><input name="${name}" value="${esc(val ?? '')}" placeholder="${esc(ph)}"></label>`;
@@ -22,11 +22,13 @@ export function render(root, go) {
     ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
       <button type="button" data-lang="fr" class="${getLang() === 'fr' ? 'on' : ''}" aria-selected="${getLang() === 'fr'}">Français</button>
       <button type="button" data-lang="en" class="${getLang() === 'en' ? 'on' : ''}" aria-selected="${getLang() === 'en'}">English</button></div></div></div>`)}
-    ${targets ? group(t('Tes besoins calculés'), `<div class="cells"><div class="stats">
+    ${targets ? group(targets.custom ? t('Mes objectifs (personnalisés)') : t('Tes besoins calculés'), `<div class="cells"><div class="stats">
         <div><small>${t('Dépense')}</small><b>${fmt(targets.tdee)}</b><small>${energy.method === 'adaptatif' ? t('adaptative ({n} j)', { n: energy.loggedDays }) : t('formule')}</small></div>
         <div><small>${t('Objectif')}</small><b>${fmt(targets.kcal)}</b><small>${t('kcal/j')}</small></div>
         <div><small>${t('Protéines')}</small><b>${fmt(targets.protein)} g</b><small>${fmt(targets.protein / p.weight, 1)} g/kg</small></div>
-      </div></div>`,
+      </div>
+      <div class="cell"><span class="grow subhead secondary num">${t('Lipides')} ${fmt(targets.fat)} g · ${t('Glucides')} ${fmt(targets.carbs)} g · ${t('Fibres')} ${fmt(targets.fiber)} g</span></div>
+      <div class="cell action" data-a="edit-needs" role="button">${icon('pencil')} ${t('Modifier mes objectifs')}</div></div>`,
       t("Formule de départ : Mifflin-St Jeor{k} × niveau d'activité FAO/OMS. Après 10 jours de saisie et des pesées sur ≥ 7 jours, la dépense s'ajuste à tes résultats réels (apport moyen − variation de la tendance × 7700 kcal/kg).", { k: p.bodyFat ? ' / Katch-McArdle' : '' })) : ''}
     <form data-f="profile">
       ${group(t('Mes informations'), `<div class="cells">
@@ -96,6 +98,7 @@ export function render(root, go) {
     const lg = e.target.closest('[data-lang]');
     if (lg) { setLang(lg.dataset.lang); return go('profile'); }
     const a = e.target.closest('[data-a]')?.dataset.a;
+    if (a === 'edit-needs') return editNeeds(auto, () => render(root, go));
     if (a === 'test') {
       const f = root.querySelector('[data-f=ai]');
       state.settings.apiKey = f.apiKey.value.trim(); save();
@@ -127,4 +130,31 @@ export function render(root, go) {
       toast(t('Sauvegarde restaurée')); render(root, go);
     } catch (err) { toast(t('Import impossible : {e}', { e: err.message })); }
   };
+}
+
+// Modifier ses objectifs : champs vides = valeur calculée ; glucides vides = reste des kcal.
+function editNeeds(auto, done) {
+  const c = state.profile.custom || {};
+  const f = (k, label, unit) => `<label class="cell field"><span>${label}</span><input name="${k}" type="number" inputmode="numeric" value="${c.enabled && c[k] ? c[k] : ''}" placeholder="${fmt(auto[k])} ${unit}"></label>`;
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Mes objectifs')}</h3></div>
+    <form>${group('', `<div class="cells">${f('kcal', t('Calories'), 'kcal')}${f('protein', t('Protéines'), 'g')}${f('fat', t('Lipides'), 'g')}${f('carbs', t('Glucides'), 'g')}</div>`,
+      t('Laisse un champ vide pour garder la valeur calculée (en gris). Glucides vides = le reste de tes calories. Par sécurité, les calories ne descendent jamais sous 1200 (femme) / 1500 (homme).'))}
+      <p class="footnote secondary live-check" style="margin:-.75rem .25rem 1rem"></p>
+      <button class="btn filled large">${t('Enregistrer')}</button></form>
+    ${c.enabled ? group('', `<div class="cells"><div class="cell action" data-a="reset-needs" role="button">${t('Revenir au calcul automatique')}</div></div>`) : ''}`, done);
+  const form = s.querySelector('form');
+  const read = () => Object.fromEntries(['kcal', 'protein', 'fat', 'carbs'].map((k) => [k, parseFloat(form[k].value) || null]));
+  const check = () => {
+    const r = S.applyCustom(auto, { enabled: true, ...read() }, state.profile.sex);
+    s.querySelector('.live-check').textContent = `→ ${fmt(r.kcal)} kcal · P ${fmt(r.protein)} · L ${fmt(r.fat)} · G ${fmt(r.carbs)} g`
+      + (r.mismatch ? ' · ' + t('Attention : tes macros ne correspondent pas aux calories saisies.') : '') + (r.floored ? ' · ' + t('plancher de sécurité appliqué') : '');
+  };
+  form.addEventListener('input', check); check();
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const v = read();
+    state.profile.custom = Object.values(v).some(Boolean) ? { enabled: true, ...v } : null;
+    save(); toast(t('Objectifs enregistrés')); s.close();
+  };
+  s.querySelector('[data-a=reset-needs]')?.addEventListener('click', () => { state.profile.custom = null; save(); s.close(); });
 }

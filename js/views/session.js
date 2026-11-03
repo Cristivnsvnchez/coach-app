@@ -38,9 +38,10 @@ function sessionExercise(src) {
   return { ...ex, why, whyVars, sets: Array.from({ length: n }, () => ({ kg: load, reps, rir: 2, type: 'normal', done: false })) };
 }
 
-export function startWorkout(routine = null) {
-  active = { id: uid(), name: routine?.name || 'Séance libre', routineId: routine?.id || null, date: today(), start: Date.now(),
-    exercises: (routine?.exercises || []).map(sessionExercise) };
+// deload : semaine de décharge du programme → ~60 % des séries (au moins 1), charges inchangées.
+export function startWorkout(routine = null, { deload = false } = {}) {
+  active = { id: uid(), name: routine?.name || 'Séance libre', routineId: routine?.id || null, date: today(), start: Date.now(), deload,
+    exercises: (routine?.exercises || []).map((e) => sessionExercise(deload ? { ...e, sets: Math.max(1, Math.round((e.sets || 3) * 0.6)) } : e)) };
   persist();
 }
 
@@ -82,6 +83,7 @@ export function renderSession(root, go, back) {
       left: `<button class="btn plain" data-a="discard">${t('Annuler')}</button>`,
       right: `<button class="btn filled" style="min-height:34px;border-radius:17px" data-a="finish">${t('Terminer')}</button>`,
     })}
+    ${active.deload ? `<p class="footnote tint" style="margin:-.5rem 0 .75rem">${t('Semaine de décharge : volume réduit (~60 %).')}</p>` : ''}
     <p class="live-line"><b data-live="dur">${hms(Date.now() - active.start)}</b> · ${fmt(vol)} kg · ${sets} ${t(sets > 1 ? 'séries' : 'série')}</p>
     <div class="rest" hidden role="timer"><div class="rest-bar"></div>
       <button class="icon-btn" data-a="rest-" aria-label="−15 s">−15</button>

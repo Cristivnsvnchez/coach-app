@@ -3,6 +3,7 @@ import { state, save, dayLog, sum, today, uid, intakesByDay } from '../store.js'
 import { current, weeklyVolume, observedKgPerWeek } from '../metrics.js';
 import { ask, hasKey, userContext, extractJson, stripJson } from '../ai.js';
 import { importProgram } from './training.js';
+import { openWizard } from './program.js';
 import { MEALS } from './addfood.js';
 import { esc, md, toast, fmt, nav } from '../ui.js';
 import { icon } from '../icons.js';
@@ -132,6 +133,7 @@ export function render(root, go, autoAction) {
     }
   };
   const runAction = (k) => {
+    if (k === 'programme') return openWizard(() => go('training')); // le coach pose ses questions dans l'assistant
     const a = ACTIONS[k];
     if (k === 'recette' && !remaining()) { toast(t("Complète ton profil d'abord")); return go('profile'); }
     send(root, go, a.prompt(), { search: a.search, label: a.label });

@@ -8,6 +8,8 @@ import { icon } from '../icons.js';
 import { t, locale } from '../i18n.js';
 import { active, startWorkout, renderSession } from './session.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
+import { openWizard, planCard, plannedDays, exportCalendar } from './program.js';
+import { isDeload, weekOf } from '../planner.js';
 
 let month = null; // mois affiché dans le calendrier ('YYYY-MM')
 
@@ -24,13 +26,14 @@ export function render(root, go) {
   const doneNames = [...new Set(ws.flatMap((w) => w.exercises.map((e) => e.name)))];
 
   root.innerHTML = `
-    ${nav(t('Entraînement'), { right: `<button class="btn plain bold" data-a="coach">${icon('sparkles')} ${t('Programme IA')}</button>` })}
+    ${nav(t('Entraînement'), { right: `<button class="btn plain bold" data-a="wizard">${icon('sparkles')} ${t('Programme')}</button>` })}
     <div class="cells stats" style="margin-bottom:1.25rem">
       <div><small>${t('Régularité')}</small><b>${streak} <span class="u">${t('sem.')}</span></b></div>
       <div><small>${t('Repos')}</small><b>${rest ?? '–'} <span class="u">${t('j')}</span></b></div>
       <div><small>${t('Ce mois-ci')}</small><b>${ws.filter((w) => w.date.slice(0, 7) === today().slice(0, 7)).length} <span class="u">${t('séances')}</span></b></div>
     </div>
-    <button class="btn filled large" data-a="empty" style="margin-bottom:1.75rem">${icon('plus')} ${t('Démarrer une séance vide')}</button>
+    ${planCard()}
+    <button class="btn large" data-a="empty" style="margin-bottom:1.75rem">${icon('plus')} ${t('Démarrer une séance vide')}</button>
     ${folders.map((f) => group(esc(t(f || 'Mes routines')), `<ul class="cells">${state.routines.filter((r) => (r.folder || '') === f).map((r) => `
       <li class="cell with-icon"><span class="badge bg-blue">${icon('dumbbell')}</span>
         <button class="grow routine-open" data-edit="${r.id}"><span class="t headline">${esc(t(r.name))}</span>
@@ -49,8 +52,12 @@ export function render(root, go) {
       t("OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem."))}`;
 
   root.onclick = (e) => {
-    const el = e.target.closest('[data-a],[data-start],[data-edit],[data-ex],[data-w],[data-cal]');
+    const el = e.target.closest('[data-a],[data-start],[data-start-plan],[data-edit],[data-ex],[data-w],[data-cal]');
     if (!el) return;
+    if (el.dataset.startPlan) {
+      const deload = isDeload(state.plan, weekOf(state.plan, today()));
+      startWorkout(state.routines.find((r) => r.id === el.dataset.startPlan), { deload }); return render(root, go);
+    }
     if (el.dataset.start) { startWorkout(state.routines.find((r) => r.id === el.dataset.start)); return render(root, go); }
     if (el.dataset.edit) return editRoutine(state.routines.find((r) => r.id === el.dataset.edit), back);
     if (el.dataset.ex) return openExercise(el.dataset.ex);
@@ -58,7 +65,8 @@ export function render(root, go) {
     if (el.dataset.cal) { month = el.dataset.cal; return render(root, go); }
     const a = el.dataset.a;
     if (a === 'empty') { startWorkout(null); return render(root, go); }
-    if (a === 'coach') return go('coach', 'programme');
+    if (a === 'wizard') return openWizard(back);
+    if (a === 'ics') return exportCalendar();
     if (a === 'plates') return platesSheet();
     if (a === 'new-routine') {
       const r = { id: uid(), name: t('Nouvelle routine'), folder: '', exercises: [] };
@@ -74,6 +82,7 @@ function calendar() {
   const first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
   const offset = (first.getDay() + 6) % 7; // lundi en premier
   const trained = new Set(state.workouts.filter((w) => w.date.startsWith(month)).map((w) => +w.date.slice(8)));
+  const planned = plannedDays(month);
   const shift = (n) => { const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
   const dow = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: 'narrow' }));
   const td = today();
@@ -84,7 +93,9 @@ function calendar() {
     <div class="cal-grid">${dow.map((d) => `<span class="caption secondary">${d}</span>`).join('')}
       ${'<span></span>'.repeat(offset)}${Array.from({ length: days }, (_, i) => {
         const d = i + 1, iso = `${month}-${String(d).padStart(2, '0')}`;
-        return `<span class="cal-d ${trained.has(d) ? 'on' : ''} ${iso === td ? 'today' : ''}">${d}</span>`; }).join('')}</div>
+        const pl = planned.get(iso);
+        return `<span class="cal-d ${trained.has(d) ? 'on' : pl ? (iso < td ? 'missed' : 'plan') : ''} ${pl?.deload ? 'deload' : ''} ${iso === td ? 'today' : ''}">${d}</span>`; }).join('')}</div>
+    <div class="cal-legend caption secondary"><span><i class="lg on"></i>${t('Fait')}</span><span><i class="lg plan"></i>${t('Prévu')}</span><span><i class="lg missed"></i>${t('Manqué')}</span></div>
   </div></div>`);
 }
 

@@ -9,7 +9,8 @@ export function current() {
   // Garde-fou : pas d'objectifs chiffrés pour mineurs, grossesse/allaitement, TCA ou pathologie déclarée.
   if (profile.age < 18 || profile.medical) return { profile, targets: null, energy: null, blocked: true };
   const energy = S.adaptiveTdee({ profile, weights: state.weights, intakes: intakesByDay(), today: today() });
-  return { profile, energy, targets: S.targets(profile, energy.tdee) };
+  const auto = S.targets(profile, energy.tdee);
+  return { profile, energy, auto, targets: S.applyCustom(auto, state.profile.custom, profile.sex) };
 }
 
 // Vitesse réelle (kg/sem) d'après la tendance des 21 derniers jours, ou null.

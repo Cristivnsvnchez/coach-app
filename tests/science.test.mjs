@@ -128,3 +128,12 @@ test('série : aujourd\'hui incomplet ne casse pas la série', () => {
   assert.equal(H.streak(r, '2026-01-10'), 2);
   assert.equal(H.streak({ ...r, '2026-01-10': 0.9 }, '2026-01-10'), 3);
 });
+
+test('objectifs personnalisés : glucides = reste, plancher conservé', () => {
+  const t = S.targets(man, 3000);
+  const c = S.applyCustom(t, { enabled: true, kcal: 2200, protein: 180, fat: 70 }, 'M');
+  assert.equal(c.kcal, 2200);
+  assert.equal(c.carbs, Math.round((2200 - 180 * 4 - 70 * 9) / 4));
+  assert.equal(S.applyCustom(t, { enabled: true, kcal: 1000 }, 'M').kcal, 1500);
+  assert.equal(S.applyCustom(t, { enabled: false, kcal: 1000 }, 'M').kcal, t.kcal);
+});
