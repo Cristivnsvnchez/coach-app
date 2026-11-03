@@ -19,6 +19,9 @@ export function render(root, go) {
 
   root.innerHTML = `
     ${nav(t('Profil'))}
+    ${group(t('Apparence'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
+      <button type="button" data-look="classic" class="${(st.look || 'classic') === 'classic' ? 'on' : ''}">${t('Classique')}</button>
+      <button type="button" data-look="glass" class="${st.look === 'glass' ? 'on' : ''}">Liquid Glass</button></div></div></div>`)}
     ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
       <button type="button" data-lang="fr" class="${getLang() === 'fr' ? 'on' : ''}" aria-selected="${getLang() === 'fr'}">Français</button>
       <button type="button" data-lang="en" class="${getLang() === 'en' ? 'on' : ''}" aria-selected="${getLang() === 'en'}">English</button></div></div></div>`)}
@@ -95,6 +98,8 @@ export function render(root, go) {
     save(); toast(t('Réglages IA enregistrés'));
   };
   root.onclick = (e) => {
+    const lk = e.target.closest('[data-look]');
+    if (lk) { state.settings.look = lk.dataset.look; save(); document.documentElement.dataset.look = lk.dataset.look; return render(root, go); }
     const lg = e.target.closest('[data-lang]');
     if (lg) { setLang(lg.dataset.lang); return go('profile'); }
     const a = e.target.closest('[data-a]')?.dataset.a;

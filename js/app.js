@@ -1,5 +1,5 @@
 // Point d'entrée : onglets, barre de navigation au défilement, persistance, service worker.
-import { load, today as todayIso } from './store.js';
+import { load, state, today as todayIso } from './store.js';
 import { icon } from './icons.js';
 import { t } from './i18n.js';
 import * as today from './views/today.js';
@@ -36,6 +36,9 @@ function go(name, arg) {
 main.addEventListener('scroll', () => main.classList.toggle('scrolled', main.scrollTop > 8), { passive: true });
 
 load();
+// Apparence : 'classic' ou 'glass' (Liquid Glass).
+export const applyLook = (look) => { document.documentElement.dataset.look = look || 'classic'; };
+applyLook(state.settings.look);
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');
   if (!b) return;

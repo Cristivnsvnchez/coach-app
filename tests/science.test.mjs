@@ -137,3 +137,17 @@ test('objectifs personnalisés : glucides = reste, plancher conservé', () => {
   assert.equal(S.applyCustom(t, { enabled: true, kcal: 1000 }, 'M').kcal, 1500);
   assert.equal(S.applyCustom(t, { enabled: false, kcal: 1000 }, 'M').kcal, t.kcal);
 });
+
+test('étapes : atteinte auto par la tendance, avance/retard vs date estimée', () => {
+  const trend = S.emaTrend([{ date: '2026-01-01', kg: 90 }, { date: '2026-01-15', kg: 80 }, { date: '2026-01-29', kg: 80 }]);
+  // tendance : 90 → 89 → 88,1 : l'étape 89 est atteinte le 15/01
+  assert.equal(S.reachedOn(trend, 89, true), '2026-01-15');
+  const st = S.milestoneStatus({ kg: 89, date: '2026-01-25' }, trend, -0.5, '2026-01-29', true);
+  assert.equal(st.reached, true);
+  assert.equal(st.deltaDays, -10); // atteinte 10 jours avant l'estimation
+  const st2 = S.milestoneStatus({ kg: 86, date: '2026-02-01' }, trend, -0.5, '2026-01-29', true);
+  assert.equal(st2.reached, false);
+  assert.ok(st2.deltaDays > 0); // en retard sur l'estimation
+  assert.equal(S.milestoneStatus({ kg: 70, done: true, doneOn: '2026-01-20' }, trend, -0.5, '2026-01-29', true).reached, true);
+  assert.equal(S.projection(88, 80, -0.5, '2026-01-29').length, 2);
+});

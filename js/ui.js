@@ -39,12 +39,13 @@ export function bar(label, value, max, unit = 'g', cls = '') {
 }
 
 // Courbe : series = [{ points: [{x: Date|number, y}], cls, dots }], band = {y1, y2} optionnel.
-export function lineChart(series, { height = 180, band = null, yPad = 1 } = {}) {
+export function lineChart(series, { height = 180, band = null, yPad = 1, hline = null } = {}) {
   const all = series.flatMap((s) => s.points);
-  if (all.length < 2) return `<p class="empty footnote">${t('Ajoute au moins 2 pesées pour voir la courbe.')}</p>`;
+  if (all.length < 1) return `<p class="empty footnote">${t('Ajoute au moins 2 pesées pour voir la courbe.')}</p>`;
   const W = 340, H = height, L = 34, R = 8, T = 10, B = 22;
   const xs = all.map((p) => +p.x);
   let ys = all.map((p) => p.y);
+  if (hline) ys = ys.concat(hline.y);
   if (band) ys = ys.concat([band.y1, band.y2].filter((v) => v > Math.min(...ys) - 8 && v < Math.max(...ys) + 8));
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const y0 = Math.min(...ys) - yPad, y1 = Math.max(...ys) + yPad;
@@ -63,7 +64,8 @@ export function lineChart(series, { height = 180, band = null, yPad = 1 } = {}) 
   }).join('');
   const lab = (x, anchor, pos) => `<text x="${pos}" y="${H - 6}" class="axis" text-anchor="${anchor}">${fmtDate(x)}</text>`;
   const labels = sameX ? lab(x0, 'middle', (L + W - R) / 2) : lab(x0, 'start', L) + lab(x1, 'end', W - R);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${bandSvg}${ticks}${lines}${labels}</svg>`;
+  const hl = hline ? `<line x1="${L}" x2="${W - R}" y1="${sy(hline.y)}" y2="${sy(hline.y)}" class="hline"/><text x="${W - R - 2}" y="${sy(hline.y) - 4}" class="axis" text-anchor="end">${esc(hline.label || '')}</text>` : '';
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${bandSvg}${ticks}${hl}${lines}${labels}</svg>`;
 }
 
 // Petit rendu Markdown sûr (titres, gras, listes, liens) pour les réponses IA.

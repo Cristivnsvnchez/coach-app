@@ -168,6 +168,31 @@ export function milestones(startKg, targetKg, kgPerWeek, today) {
   });
 }
 
+// ---- Étapes de poids (timeline) ----
+// Date à laquelle une étape a été atteinte : première pesée dont la tendance franchit le seuil (ou null).
+export function reachedOn(trend, kg, down) {
+  const hit = trend.find((t) => (down ? t.trend <= kg + 1e-9 : t.trend >= kg - 1e-9));
+  return hit ? hit.date : null;
+}
+
+// Statut d'une étape { kg, date? (estimation de l'utilisateur), done? (coché à la main) } :
+// atteinte (auto ou manuelle), date d'arrivée projetée, avance/retard en jours vs la date estimée.
+export function milestoneStatus(m, trend, kgPerWeek, today, down) {
+  const auto = reachedOn(trend, m.kg, down);
+  const reached = !!(auto || m.done);
+  const last = trend[trend.length - 1];
+  const eta = reached || !last ? null : etaDate(last.trend, m.kg, kgPerWeek, today);
+  const ref = reached ? (auto || m.doneOn || today) : eta ? isoDate(eta) : null;
+  const deltaDays = m.date && ref ? Math.round((parseDate(ref) - parseDate(m.date)) / DAY) : null; // < 0 = en avance
+  return { reached, reachedOn: auto || m.doneOn || null, auto: !!auto, eta, deltaDays };
+}
+
+// Points de projection (aujourd'hui → cible) pour le graphique.
+export function projection(lastTrend, target, kgPerWeek, today) {
+  const eta = etaDate(lastTrend, target, kgPerWeek, today);
+  return eta ? [{ x: parseDate(today), y: lastTrend }, { x: eta, y: target }] : [];
+}
+
 export const epley1RM = (kg, reps) => (reps <= 1 ? kg : kg * (1 + reps / 30));
 
 const round05 = (x) => Math.round(x * 2) / 2;
