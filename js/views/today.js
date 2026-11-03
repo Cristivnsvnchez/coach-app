@@ -6,6 +6,7 @@ import { esc, fmt, ring, bar, fmtDate, toast, nav, group } from '../ui.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import { openAddFood, MEALS } from './addfood.js';
+import { habitsSection, handleHabitClick } from './habits.js';
 
 let date = null;
 let renderedOn = null; // jour réel du dernier rendu : si on a changé de jour, on revient à aujourd'hui
@@ -44,6 +45,7 @@ export function render(root, go) {
       <div class="grow"><span class="t headline">${t('Eau')}</span><span class="s num">${fmt(log.water / 1000, 2)} / ${fmt(targets?.waterL ?? 2, 1)} L ${t('(boissons + aliments)')}</span></div>
       <div class="stepper"><button class="icon-btn round" data-a="water-" aria-label="−250 ml">${icon('minus')}</button><button class="icon-btn round" data-a="water+" aria-label="+250 ml">${icon('plus')}</button></div>
     </div></div>`)}
+    ${habitsSection(date)}
     ${Object.entries(MEALS).map(([k, label]) => {
       const items = log.meals.filter((m) => m.meal === k);
       const s = sum(items);
@@ -55,6 +57,7 @@ export function render(root, go) {
     ${group('', `<div class="cells"><div class="cell action" data-a="copy" role="button">${icon('copy')} ${t('Copier les repas de la veille')}</div></div>`)}`;
 
   root.onclick = (e) => {
+    if (handleHabitClick(e, date, () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; })) return;
     const el = e.target.closest('[data-a],[data-add],[data-del]');
     if (!el) return;
     const a = el.dataset.a;

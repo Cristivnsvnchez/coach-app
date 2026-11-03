@@ -48,18 +48,22 @@ export function lineChart(series, { height = 180, band = null, yPad = 1 } = {}) 
   if (band) ys = ys.concat([band.y1, band.y2].filter((v) => v > Math.min(...ys) - 8 && v < Math.max(...ys) + 8));
   const x0 = Math.min(...xs), x1 = Math.max(...xs);
   const y0 = Math.min(...ys) - yPad, y1 = Math.max(...ys) + yPad;
-  const sx = (x) => L + ((x - x0) / (x1 - x0 || 1)) * (W - L - R);
+  // Toutes les dates identiques (plusieurs séances le même jour) : on répartit les points par rang.
+  const sameX = x1 === x0;
+  const sx = (x, i = 0, n = 1) => L + (sameX ? (n > 1 ? i / (n - 1) : 0.5) : (x - x0) / (x1 - x0)) * (W - L - R);
   const sy = (y) => T + (1 - (y - y0) / (y1 - y0 || 1)) * (H - T - B);
   const ticks = [y0, (y0 + y1) / 2, y1].map((y) => `<text x="${L - 4}" y="${sy(y) + 4}" class="axis" text-anchor="end">${fmt(y, 1)}</text>
     <line x1="${L}" x2="${W - R}" y1="${sy(y)}" y2="${sy(y)}" class="grid"/>`).join('');
   const bandSvg = band ? `<rect x="${L}" width="${W - L - R}" y="${sy(Math.min(y1, band.y2))}" height="${Math.max(0, sy(Math.max(y0, band.y1)) - sy(Math.min(y1, band.y2)))}" class="band"/>` : '';
   const lines = series.map((s) => {
-    const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${sx(+p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
-    const dots = s.dots ? s.points.map((p) => `<circle cx="${sx(+p.x)}" cy="${sy(p.y)}" r="2.5" class="${s.cls}-dot"/>`).join('') : '';
+    const n = s.points.length;
+    const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${sx(+p.x, i, n).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
+    const dots = s.dots ? s.points.map((p, i) => `<circle cx="${sx(+p.x, i, n)}" cy="${sy(p.y)}" r="2.5" class="${s.cls}-dot"/>`).join('') : '';
     return `<path d="${d}" class="${s.cls}"/>${dots}`;
   }).join('');
-  const lab = (x, anchor) => `<text x="${sx(x)}" y="${H - 6}" class="axis" text-anchor="${anchor}">${fmtDate(x)}</text>`;
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${bandSvg}${ticks}${lines}${lab(x0, 'start')}${lab(x1, 'end')}</svg>`;
+  const lab = (x, anchor, pos) => `<text x="${pos}" y="${H - 6}" class="axis" text-anchor="${anchor}">${fmtDate(x)}</text>`;
+  const labels = sameX ? lab(x0, 'middle', (L + W - R) / 2) : lab(x0, 'start', L) + lab(x1, 'end', W - R);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${bandSvg}${ticks}${lines}${labels}</svg>`;
 }
 
 // Petit rendu Markdown sûr (titres, gras, listes, liens) pour les réponses IA.

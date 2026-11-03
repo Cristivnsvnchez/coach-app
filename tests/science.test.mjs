@@ -111,3 +111,20 @@ test('la journée en cours est exclue du calcul adaptatif', () => {
   const b = S.adaptiveTdee({ profile: man, weights, intakes: { ...intakes, [today]: 400 }, today });
   assert.equal(a.tdee, b.tdee);
 });
+
+import * as H from '../js/habits.js';
+
+test('habitudes : auto-cochage protéines/kcal et case manuelle', () => {
+  const habits = [{ id: 'protein', auto: true }, { id: 'kcal', auto: true }, { id: 'sleep', name: 'Sommeil' }];
+  const ctx = { totals: { p: 160, kcal: 2300, fib: 20 }, targets: { protein: 165, kcal: 2400, fiber: 30 }, water: 0, weighed: false, trained: false };
+  const st = H.dayStatus(habits, ctx, { sleep: true });
+  assert.deepEqual(st.map((s) => s.done), [true, true, true]);
+  assert.equal(st[0].tappable, false);
+  assert.equal(H.completion(st), 1);
+});
+
+test('série : aujourd\'hui incomplet ne casse pas la série', () => {
+  const r = { '2026-01-10': 0.2, '2026-01-09': 1, '2026-01-08': 0.8, '2026-01-07': 0.5 };
+  assert.equal(H.streak(r, '2026-01-10'), 2);
+  assert.equal(H.streak({ ...r, '2026-01-10': 0.9 }, '2026-01-10'), 3);
+});

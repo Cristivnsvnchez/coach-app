@@ -1,5 +1,8 @@
 // État persistant dans localStorage (données uniquement sur le téléphone).
 import { isoDate } from './science.js';
+import { DEFAULT_HABITS } from './habits.js';
+import { migrateProgram } from './workout.js';
+import { DEFAULT_PROGRAM } from './exercises.js';
 
 const KEY = 'coach.v1';
 
@@ -13,6 +16,10 @@ const empty = () => ({
   program: null,  // { name, days: [{ name, exercises: [{ name, muscle, sets, repMin, repMax, upper }] }] }
   workouts: [],   // [{ id, date, dayName, exercises: [{ name, muscle, upper, repMin, repMax, sets: [{ kg, reps, rir, done }] }] }]
   chat: [],       // [{ role, text, sources }]
+  habits: DEFAULT_HABITS.map((h) => ({ ...h })), // [{ id, auto?, name? }]
+  habitLog: {},   // 'YYYY-MM-DD' -> { habitId: true } (cases cochées à la main)
+  routines: [],   // [{ id, name, folder, exercises: [{ name, muscle, secondary, type, sets, repMin, repMax, rest, upper }] }]
+  customExercises: [], // [{ name, muscle, secondary, equipment, type, upper }]
 });
 
 export let state = empty();
@@ -39,13 +46,15 @@ export function save() {
 // Fusion avec les valeurs par défaut + types vérifiés (import de fichier, ancienne version).
 function sanitize(data) {
   const base = empty(), out = { ...base, ...data };
-  for (const k of ['weights', 'workouts', 'chat', 'favorites']) if (!Array.isArray(out[k])) out[k] = base[k];
-  for (const k of ['profile', 'settings', 'foods', 'logs']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
+  for (const k of ['weights', 'workouts', 'chat', 'favorites', 'habits', 'routines', 'customExercises']) if (!Array.isArray(out[k])) out[k] = base[k];
+  for (const k of ['profile', 'settings', 'foods', 'logs', 'habitLog']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   out.settings = { ...base.settings, ...out.settings };
   for (const d in out.logs) {
     const l = out.logs[d];
     if (!l || !Array.isArray(l.meals)) out.logs[d] = { meals: [], water: Number(l?.water) || 0 };
   }
+  // Ancien « programme » (ou premier lancement) → routines rangées dans un dossier.
+  if (!out.routines.length) out.routines = migrateProgram(out.program || DEFAULT_PROGRAM);
   return out;
 }
 
