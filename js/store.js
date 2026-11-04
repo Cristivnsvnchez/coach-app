@@ -8,7 +8,7 @@ const KEY = 'coach.v1';
 
 const empty = () => ({
   profile: { goal: 'perte', rate: 0.5, activity: 'leger' },
-  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass' },
+  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow' },
   usage: null,    // { month: 'YYYY-MM', usd, calls } : dépense IA estimée du mois
   foods: {},      // id -> { name, per100: {kcal,p,c,f,fib}, source, serving }
   favorites: [],  // ids d'aliments
@@ -22,6 +22,9 @@ const empty = () => ({
   routines: [],   // [{ id, name, folder, exercises: [{ name, muscle, secondary, type, sets, repMin, repMax, rest, upper }] }]
   customExercises: [], // [{ name, muscle, secondary, equipment, type, upper }]
   milestones: [], // étapes de poids estimées : [{ id, kg, date?, label?, done?, doneOn? }]
+  cycle: { enabled: false, periods: [], logs: {}, cycleLen: 28, periodLen: 5, hormonal: false }, // suivi du cycle (utilisatrices)
+  foodGroups: {}, // 'YYYY-MM-DD' -> { fruitVeg: n, fish: n } (repères ANSES)
+  strava: null,   // { clientId, clientSecret, token, refresh, expiresAt, athlete, activities: [], lastSync, prefs }
   plan: null,     // programme daté : { id, name, goal, start, end, weeks, weekdays, deloadEvery, phases, routineIds }
 });
 

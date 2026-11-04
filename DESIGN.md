@@ -1,37 +1,74 @@
-# Coach — design V1 (2026-11-03)
+# TrackMe — système de design
 
-## Intention
-App perso iPhone : coach sportif + diététicien, sans compte développeur Apple.
-Données sur le téléphone. IA qui s'appuie sur des sources scientifiques, pas des blogs.
+Monde : « précision calme ». Fond clair légèrement froid, cartes blanches, encre presque noire pour l'action,
+couleur réservée aux données. Une seule voix typographique (Geist). Verre uniquement sur la couche de contrôle
+(barre d'onglets, minuteur, feuilles).
 
-## Approches considérées
-| Approche | Pour | Contre |
-|---|---|---|
-| **PWA (retenue)** — HTML/JS installée via Safari « Sur l'écran d'accueil » | Gratuit, plein écran, hors ligne, pas de Mac/Xcode à chaque mise à jour | Pas d'App Store, notifications seulement si installée (iOS 16.4+) |
-| App native Swift + sideload (AltStore / Xcode gratuit) | Vraie app native | Re-signature obligatoire tous les 7 jours sans compte payant |
-| Expo Go (React Native) | Proche du natif | Dépend de l'app Expo Go, pas autonome |
+## Palette choisie par l'utilisateur (prépondérante)
+Une seule palette domine l'app. L'utilisateur la choisit à l'onboarding (« Ta couleur préférée ») et la change dans
+Profil → Apparence, avec une forme (Vague, Halo, Spirale). Fond papier crème #F3F0EA ; formes en dégradés organiques
+flous avec grain (SVG feGaussianBlur + feTurbulence).
 
-## Écrans (5 onglets)
-1. **Aujourd'hui** — anneau kcal restantes, barres protéines/glucides/lipides/fibres, eau, repas du jour, saisie express (récents, favoris, « copier hier », macros manuelles).
-2. **Poids** — pesée du jour, courbe brute + tendance lissée (EMA α=0,1), fourchette de poids cible (IMC OMS + Devine/Robinson/Hamwi), date d'arrivée estimée, timeline des jalons.
-3. **Entraînement** — programme, log de séance pré-rempli depuis la dernière, double progression automatique, minuteur de repos, records + 1RM (Epley), volume hebdo par muscle vs cible 10–20 séries.
-4. **Coach IA** — chat + actions : « recette selon mes macros restantes », « génère mon programme », « analyse photo de repas », « bilan de la semaine ». Recherche web limitée à une liste blanche (PubMed, ANSES/Ciqual, EFSA, OMS, USDA, ISSN…) avec citations affichées.
-5. **Profil** — âge, sexe, taille, activité, objectif, rythme (0,25–1 %/sem), clé API Claude, export/import JSON.
+| Palette | Principale (boutons, progression) | Moyenne | Chaude | Teinte (bouton secondaire) |
+|---|---|---|---|---|
+| Océan | #1B3FD1 | #2F7BFF | #FF8A3D | #E6ECFF |
+| Aurore | #5B2BD6 | #E8365B | #F7A23B | #EFE8FF |
+| Lagune | #0E6E6A | #2AA7A0 | #F2C94C | #E0F2F0 |
+| Braise | #A62E10 | #E8471C | #F5A83A | #FDE9E1 |
+| Prairie | #3D5BD9 | #8FB8F0 | #E6D54A | #E9EEFC |
+| Encre | #141418 | #5A5A66 | #E9A93B | #ECEBEF |
 
-## Science (codée)
-- TDEE initial Mifflin-St Jeor × PAL FAO/OMS ; puis TDEE adaptatif après ≥10 jours loggés (apport moyen − pente tendance × 7700, lissé 80/20).
-- Déficit ≤ 25 % TDEE, rythme 0,5–1 %/sem ; plancher 1200 F / 1500 H.
-- Protéines 1,6 / 2,0 / 1,8 g/kg (maintien / sèche / prise) ; lipides ≥ max(0,6 g/kg, 20 %) ; fibres ≥ 30 g.
-- Avertissement + redirection pro si mineur, grossesse ou TCA.
+La couleur principale de chaque palette garde un contraste ≥ 4,5:1 avec le blanc. Elle remplace `--ink` pour
+les boutons principaux et `--brand` pour la progression. Restent fixes pour garder leur sens : cycle (rose),
+Strava (orange de marque), alerte et erreur.
 
-## Données & APIs
-- Stockage : localStorage local (pas de serveur ; quelques Mo suffisent pour des années de texte). Export JSON pour sauvegarde.
-- Recherche texte : Open Food Facts quand disponible (souvent en 503), sinon estimation IA (valeurs Ciqual/USDA). Table Ciqual embarquée : à faire (téléchargement ANSES bloqué aux robots).
-- Aliments : Open Food Facts (code-barres + recherche, CORS OK), cache local.
-- IA : API Claude appelée directement depuis le téléphone (clé perso, usage strictement personnel).
+## Couleurs (tokens)
+| Rôle | Clair | Sombre | Usage |
+|---|---|---|---|
+| `--bg` fond | #F4F4F6 | #0B0B0D | arrière-plan |
+| `--surface` carte | #FFFFFF | #18181C | cartes, listes |
+| `--ink` texte / action | #141418 | #F4F4F6 | titres, texte, **boutons principaux** |
+| `--ink-2` texte secondaire | #5E5E6A | #A3A3AE | sous-titres (≥ 4,5:1) |
+| `--line` séparateur | #E6E6EB | #2A2A30 | filets |
+| `--fill` contrôle neutre | #EDEDF1 | #26262C | boutons secondaires, champs |
+| `--brand` vert TrackMe | #1F8A4C | #3FD07A | progression, états positifs, onglet actif |
 
-## Non-objectifs V1
-Sync multi-appareils, Apple Santé, Apple Watch, social, abonnement.
+Couleurs de données (jamais sur un bouton d'action) :
+- nutrition `--d-food` #1F8A4C · hydratation `--d-water` #1C8FA0 · sommeil `--d-sleep` #5F7F4A
+- cycle `--d-cycle` #C2255C (règles), #7A4BD1 (fertile), #B35A1F (SPM)
+- effort `--d-effort` #D9480F · marque Strava #FC4C02 (logo et lien Strava uniquement)
+- alerte `--warn` #A15C00 · erreur `--danger` #C92A2A
 
-## Choix laissés au builder (mes calls)
-Pas de framework (vanilla JS + Chart.js), design sombre/clair auto, modèle Claude par défaut `claude-sonnet-5-5`.
+Dégradés : uniquement sur la carte héros d'un domaine (nutrition vert→turquoise, cycle rose→violet) ; texte blanc ≥ 4,5:1.
+
+## Composition
+Pas d'empilement linéaire : une forme de la palette déborde du cadre, une feuille crème arrondie (40 px en haut)
+la chevauche, des pastilles flottent sur la forme. Arrondis : bouton 28 px (hauteur 56), carte 24–28 px,
+pastille 17–20 px, feuille 40 px.
+
+## Menu
+Capsule blanche flottante (62 px, rayon 31). L'onglet actif s'élargit en pastille teintée de la palette avec son
+libellé ; les autres sont des icônes seules. Le « + » central est un cercle de 60 px à la couleur principale,
+surélevé, entouré d'un anneau couleur fond.
+
+## Boutons (une seule hiérarchie partout)
+- **Principal** : pilule couleur principale de la palette, 56 px, rayon 28, texte blanc 600, flèche dans une pastille
+  à droite. Un seul par écran.
+- **Secondaire** : pilule teinte de la palette, texte couleur principale.
+- **Discret** : texte `--ink` 600, sans fond (Annuler, Passer).
+- **Icône** : cercle 44 px `--fill`, icône `--ink`.
+- **Destructif** : texte `--danger`, sans fond.
+- Pastilles de filtre : inactive `--surface` + filet `--line` ; active `--ink` + texte `--surface`.
+Les couleurs de données n'apparaissent jamais en fond de bouton.
+
+## Typographie
+Geist (OFL, embarquée) : 32/700 titre d'écran (-0.04em) · 24/600 titre de feuille · 19/600 titre de section ·
+16/600 libellé · 15/400 corps · 13/400 secondaire · 11/500 légende. Chiffres en `tabular-nums`.
+
+## Icônes
+Un seul jeu dessiné, trait 1,9 px, extrémités rondes, grille 24 px. Onglet actif : pastille `--ink`, icône `--surface`.
+Pas d'emoji dans l'interface.
+
+## Formes et espace
+Rayons : carte 24 px, carte héros 28 px, champ 14 px, pilule 999 px. Espacement : 4 · 8 · 12 · 16 · 24 · 32.
+Cibles tactiles ≥ 44 px. Ombres : douces avec décalage (0 6 18 rgba(0,0,0,.05)) ; aucune lueur.

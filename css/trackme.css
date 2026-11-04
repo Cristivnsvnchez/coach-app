@@ -1,0 +1,66 @@
+/* TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
+   Une palette choisie (--p-deep / --p-mid / --p-warm / --p-tint, posées par js/theme.js), fond papier crème,
+   formes en dégradé granuleux, boutons pilule 56 px, arrondis généreux, menu capsule + « + » central. */
+html.tm {
+  --p-deep: #1b3fd1; --p-mid: #2f7bff; --p-warm: #ff8a3d; --p-tint: #e6ecff;
+  --bg: #f3f0ea; --cell: #ffffff; --elevated: #f8f6f1;
+  --label: #141418; --label-2: #5e5a52; --label-3: rgba(60, 56, 48, .32);
+  --separator: rgba(60, 56, 48, .14); --fill: rgba(60, 56, 48, .07); --fill-2: rgba(60, 56, 48, .14);
+  --tint: var(--p-deep); --tint-fill: var(--p-deep); --tint-text: var(--p-deep); --on-tint: #ffffff;
+  --radius: 24px; --tabbar-h: calc(5rem + var(--safe-b));
+  --glass: rgba(255, 255, 255, .86); --glass-strong: var(--p-tint); --glass-edge: rgba(255, 255, 255, .95);
+  --glass-shadow: 0 12px 32px rgba(30, 24, 16, .14), 0 2px 6px rgba(30, 24, 16, .06);
+}
+@media (prefers-color-scheme: dark) {
+  html.tm {
+    --bg: #12110f; --cell: #1d1b18; --elevated: #1d1b18;
+    --label: #f4f1ea; --label-2: #b3ada2; --label-3: rgba(244, 241, 234, .3);
+    --separator: rgba(244, 241, 234, .12); --fill: rgba(244, 241, 234, .08); --fill-2: rgba(244, 241, 234, .16);
+    --tint-text: var(--p-mid); --glass: rgba(40, 37, 33, .86); --glass-edge: rgba(255, 255, 255, .1); --glass-strong: rgba(255, 255, 255, .12);
+  }
+}
+html.tm, html.tm body { background: var(--bg); }
+html.tm body::before { display: none; }
+
+/* Forme en dégradé granuleux (js/theme.js → shape()) */
+.tm-shape { display: block; width: 100%; height: 100%; }
+.tm-hero { position: relative; overflow: hidden; border-radius: 28px; background: var(--p-deep); color: #fff; }
+.tm-hero > .tm-shape { position: absolute; inset: 0; opacity: .85; }
+.tm-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.16), rgba(0,0,0,.32)); pointer-events: none; }
+.tm-hero > *:not(.tm-shape) { position: relative; z-index: 1; }
+
+/* Cartes et listes : arrondis généreux, sans filet dur */
+html.tm .cells, html.tm .summary, html.tm .cta { border-radius: 24px; border: 0; box-shadow: 0 1px 2px rgba(30, 24, 16, .04); -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.tm .large-title { letter-spacing: -0.045em; }
+
+/* Boutons : une seule hiérarchie */
+html.tm .btn { border-radius: 999px; min-height: 48px; font-weight: 600; }
+html.tm .btn.filled, html.tm .btn.large.filled { background: var(--p-deep); color: #fff; box-shadow: none; }
+html.tm .btn.large { min-height: 56px; border-radius: 28px; }
+html.tm .btn:not(.filled):not(.plain):not(.destructive) { background: var(--p-tint); color: var(--p-deep); border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+@media (prefers-color-scheme: dark) { html.tm .btn:not(.filled):not(.plain):not(.destructive) { background: var(--fill-2); color: var(--label); } }
+html.tm .icon-btn.round { background: var(--fill); border: 0; }
+html.tm .chip { background: var(--cell); border: 1px solid var(--separator); }
+html.tm .chip.on { background: var(--p-deep); color: #fff; border-color: var(--p-deep); }
+html.tm .seg { background: var(--fill); border: 0; }
+html.tm .seg button.on { background: var(--cell); }
+html.tm .switch input:checked + span { background: var(--p-deep); }
+html.tm .bar-fill, html.tm .bar .bar-fill { background: var(--p-deep); }
+html.tm .ring-fg { stroke: var(--p-deep); }
+
+/* Menu : capsule flottante, onglet actif en pastille avec libellé, « + » central surélevé */
+html.tm .tabbar { left: calc(.9rem + var(--safe-l)); right: calc(.9rem + var(--safe-r)); bottom: calc(.6rem + var(--safe-b)); height: 62px; max-width: 520px; margin: 0 auto;
+  display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 31px; background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--glass-shadow); overflow: visible; }
+html.tm .tabbar button { flex: 1; flex-direction: row; gap: 6px; height: 50px; min-height: 50px; margin: 0; padding: 0; border-radius: 25px; color: var(--label-2); font-size: .82rem; font-weight: 600; transition: flex .25s cubic-bezier(.2,.9,.25,1), background .2s; }
+html.tm .tabbar button span { display: none; }
+html.tm .tabbar button.on { flex: 1.9; background: var(--p-tint); color: var(--p-deep); box-shadow: none; padding: 0 12px; }
+html.tm .tabbar button.on span { display: inline; }
+@media (prefers-color-scheme: dark) { html.tm .tabbar button.on { background: var(--fill-2); color: var(--label); } }
+html.tm .tabbar .tm-fab { flex: 0 0 60px; height: 60px; min-height: 60px; margin-top: -26px; border-radius: 30px; background: var(--p-deep); color: #fff;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--p-deep) 35%, transparent), 0 0 0 5px var(--bg); }
+html.tm .tabbar .tm-fab svg.ic { width: 26px; height: 26px; stroke-width: 2.4; }
+html.tm .tabbar .tm-fab:active { transform: scale(.94); }
+html.tm .composer { bottom: calc(var(--tabbar-h) + .2rem); }
+html.tm .rest { bottom: calc(var(--tabbar-h) + .3rem); border-radius: 999px; }
+html.tm .sheet { border-radius: 32px 32px 0 0; background: var(--bg); }
+@media (min-width: 820px) { html.tm .sheet { border-radius: 32px; } }

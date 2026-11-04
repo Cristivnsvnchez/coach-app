@@ -235,21 +235,30 @@ const EN = {
 };
 
 const KEY = 'coach.lang';
+// Dictionnaires : EN ci-dessus (base) ; NL et ajouts par module via register({ en: {...}, nl: {...} }).
+const DICT = { en: EN, nl: {} };
+export function register(d) { for (const l of ['en', 'nl']) if (d?.[l]) Object.assign(DICT[l], d[l]); }
+export const LANGS = { fr: 'Français', en: 'English', nl: 'Nederlands' };
+
 let lang = 'fr';
-try { lang = localStorage.getItem(KEY) || ((navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en'); } catch {}
+try {
+  const nav = (typeof navigator !== 'undefined' && navigator.language || 'fr').toLowerCase();
+  lang = localStorage.getItem(KEY) || (nav.startsWith('fr') ? 'fr' : nav.startsWith('nl') ? 'nl' : 'en');
+} catch {}
 if (typeof document !== "undefined") document.documentElement.lang = lang;
 
 export const getLang = () => lang;
-export const locale = () => (lang === 'en' ? 'en-US' : 'fr-FR');
+export const locale = () => ({ en: 'en-US', nl: 'nl-NL' })[lang] || 'fr-FR';
 
 export function setLang(l) {
-  lang = l === 'en' ? 'en' : 'fr';
+  lang = LANGS[l] ? l : 'fr';
   if (typeof document !== "undefined") document.documentElement.lang = lang;
   try { localStorage.setItem(KEY, lang); } catch {}
 }
 
+// Texte source en français ; repli NL → EN → FR si une traduction manque.
 export function t(fr, vars) {
-  let s = lang === 'en' ? (EN[fr] ?? fr) : fr;
+  let s = lang === 'fr' ? fr : (DICT[lang][fr] ?? (lang === 'nl' ? EN[fr] : undefined) ?? fr);
   if (vars) s = s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
   return s;
 }
