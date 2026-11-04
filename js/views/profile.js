@@ -20,8 +20,8 @@ export function render(root, go) {
   root.innerHTML = `
     ${nav(t('Profil'))}
     ${group(t('Apparence'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
-      <button type="button" data-look="classic" class="${(st.look || 'classic') === 'classic' ? 'on' : ''}">${t('Classique')}</button>
-      <button type="button" data-look="glass" class="${st.look === 'glass' ? 'on' : ''}">Liquid Glass</button></div></div></div>`)}
+      <button type="button" data-look="classic" class="${st.look === 'classic' ? 'on' : ''}">${t('Classique')}</button>
+      <button type="button" data-look="glass" class="${(st.look || 'glass') === 'glass' ? 'on' : ''}">Liquid Glass</button></div></div></div>`)}
     ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
       <button type="button" data-lang="fr" class="${getLang() === 'fr' ? 'on' : ''}" aria-selected="${getLang() === 'fr'}">Français</button>
       <button type="button" data-lang="en" class="${getLang() === 'en' ? 'on' : ''}" aria-selected="${getLang() === 'en'}">English</button></div></div></div>`)}

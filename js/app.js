@@ -36,8 +36,8 @@ function go(name, arg) {
 main.addEventListener('scroll', () => main.classList.toggle('scrolled', main.scrollTop > 8), { passive: true });
 
 load();
-// Apparence : 'classic' ou 'glass' (Liquid Glass).
-export const applyLook = (look) => { document.documentElement.dataset.look = look || 'classic'; };
+// Apparence : 'glass' (Liquid Glass, par défaut) ou 'classic'.
+export const applyLook = (look) => { document.documentElement.dataset.look = look || 'glass'; };
 applyLook(state.settings.look);
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');
