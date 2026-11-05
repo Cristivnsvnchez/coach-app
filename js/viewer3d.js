@@ -6,7 +6,9 @@ const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par
 
 const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
-export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equipment, mistake, name }, outfit = null) {
+// `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
+// sans interaction (la carte reste cliquable), cadrage un peu plus serré.
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equipment, mistake, name }, outfit = null, { showcase = false } = {}) {
   let THREE, GLTFLoader, OrbitControls;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
@@ -22,13 +24,13 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.setClearColor(0x12151c, 1); // décor de studio sombre, comme les fiches de référence
+  renderer.setClearColor(0x12151c, showcase ? 0 : 1); // décor de studio sombre, comme les fiches de référence (transparent en vitrine)
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x12151c, 3.2, 7.5); // la grille se fond dans le noir
+  if (!showcase) scene.fog = new THREE.Fog(0x12151c, 3.2, 7.5); // la grille se fond dans le noir
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
   const grid = new THREE.GridHelper(12, 48, 0x3d7bff, 0x22355e);
-  grid.material.transparent = true; grid.material.opacity = 0.55; grid.material.fog = true; scene.add(grid);
+  grid.material.transparent = true; grid.material.opacity = 0.55; grid.material.fog = true; if (!showcase) scene.add(grid);
   scene.add(new THREE.HemisphereLight(0xeef2ff, 0x8a8f9c, 1.6));
   const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 4, 3); scene.add(key);
   const rim = new THREE.DirectionalLight(0x9db4ff, 1.4); rim.position.set(-3, 2.5, -2.5); scene.add(rim);
@@ -188,13 +190,20 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     addDecor(g);
   }
   if (equipment === 'barre') {
-    const spine = findBone(/Spine2$/) || findBone(/Spine1$/);
+    // Barre tenue à deux mains : posée au milieu des mains, dans l'axe main gauche → main droite (suit le vrai mouvement :
+    // squat avant, overhead, arraché, épaulé-jeté, curl…). Repli sur le buste si les os des mains sont introuvables.
     const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
-    attach(spine, mat, [
-      { geo: new THREE.CylinderGeometry(0.014, 0.014, 0.52, 12), rot: [0, 0, Math.PI / 2] },
-      { geo: new THREE.CylinderGeometry(0.09, 0.09, 0.02, 20), pos: [-0.27, 0, 0], rot: [0, 0, Math.PI / 2] },
-      { geo: new THREE.CylinderGeometry(0.09, 0.09, 0.02, 20), pos: [0.27, 0, 0], rot: [0, 0, Math.PI / 2] },
-    ], [0, 0.04, 0.09]);
+    const L = findBone(/LeftHand$/), R = findBone(/RightHand$/);
+    const parts = [
+      { geo: new THREE.CylinderGeometry(0.014, 0.014, 1.3, 12), rot: [0, 0, Math.PI / 2] },
+      { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [-0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
+      { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
+    ];
+    if (L && R) {
+      const group = new THREE.Group();
+      for (const { geo, pos, rot } of parts) { const mesh = new THREE.Mesh(geo, mat); if (pos) mesh.position.set(...pos); if (rot) mesh.rotation.set(...rot); group.add(mesh); }
+      scene.add(group); rigs.push({ hands: [L, R], group });
+    } else attach(findBone(/Spine2$/) || findBone(/Spine1$/), mat, parts, [0, 0.04, 0.09]);
   } else if (equipment === 'haltères') {
     const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
     for (const side of ['Left', 'Right']) {
@@ -216,8 +225,15 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   };
 
   const tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion(), tmpScale = new THREE.Vector3();
+  const pL = new THREE.Vector3(), pR = new THREE.Vector3(), axisX = new THREE.Vector3(1, 0, 0), dirLR = new THREE.Vector3();
   const updateRigs = () => {
-    for (const { bone, group, offset } of rigs) {
+    for (const { bone, group, offset, hands } of rigs) {
+      if (hands) { // barre entre les deux mains
+        hands[0].getWorldPosition(pL); hands[1].getWorldPosition(pR);
+        group.position.copy(pL).add(pR).multiplyScalar(0.5);
+        group.quaternion.setFromUnitVectors(axisX, dirLR.subVectors(pR, pL).normalize());
+        continue;
+      }
       bone.matrixWorld.decompose(tmpPos, tmpQuat, tmpScale);
       group.position.copy(offset).applyQuaternion(tmpQuat).add(tmpPos);
       group.quaternion.copy(tmpQuat);
@@ -240,6 +256,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   controls.minPolarAngle = 0.25; controls.maxPolarAngle = Math.PI / 2 - 0.05; // jamais sous le sol
   controls.autoRotate = !reduce; controls.autoRotateSpeed = 1.2;
   controls.addEventListener('start', () => { controls.autoRotate = false; box.classList.add('touched'); });
+  if (showcase) { controls.enabled = false; controls.autoRotateSpeed = 0.8; camera.position.multiplyScalar(1.06); }
   controls.update();
 
   box.prepend(canvas);
