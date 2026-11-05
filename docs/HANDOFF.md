@@ -15,7 +15,7 @@ Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v28** · htt
 
 ## 3. Publier une version (checklist)
 1. Incrémenter `VERSION` dans `sw.js` et ajouter tout nouveau fichier au tableau `SHELL`.
-2. `node --test tests/*.test.mjs` (65 tests verts) · `node --check` sur les JS · `node tests/i18n-scan.mjs`.
+2. `node --test tests/*.test.mjs` (66 tests verts, dont `tests/i18n.test.mjs` qui échoue s'il manque une traduction EN ou NL) · `node --check` sur les JS · `node tests/i18n-scan.mjs` pour voir la liste.
 3. Régénérer `MAP.md` (boucle bash : 1re ligne de chaque fichier + `grep -oE '^export …'`).
 4. `git commit` + `git push origin main` ; attendre que `https://cristivnsvnchez.github.io/coach-app/sw.js` affiche la nouvelle VERSION.
 - Test local : `python3 -m http.server 5173` dans le dossier ; vider service worker + caches avant de vérifier (`fetch(f,{cache:'reload'})`).

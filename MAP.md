@@ -62,9 +62,9 @@ exports: BASE_FOODS
 Checklist quotidienne : habitudes auto-cochées d'après les données du jour + habitudes manuelles, et série de jours.
 exports: AUTO,DEFAULT_HABITS habitName,dayStatus completion,streak
 
-## js/i18n.js (265 l.)
+## js/i18n.js (268 l.)
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
-exports: register,LANGS getLang,locale setLang,t
+exports: register,hasTranslation LANGS,getLang locale,setLang t
 
 ## js/icons.js (51 l.)
 Icônes SVG au trait, dessinées pour l'app (les SF Symbols ne sont pas licenciés pour le web).

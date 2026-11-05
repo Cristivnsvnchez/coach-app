@@ -22,7 +22,7 @@ register({
     'Ton activité au quotidien': 'Your daily activity', 'Ton alimentation': 'Your diet', 'Ton entraînement': 'Your training',
     'Ton objectif principal': 'Your main goal', 'Ton poids cible': 'Your target weight', 'Tu es…': 'You are…',
     'Un homme': 'A man', 'Une femme': 'A woman', 'ans': 'years', 'jours': 'days', 'par semaine': 'per week',
-    'Niveau': 'Level', 'formule': 'formula', 'Apprendre': 'Learn', 'Hors ligne : tes saisies restent enregistrées.': 'Offline: your entries are still saved.',
+    'Superset': 'Superset', 'Niveau': 'Level', 'formule': 'formula', 'Apprendre': 'Learn', 'Hors ligne : tes saisies restent enregistrées.': 'Offline: your entries are still saved.',
     'De nouveau en ligne.': 'Back online.', 'Nouvelle version de TrackMe prête.': 'A new version of TrackMe is ready.', 'Mettre à jour': 'Update', 'Aliments courants': 'Common foods', 'Rien dans les aliments courants.': 'Nothing in common foods.',
     'Chercher « {q} » en ligne': 'Search "{q}" online', "Estimer avec l'IA": 'Estimate with AI', 'Fermer': 'Close', 'Sauvegarder mes données': 'Back up my data', 'Dernière sauvegarde : {d}': 'Last backup: {d}', 'Jamais sauvegardé · vers Fichiers ou iCloud Drive': 'Never backed up · to Files or iCloud Drive', 'Marquer comme atteinte': 'Mark as reached', 'Marquer comme non atteinte': 'Mark as not reached',
     'Prévu le {d}': 'Planned for {d}', 'Étape proposée': 'Suggested step',

@@ -240,6 +240,8 @@ const KEY = 'coach.lang';
 // Dictionnaires : EN ci-dessus (base) ; NL et ajouts par module via register({ en: {...}, nl: {...} }).
 const DICT = { en: EN, nl: {} };
 export function register(d) { for (const l of ['en', 'nl']) if (d?.[l]) Object.assign(DICT[l], d[l]); }
+// Vrai si la clé a une entrée dans la langue (même identique au français : « Coach », « Volume »…). Sert à tests/i18n-scan.mjs.
+export const hasTranslation = (l, k) => Object.hasOwn(DICT[l] || {}, k);
 export const LANGS = { fr: 'Français', en: 'English', nl: 'Nederlands' };
 
 let lang = 'fr';
