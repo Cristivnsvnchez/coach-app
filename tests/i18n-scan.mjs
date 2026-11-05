@@ -1,5 +1,6 @@
 // Outil : liste les textes t('…') sans traduction EN ou NL (node tests/i18n-scan.mjs [--json]).
 import { readFileSync, readdirSync } from 'node:fs';
+globalThis.addEventListener ??= () => {}; globalThis.matchMedia ??= () => ({ matches: false });
 const store = {}; globalThis.localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; }, removeItem: (k) => { delete store[k]; } };
 
 const files = ['js/' , 'js/views/'].flatMap((d) => readdirSync(d).filter((f) => f.endsWith('.js')).map((f) => d + f));
