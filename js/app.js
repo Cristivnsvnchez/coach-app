@@ -2,7 +2,7 @@
 import { load, state, flush, today as todayIso } from './store.js';
 import { icon } from './icons.js';
 import { t } from './i18n.js';
-import { applyTheme, wordmark } from './theme.js';
+import { applyTheme, applyScheme, wordmark } from './theme.js';
 import { banner, sheetPop } from './ui.js';
 import './i18n/nl-base.js'; // traductions néerlandaises des textes existants
 import './i18n/extra.js'; // compléments EN + NL (tests/i18n-scan.mjs)
@@ -72,6 +72,8 @@ load();
 document.documentElement.dataset.look = 'glass';
 document.documentElement.classList.add('tm');
 applyTheme(state.settings.palette, state.settings.shape, state.settings.surface);
+applyScheme(state.settings.scheme);
+addEventListener('load', () => applyScheme(state.settings.scheme)); // feuilles de style chargées après le module
 
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');

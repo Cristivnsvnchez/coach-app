@@ -49,3 +49,32 @@ export function shape({ key = current, v = currentVariant, grain = 0.5, cls = ''
 
 // Logotype TrackMe : Funnel Display serrée, point final à la couleur de la palette (voir DESIGN.md → Marque).
 export const wordmark = (cls = '') => `<span class="tm-wordmark ${cls}" aria-label="TrackMe">TrackMe<i aria-hidden="true"></i></span>`;
+
+// Mode d'affichage choisi (Profil → Apparence) : 'auto' suit l'iPhone, 'light' / 'dark' forcent.
+// Les styles sombres sont écrits en @media (prefers-color-scheme: dark) ; on réécrit ces conditions à la volée
+// (vraie / fausse) plutôt que de dupliquer chaque règle. Le texte d'origine est gardé pour revenir en automatique.
+export const SCHEMES = ['auto', 'light', 'dark'];
+const ORIGINAL = new WeakMap();
+const TRUE = '(min-width: 0px)', FALSE = '(min-width: 999999px)';
+export function applyScheme(mode = 'auto') {
+  const m = SCHEMES.includes(mode) ? mode : 'auto';
+  const darkOn = m === 'dark', lightOn = m === 'light';
+  const walk = (rules) => {
+    for (const r of rules) {
+      if (r.media && r.cssRules) {
+        if (!ORIGINAL.has(r)) ORIGINAL.set(r, r.media.mediaText);
+        const src = ORIGINAL.get(r);
+        if (/prefers-color-scheme/.test(src)) {
+          r.media.mediaText = m === 'auto' ? src : src
+            .replace(/\(\s*prefers-color-scheme:\s*dark\s*\)/g, darkOn ? TRUE : FALSE)
+            .replace(/\(\s*prefers-color-scheme:\s*light\s*\)/g, lightOn ? TRUE : FALSE);
+        }
+        walk(r.cssRules);
+      }
+    }
+  };
+  for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch {} }
+  const root = document.documentElement;
+  root.dataset.scheme = m;
+  root.style.colorScheme = m === 'auto' ? 'light dark' : m; // contrôles natifs (champs, sélecteurs, barres de défilement)
+}
