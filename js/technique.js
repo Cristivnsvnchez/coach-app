@@ -62,10 +62,53 @@ const SVG_ATTR = 'viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-w
 // Les exercices sans rendu gardent le pictogramme au trait.
 const FIGURES = { Squat: 'squat' };
 export const hasFigure = (name) => !!FIGURES[name];
-// Modèles 3D animés (humain Mixamo converti dans Blender) : un fichier glb, une animation par exercice.
-// muscles : os du squelette Mixamo → intensité de la lueur (1 = muscle principal, ~0,5 = secondaire).
-const MODELS = { Squat: { url: 'models/trackme-human.glb', clip: 'squat', muscles: { LeftUpLeg: 1, RightUpLeg: 1, Hips: -0.9, LeftLeg: 0.15, RightLeg: 0.15 } } };
-export const model3D = (name) => MODELS[name] || null;
+// Modèles 3D animés (humain Mixamo converti dans Blender) : un fichier glb par sexe, plusieurs animations dedans
+// (une par exercice, ajoutées au fur et à mesure des imports Mixamo).
+const BODY = { M: 'models/trackme-human.glb', F: 'models/trackme-human-f.glb' };
+// Clip Mixamo par exercice (nom du LIBRARY → nom de l'animation dans le glb). Pas encore de clip = figure 2D.
+const CLIPS = { Squat: 'squat' };
+// Muscle (nom FR de exercises.js) → os du squelette Mixamo, intensité de la lueur.
+// Valeur > 0 : tout le segment ; valeur < 0 : face arrière seulement (ex. fessiers = os Hips, côté dos).
+const MUSCLE_BONES = {
+  Quadriceps: { LeftUpLeg: 1, RightUpLeg: 1 },
+  Fessiers: { Hips: -0.9 },
+  Ischios: { LeftUpLeg: -0.55, RightUpLeg: -0.55 },
+  Mollets: { LeftLeg: 1, RightLeg: 1 },
+  Dos: { Spine1: -0.9, Spine2: -0.9 },
+  Pectoraux: { Spine2: 0.85, Spine1: 0.3 },
+  Triceps: { LeftForeArm: 1, RightForeArm: 1 },
+  Épaules: { LeftShoulder: 1, RightShoulder: 1, LeftArm: 0.4, RightArm: 0.4 },
+  Biceps: { LeftArm: -0.7, RightArm: -0.7 },
+  Abdos: { Spine: 1 },
+};
+// Combine muscle principal (intensité pleine) + secondaires (0,55×) : à os partagé, la plus forte intensité l'emporte.
+function combineMuscles(primary, secondary = []) {
+  const W = {};
+  const add = (name, scale) => { const b = MUSCLE_BONES[name]; if (!b) return;
+    for (const bone in b) { const v = b[bone] * scale; if (!(bone in W) || Math.abs(v) > Math.abs(W[bone])) W[bone] = v; } };
+  add(primary, 1); secondary.forEach((m) => add(m, 0.55));
+  return W;
+}
+export function model3D(name, sex = 'M') {
+  const clip = CLIPS[name]; if (!clip) return null;
+  const e = LIBRARY.find((x) => x.name === name);
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []) };
+}
+// Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
+// appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).
+export const OUTFITS = {
+  M: [
+    { id: 'survet-gris', label: 'Survêtement gris', top: 0xb8b8bc, shorts: 0xc2c2c6, shoes: 0xf4f4f2 },
+    { id: 'hoodie-marine', label: 'Hoodie marine', top: 0x10172a, shorts: 0xa9acb2, shoes: 0xb8babd },
+    { id: 'hoodie-cosy', label: 'Hoodie cosy', top: 0x9b9b92, shorts: 0xa8a89e, shoes: 0xf2f0ec },
+  ],
+  F: [
+    { id: 'zip-blanc', label: 'Col zippé blanc', top: 0xf5f4f0, shorts: 0x16161a, shoes: 0xe8e8e6 },
+    { id: 'crop-gris', label: 'Crop gris', top: 0x9c9ca0, shorts: 0xb7b7bb, shoes: 0xc3c5c8 },
+    { id: 'demizip-gris', label: 'Demi-zip gris', top: 0xd7d7d4, shorts: 0x54545a, shoes: 0xf2f0ec },
+  ],
+};
+export const outfitsFor = (sex) => OUTFITS[sex === 'F' ? 'F' : 'M'];
 export const pictogram = (name, cls = '') => {
   const f = FIGURES[name];
   if (f) return `<span class="lrn-pic lrn-3d ${cls}" aria-hidden="true"><img src="img/ex/${f}-1.webp" alt="" decoding="async"><img src="img/ex/${f}-2.webp" alt="" decoding="async"></span>`;

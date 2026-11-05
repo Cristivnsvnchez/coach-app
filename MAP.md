@@ -12,7 +12,7 @@ Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 ## css/cycle.css (58 l.)
 TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 
-## css/learn.css (53 l.)
+## css/learn.css (84 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 
 ## css/motion.css (51 l.)
@@ -63,7 +63,7 @@ exports: AUTO,DEFAULT_HABITS habitName,dayStatus completion,streak
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
 exports: register,LANGS getLang,locale setLang,t
 
-## js/icons.js (50 l.)
+## js/icons.js (51 l.)
 Icônes SVG au trait, dessinées pour l'app (les SF Symbols ne sont pas licenciés pour le web).
 exports: icon
 
@@ -95,9 +95,9 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog uid,sum intakesByDay,latestWeight recentFoods
 
-## js/technique.js (476 l.)
+## js/technique.js (523 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
-exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure pictogram,getTechnique allTechniques,missingTechniques
+exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure model3D,OUTFITS outfitsFor,pictogram getTechnique,allTechniques missingTechniques,TECH
 
 ## js/theme.js (80 l.)
 Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
@@ -137,7 +137,11 @@ exports: pickExercise,openExercise platesSheet
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick
 
-## js/views/learn.js (109 l.)
+## js/viewer3d.js (162 l.)
+Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
+exports: mount3D
+
+## js/views/learn.js (135 l.)
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise render,openTechnique
 

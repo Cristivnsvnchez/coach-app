@@ -2,9 +2,9 @@
 import { nav, esc, sheet, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, register, getLang } from '../i18n.js';
-import { state } from '../store.js';
+import { state, save } from '../store.js';
 import { LIBRARY, findExercise } from '../exercises.js';
-import { getTechnique, pictogram, model3D, LEVELS, LEVEL_LABEL } from '../technique.js';
+import { getTechnique, pictogram, model3D, outfitsFor, LEVELS, LEVEL_LABEL } from '../technique.js';
 import { mount3D } from '../viewer3d.js';
 import { active, persist } from './session.js';
 import { openExercise } from './exsheets.js';
@@ -17,14 +17,18 @@ register({
     'Ajouté à ta séance': 'Added to your workout', 'Maîtrise': 'Mastery', '{n}/8 séances': '{n}/8 workouts', 'Haut du corps': 'Upper body', 'Bas du corps': 'Lower body',
     'Technique': 'Technique', 'Aucun mouvement trouvé.': 'No movement found.', 'Tous les niveaux': 'All levels', 'Niveau': 'Level',
     'Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.': 'General guidance: if you feel pain, stop and ask a professional.',
-    'barre': 'barbell', 'haltères': 'dumbbells', 'machine': 'machine', 'poulie': 'cable', 'aucun': 'bodyweight', 'Fiche à venir pour cet exercice.': 'No guide yet for this exercise.' },
+    'barre': 'barbell', 'haltères': 'dumbbells', 'machine': 'machine', 'poulie': 'cable', 'aucun': 'bodyweight', 'Fiche à venir pour cet exercice.': 'No guide yet for this exercise.',
+    'Habiller': 'Outfit', 'Choisir une tenue': 'Choose an outfit', 'Survêtement gris': 'Grey tracksuit', 'Hoodie marine': 'Navy hoodie', 'Hoodie cosy': 'Cosy hoodie',
+    'Col zippé blanc': 'White zip top', 'Crop gris': 'Grey crop top', 'Demi-zip gris': 'Grey half-zip' },
   nl: { 'Apprends les bons mouvements': 'Leer de juiste bewegingen', 'Glisse pour tourner': 'Veeg om te draaien', 'Apprendre les mouvements': 'Bewegingen leren', 'Rechercher un mouvement': 'Zoek een beweging',
     'Geste du jour': 'Beweging van de dag', 'Voir la technique': 'Bekijk de techniek', 'Débutant': 'Beginner', 'Intermédiaire': 'Gevorderd', 'Avancé': 'Expert',
     'Étapes': 'Stappen', 'Erreurs': 'Fouten', 'Conseils': 'Tips', 'Voir mes records': 'Mijn records bekijken', 'Ajouter à ma séance': 'Toevoegen aan mijn training',
     'Ajouté à ta séance': 'Toegevoegd aan je training', 'Maîtrise': 'Beheersing', '{n}/8 séances': '{n}/8 trainingen', 'Haut du corps': 'Bovenlichaam', 'Bas du corps': 'Onderlichaam',
     'Technique': 'Techniek', 'Aucun mouvement trouvé.': 'Geen beweging gevonden.', 'Tous les niveaux': 'Alle niveaus', 'Niveau': 'Niveau',
     'Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.': 'Algemene richtlijnen: stop bij pijn en vraag advies aan een professional.',
-    'barre': 'stang', 'haltères': 'dumbbells', 'machine': 'apparaat', 'poulie': 'kabel', 'aucun': 'lichaamsgewicht', 'Fiche à venir pour cet exercice.': 'Nog geen uitleg voor deze oefening.' },
+    'barre': 'stang', 'haltères': 'dumbbells', 'machine': 'apparaat', 'poulie': 'kabel', 'aucun': 'lichaamsgewicht', 'Fiche à venir pour cet exercice.': 'Nog geen uitleg voor deze oefening.',
+    'Habiller': 'Kleding', 'Choisir une tenue': 'Kies een outfit', 'Survêtement gris': 'Grijs trainingspak', 'Hoodie marine': 'Marineblauwe hoodie', 'Hoodie cosy': 'Knusse hoodie',
+    'Col zippé blanc': 'Witte rits-top', 'Crop gris': 'Grijze crop top', 'Demi-zip gris': 'Grijze halve rits' },
 });
 
 let q = '', level = ''; // filtres de la liste (conservés pendant la session)
@@ -84,12 +88,28 @@ export function render(root, go) {
 export function openTechnique(name, go) {
   const info = findExercise(name, state.customExercises) || {}, f = getTechnique(name);
   let tab = 'steps';
+  const sex = state.profile.sex === 'F' ? 'F' : 'M';
+  const outfits = outfitsFor(sex);
+  let outfitIdx = Math.min(state.settings.outfit || 0, outfits.length - 1);
   // Le visuel (3D 360° si disponible, sinon figure) est posé une fois : changer d'onglet ne recharge pas le modèle.
-  const m3d = model3D(name);
-  let dispose = () => {};
+  const m3d = model3D(name, sex);
+  let dispose = () => {}, setOutfit = () => {};
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
-    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big')}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>` : ''}</div><div class="body"></div>`, () => dispose());
-  if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d).then((d) => { dispose = d; });
+    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big')}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
+      <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
+  if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; });
+  const openDress = () => {
+    const ds = sheet(`<div class="sheet-head"><h3 class="title2">${t('Choisir une tenue')}</h3></div>
+      <ul class="v3d-outfits">${outfits.map((o, i) => `<li><button class="v3d-outfit ${i === outfitIdx ? 'on' : ''}" data-outfit="${i}">
+        <span class="v3d-swatch" style="background:#${o.top.toString(16).padStart(6, '0')}"></span>
+        <span class="v3d-swatch" style="background:#${o.shorts.toString(16).padStart(6, '0')}"></span>
+        <span class="v3d-outfit-label">${esc(t(o.label))}</span>${i === outfitIdx ? icon('check') : ''}</button></li>`).join('')}</ul>`);
+    ds.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-outfit]'); if (!b) return;
+      outfitIdx = +b.dataset.outfit; state.settings.outfit = outfitIdx; save();
+      setOutfit(outfits[outfitIdx]); ds.close();
+    });
+  };
   const draw = () => {
     const tags = [info.equipment && t(info.equipment), f && t(LEVEL_LABEL[f.level]), info.upper != null && t(info.upper ? 'Haut du corps' : 'Bas du corps')].filter(Boolean);
     s.querySelector('.body').innerHTML = `<div class="lrn-tags">${tags.map((x) => `<span class="lrn-tag">${esc(x)}</span>`).join('')}</div>
@@ -100,6 +120,7 @@ export function openTechnique(name, go) {
         <button class="btn large" data-rec>${t('Voir mes records')}</button></div>`;
   };
   s.addEventListener('click', (e) => {
+    if (e.target.closest('[data-dress]')) return openDress();
     const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; return draw(); }
     if (e.target.closest('[data-rec]')) { s.close(); return openExercise(name); }
     if (e.target.closest('[data-add]') && active) {

@@ -41,6 +41,7 @@ const P = {
   bolt: '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   timer: '<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
+  shirt: '<path d="M9 3.5L4 7l2.5 3L9 8v12.5h6V8l2.5 2L20 7l-5-3.5c-.3 1.6-1.5 2.7-3 2.7s-2.7-1.1-3-2.7z"/>',
 };
 
 export function icon(name, { filled = false, cls = '' } = {}) {

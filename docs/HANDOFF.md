@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v20** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v21** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -35,8 +35,23 @@ Onboarding par choix (12 étapes, palette, kcal Mifflin modifiables, « Protège
 - Blender (addon MCP, port 9876) : importer FBX dans un `bpy.context.temp_override(window, area VIEW_3D)` ; exporter glTF (`export_animation_mode='ACTIONS'`, sans textures). Ne pas utiliser `read_factory_settings` (désactive l'addon).
 - Accès fichiers Mac : Téléchargements / Documents / iCloud illisibles → travailler dans `~/trackme-3d` et `~/coach-app-preview`.
 
-## 6. DERNIÈRE DEMANDE (à faire en priorité)
+## 6. Tenues homme/femme (v21 : fait pour Squat, reste à étendre à tous les exercices)
 > « Mets-lui des habits type, selon que c'est une femme ou un homme. Au moment où il accède à la partie où on voit la 3D, proposer s'il veut modifier et l'habiller : plusieurs tenues, quelque chose de qualitatif. »
+> Demande complémentaire : faire ça pour TOUS les exercices (pas que Squat), importer les mouvements Mixamo manquants, réorganiser et catégoriser la bibliothèque Apprendre.
+
+**Fait (v21) :**
+- Y Bot (mannequin féminin Mixamo) exporté : `models/trackme-human-f.glb`, mêmes zones de vêtements que l'homme (débardeur/short/baskets), squelette identique → même pipeline d'animation.
+- `js/technique.js` : `model3D(name, sex)` choisit le bon glb par sexe ; `MUSCLE_BONES` + `combineMuscles()` dérivent automatiquement la lueur musculaire depuis `muscle`/`secondary` de `exercises.js` (plus besoin de la régler à la main par exercice) ; `CLIPS` associe un exercice à un clip d'animation présent dans le glb (seul `Squat` → `'squat'` pour l'instant).
+- `OUTFITS` (3 tenues par sexe, couleurs tirées des 6 photos de référence `~/trackme-3d/refs/`) + `outfitsFor(sex)`.
+- `js/viewer3d.js` : `mount3D()` renvoie `{ dispose, setOutfit }` ; `setOutfit(outfit)` recolore les matériaux `TM_Top`/`TM_Shorts`/`TM_Shoes` en direct, sans recharger le modèle (la semelle `TM_Shoes_Sole` reste neutre). Tenue retenue dans `state.settings.outfit` (index global, persiste entre les deux sexes).
+- Bouton « Habiller » (icône `shirt` ajoutée dans `js/icons.js`) posé en haut à droite de la visionneuse dans `js/views/learn.js` → feuille de choix (vignettes couleur + libellé), i18n FR/EN/NL.
+- Testé en local sur les deux sexes (profil M et F), 53 tests verts, i18n-scan sans nouvelle lacune.
+
+**Reste à faire pour ce chantier :**
+1. Étendre `CLIPS` : importer dans Blender les mouvements Mixamo pour les ~36 autres exercices de `LIBRARY` (homme + femme), les ajouter comme actions supplémentaires dans les mêmes glb (un seul fichier par sexe, plusieurs clips dedans — pas un glb par exercice).
+2. Mouvements du point 7.1 ci-dessous (cardio, haltéro, mobilité…) : à importer aussi et ranger par catégorie dans Apprendre (actuellement la vue n'a que le filtre niveau + Haut/Bas du corps, pas de vraie catégorie Jambes/Haut/Abdos/Cardio/Haltéro/Mobilité — à ajouter).
+3. Coupes de vêtements manches longues / pantalon large / legging / chaussettes (actuellement toutes les tenues réutilisent la même coupe débardeur+short, seules les couleurs changent) — décidé pour l'instant de livrer vite avec les couleurs seules ; les vraies coupes sont un chantier Blender à part, plus long.
+4. Vignettes des tenues dans la feuille « Habiller » : pour l'instant juste 2 pastilles de couleur (haut/bas) + libellé, pas de rendu Blender comme prévu initialement.
 
 Références photo : 6 images gardées en local chez l’utilisateur (`~/trackme-3d/refs/`, non publiées : photos de personnes réelles). Description :
 - **Homme** : survêtement gris chiné zippé + t-shirt blanc + baskets blanches · hoodie marine + jogging gris large + baskets argent · hoodie + jogging gris « cosy » + chaussettes blanches.

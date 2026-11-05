@@ -17,7 +17,7 @@ const MIGRATIONS = {
 const empty = () => ({
   _v: SCHEMA,
   profile: { goal: 'perte', rate: 0.5, activity: 'leger' },
-  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7 },
+  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7, outfit: 0 },
   usage: null,    // { month: 'YYYY-MM', usd, calls } : dépense IA estimée du mois
   foods: {},      // id -> { name, per100: {kcal,p,c,f,fib}, source, serving }
   favorites: [],  // ids d'aliments

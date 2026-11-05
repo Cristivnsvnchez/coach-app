@@ -4,19 +4,21 @@
 
 const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par session
 
-export async function mount3D(box, { url, clip, muscles = {} }) {
+const noop3D = { dispose() {}, setOutfit() {} };
+
+export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
   let THREE, GLTFLoader, OrbitControls;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
     ({ OrbitControls } = await import('../vendor/three/OrbitControls.js'));
-  } catch { return () => {}; }
+  } catch { return noop3D; }
 
   const canvas = document.createElement('canvas');
   canvas.className = 'v3d-canvas';
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' }); }
-  catch { return () => {}; } // pas de WebGL : on garde le repli
+  catch { return noop3D; } // pas de WebGL : on garde le repli
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -43,7 +45,7 @@ export async function mount3D(box, { url, clip, muscles = {} }) {
   try {
     if (!cache.has(url)) cache.set(url, new GLTFLoader().loadAsync(url));
     gltf = await cache.get(url);
-  } catch { cache.delete(url); renderer.dispose(); return () => {}; }
+  } catch { cache.delete(url); renderer.dispose(); return noop3D; }
 
   const model = gltf.scene; // le cache garde l'original : on travaille sur une copie liée au squelette
   const { clone } = await import('../vendor/three/SkeletonUtils.js');
@@ -64,6 +66,7 @@ export async function mount3D(box, { url, clip, muscles = {} }) {
   // Matière « mannequin anatomique » : blanc mat + liseré bleu (effet rayons X) + muscles travaillés lumineux.
   // Le masque musculaire vient des poids de peau : chaque sommet sait à quels os il est lié (cuisses, dos, bras…).
   const uTime = { value: 0 };
+  const byKind = {}; // kind ('top'/'shorts'/'shoes') → matériaux à recolorer quand on change de tenue
   obj.traverse((o) => {
     if (!o.isSkinnedMesh) return;
     const names = o.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ''));
@@ -74,8 +77,11 @@ export async function mount3D(box, { url, clip, muscles = {} }) {
     o.material = mats.map((m) => {
       // Peau : blanc mat + lueur. Haut : tissu sombre, la lueur passe à travers (pectoraux, dos). Short et chaussures : sans lueur.
       const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : 'skin';
+      const sole = /sole/i.test(m.name); // semelle : jamais recolorée par la tenue, reste neutre
       const skin = kind === 'skin', glows = kind === 'skin' || kind === 'top';
-      const mm = new THREE.MeshStandardMaterial({ color: skin ? 0xeceef2 : m.color, roughness: skin ? 0.5 : 0.78, metalness: 0 });
+      const tint = outfit && outfit[kind] && !sole ? outfit[kind] : m.color;
+      const mm = new THREE.MeshStandardMaterial({ color: skin ? 0xeceef2 : tint, roughness: skin ? 0.5 : 0.78, metalness: 0 });
+      if (!skin && !sole) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
       mm.onBeforeCompile = (sh) => {
         sh.uniforms.uW = { value: W }; sh.uniforms.uTime = uTime;
@@ -139,8 +145,11 @@ export async function mount3D(box, { url, clip, muscles = {} }) {
   document.addEventListener('visibilitychange', onVis);
   loop();
 
+  // Changer de tenue sans recharger le modèle : recolore juste les matériaux déjà en place.
+  const setOutfit = (next) => { for (const k in byKind) if (next?.[k]) byKind[k].forEach((m) => m.color.set(next[k])); };
+
   // Nettoyage à la fermeture de la fiche : GPU, écouteurs, boucle.
-  return () => {
+  const dispose = () => {
     cancelAnimationFrame(raf); raf = 0; visible = false;
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
     controls.dispose(); mixer.stopAllAction();
@@ -149,4 +158,5 @@ export async function mount3D(box, { url, clip, muscles = {} }) {
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
     renderer.dispose(); canvas.remove();
   };
+  return { dispose, setOutfit };
 }
