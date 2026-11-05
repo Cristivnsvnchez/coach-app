@@ -65,7 +65,7 @@ export function lineChart(series, { height = 180, band = null, yPad = 1, hline =
   const lab = (x, anchor, pos) => `<text x="${pos}" y="${H - 6}" class="axis" text-anchor="${anchor}">${fmtDate(x)}</text>`;
   const labels = sameX ? lab(x0, 'middle', (L + W - R) / 2) : lab(x0, 'start', L) + lab(x1, 'end', W - R);
   const hl = hline ? `<line x1="${L}" x2="${W - R}" y1="${sy(hline.y)}" y2="${sy(hline.y)}" class="hline"/><text x="${W - R - 2}" y="${sy(hline.y) - 4}" class="axis" text-anchor="end">${esc(hline.label || '')}</text>` : '';
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${bandSvg}${ticks}${hl}${lines}${labels}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="aspect-ratio:${W}/${H}" aria-hidden="true">${bandSvg}${ticks}${hl}${lines}${labels}</svg>`;
 }
 
 // Petit rendu Markdown sûr (titres, gras, listes, liens) pour les réponses IA.
@@ -94,13 +94,70 @@ export function toast(msg) {
 }
 
 // Feuille modale du bas (style iOS). Renvoie l'élément pour brancher les événements.
+// Feuille modale façon iOS : glisser vers le bas pour fermer, Échap, bouton retour du navigateur, focus géré.
+let skipPop = 0;
 export function sheet(html, onClose) {
   const wrap = document.createElement('div');
   wrap.className = 'sheet-wrap';
-  wrap.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><button class="icon-btn round sheet-close" aria-label="${t('Annuler')}">${icon('close')}</button>${html}</div>`;
-  const close = () => { wrap.remove(); onClose && onClose(); };
+  wrap.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="sheet-grab" aria-hidden="true"></span><button class="icon-btn round sheet-close" aria-label="${t('Annuler')}">${icon('close')}</button>${html}</div>`;
+  const el = wrap.querySelector('.sheet'), before = document.activeElement;
+  let closed = false;
+  const close = (fromHistory = false) => {
+    if (closed) return; closed = true;
+    wrap.remove(); removeEventListener('keydown', onKey);
+    if (!fromHistory && history.state?.sheet) { skipPop++; history.back(); }
+    before?.focus?.({ preventScroll: true });
+    onClose && onClose();
+  };
+  const onKey = (e) => { if (e.key === 'Escape' && wrap === [...document.querySelectorAll('.sheet-wrap')].pop()) close(); };
+  addEventListener('keydown', onKey);
   wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('.sheet-close')) close(); });
+  dragToClose(el, () => close());
   document.body.appendChild(wrap);
+  history.pushState({ ...(history.state || {}), sheet: true }, '');
+  if (matchMedia('(pointer: fine)').matches) (el.querySelector('input:not([type=hidden]), select, textarea') || el.querySelector('.sheet-close'))?.focus({ preventScroll: true });
   wrap.close = close;
   return wrap;
+}
+
+// Appelé par le routeur sur « popstate » : true si l'évènement concernait une feuille (fermée ici).
+export function sheetPop() {
+  if (skipPop) { skipPop--; return true; }
+  const open = [...document.querySelectorAll('.sheet-wrap')].pop();
+  if (open) { open.close?.(true); return true; }
+  return false;
+}
+
+// Glisser une feuille vers le bas (doigt seulement, quand elle est défilée en haut) : > 110 px ou geste rapide = fermer.
+function dragToClose(el, close) {
+  let y0 = 0, t0 = 0, dy = 0, active = false;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || el.scrollTop > 0 || e.target.closest('input, textarea, select, .seg, .chips, [data-nodrag]')) return;
+    y0 = e.clientY; t0 = e.timeStamp; dy = 0; active = true;
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!active) return;
+    dy = e.clientY - y0;
+    if (dy <= 0) { el.style.transform = ''; return; }
+    el.classList.add('dragging'); el.style.transform = `translateY(${dy}px)`;
+  });
+  const end = (e) => {
+    if (!active) return; active = false; el.classList.remove('dragging');
+    const fast = dy > 40 && dy / Math.max(1, e.timeStamp - t0) > 0.6;
+    if (dy > 110 || fast) { el.classList.add('closing'); el.style.transform = 'translateY(100%)'; setTimeout(close, 200); }
+    else el.style.transform = '';
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+
+// Bandeau discret en haut (hors ligne, mise à jour…), avec une action facultative.
+export function banner(msg, { action, onAction, ms = action ? 0 : 3200 } = {}) {
+  document.querySelectorAll('.tm-banner').forEach((x) => x.remove());
+  const el = document.createElement('div');
+  el.className = 'tm-banner'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button class="btn filled">${esc(action)}</button>` : ''}`;
+  el.querySelector('button')?.addEventListener('click', () => { el.remove(); onAction?.(); });
+  document.body.appendChild(el);
+  if (ms) setTimeout(() => el.remove(), ms);
+  return el;
 }

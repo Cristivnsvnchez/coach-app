@@ -1,8 +1,9 @@
 // Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
-import { load, state, today as todayIso } from './store.js';
+import { load, state, flush, today as todayIso } from './store.js';
 import { icon } from './icons.js';
 import { t } from './i18n.js';
-import { applyTheme } from './theme.js';
+import { applyTheme, wordmark } from './theme.js';
+import { banner, sheetPop } from './ui.js';
 import './i18n/nl-base.js'; // traductions néerlandaises des textes existants
 import './i18n/extra.js'; // compléments EN + NL (tests/i18n-scan.mjs)
 import * as today from './views/today.js';
@@ -25,18 +26,27 @@ const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
 let tab = 'today';
 
+// Mobile : capsule 4 onglets + « + » central. Ordinateur (CSS ≥ 1024 px) : la même barre devient une barre latérale
+// avec le logotype, le libellé du « + » et les écrans secondaires (éléments .side-only, masqués sur mobile).
+const SIDE = () => [['coach', 'Coach', 'sparkles'], ['learn', 'Apprendre', 'flask'],
+  ...(state.profile?.sex === 'F' && state.cycle?.enabled ? [['cycle', 'Cycle', 'drop']] : [])];
 function drawTabbar() {
-  const active = TAB_OF[tab] || tab;
-  tabbar.innerHTML = TABS.map(([k, label, ic]) => k === 'add'
-    ? `<button class="tm-fab" data-tab="add" aria-label="${t('Ajouter un aliment')}">${icon('plus')}</button>`
-    : `<button data-tab="${k}" class="${k === active ? 'on' : ''}" ${k === active ? 'aria-current="page"' : ''} aria-label="${t(label)}">${icon(ic)}<span>${t(label)}</span></button>`).join('');
+  const active = tab;
+  // .on = écran affiché ; .parent = onglet du menu mobile qui contient l'écran (Coach, Cycle… → Journal).
+  const btn = ([k, label, ic], cls = '') => `<button data-tab="${k}" class="${cls} ${k === active ? 'on' : TAB_OF[active] === k ? 'parent' : ''}" ${k === active ? 'aria-current="page"' : ''} aria-label="${t(label)}">${icon(ic)}<span>${t(label)}</span></button>`;
+  tabbar.innerHTML = `<span class="side-only side-brand">${wordmark()}</span>` + TABS.map((x) => x[0] === 'add'
+    ? `<button class="tm-fab" data-tab="add" aria-label="${t('Ajouter un aliment')}">${icon('plus')}<span class="side-only">${t('Ajouter un aliment')}</span></button>`
+    : btn(x)).join('') + `<span class="side-only side-sep" aria-hidden="true"></span>` + SIDE().map((x) => btn(x, 'side-only')).join('')
+    + btn(['profile', 'Profil', 'profile'], 'side-only side-foot');
 }
 
 // Repas proposé par le « + » selon l'heure.
 const mealNow = () => { const h = new Date().getHours() + new Date().getMinutes() / 60; return h < 10.5 ? 'dej' : h < 15 ? 'midi' : h < 21 ? 'diner' : 'snack'; };
 
-export function go(name, arg) {
+// Navigation : historique du navigateur (bouton retour, geste retour Android, souris) + fondu court entre écrans.
+export function go(name, arg, { push = true } = {}) {
   if (!VIEWS[name]) return;
+  const changed = name !== tab, first = !tab;
   tab = name;
   drawTabbar();
   main.scrollTo(0, 0);
@@ -45,8 +55,15 @@ export function go(name, arg) {
   main.style.paddingBottom = '';
   document.body.classList.remove('typing');
   VIEWS[name].render(main, go, arg);
+  // Fondu court à l'arrivée sur un autre écran (rendu synchrone : un tap = une réaction immédiate).
+  if (changed && !first) { main.classList.remove('tm-enter'); void main.offsetWidth; main.classList.add('tm-enter'); }
+  if (push && changed) history.pushState({ tab: name }, '', '#' + name);
   try { sessionStorage.setItem('tab', name); } catch {}
 }
+addEventListener('popstate', (e) => {
+  if (sheetPop()) return;
+  go(e.state?.tab || (location.hash.slice(1) in VIEWS ? location.hash.slice(1) : 'today'), undefined, { push: false });
+});
 
 main.addEventListener('scroll', () => main.classList.toggle('scrolled', main.scrollTop > 8), { passive: true });
 
@@ -62,9 +79,11 @@ tabbar.addEventListener('click', (e) => {
   if (b.dataset.tab === tab) main.scrollTo({ top: 0, behavior: 'smooth' });
   else go(b.dataset.tab);
 });
-let saved = null;
-try { saved = sessionStorage.getItem('tab'); } catch {}
-go(saved || tab);
+let saved = location.hash.slice(1) in VIEWS ? location.hash.slice(1) : null;
+try { saved ||= sessionStorage.getItem('tab'); } catch {}
+tab = '';
+go(saved || 'today', undefined, { push: false });
+history.replaceState({ tab }, '', '#' + tab);
 if (needsOnboarding()) openOnboarding(() => { applyTheme(state.settings.palette, state.settings.shape, state.settings.surface); go('today'); });
 
 let day = todayIso();
@@ -76,6 +95,22 @@ document.addEventListener('visibilitychange', () => {
 
 navigator.storage?.persist?.().catch(() => {});
 
+// Hors ligne : l'app continue (données locales) ; on le dit sans bloquer.
+addEventListener('offline', () => banner(t('Hors ligne : tes saisies restent enregistrées.')));
+addEventListener('online', () => banner(t('De nouveau en ligne.'), { ms: 1800 }));
+
+// Mise à jour : la nouvelle version prend la main en arrière-plan ; on recharge une seule fois, sans perdre de saisie.
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    const reload = () => { reloading = true; flush(); location.reload(); };
+    if (!document.querySelector('.sheet-wrap') && document.visibilityState === 'hidden') return reload();
+    banner(t('Nouvelle version de TrackMe prête.'), { action: t('Mettre à jour'), onAction: reload });
+  });
+  navigator.serviceWorker.register('./sw.js').then((r) => {
+    // Vérifie les mises à jour à chaque retour dans l'app (iOS garde l'app ouverte longtemps).
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); });
+  }).catch(() => {});
 }

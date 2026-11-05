@@ -26,6 +26,7 @@ export function render(root, go) {
   const speed = obs && target && Math.sign(target - (last?.trend ?? 0)) === Math.sign(obs) ? obs : targets?.weeklyChangeKg;
   const eta = last && target ? S.etaDate(last.trend, target, speed, today()) : null;
   const custom = state.milestones || [];
+  const progress = start && last && target && start.kg !== target ? Math.min(1, Math.max(0, (start.kg - last.trend) / (start.kg - target))) : 0;
   const keep = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
 
   // Graphique : fenêtre = période choisie, étendue jusqu'à l'arrivée estimée si elle est proche.
@@ -52,16 +53,20 @@ export function render(root, go) {
   const steps = [...autoSteps.filter((a) => !custom.some((c) => Math.abs(c.kg - a.kg) < 0.25)), ...custom]
     .sort((a, b) => (down ? b.kg - a.kg : a.kg - b.kg));
   const delta = (d) => (d == null || d === 0 ? '' : d < 0 ? `<span class="delta ahead">${t('{n} j d\'avance', { n: -d })}</span>` : `<span class="delta late">${t('{n} j de retard', { n: d })}</span>`);
+  // Étape = un nœud sur la ligne de progression. Le rond coche/décoche d'un tap ; la ligne ouvre l'étape
+  // (une étape automatique devient alors une étape personnalisée, modifiable).
   const stepRow = (m) => {
     const st = S.milestoneStatus(m, trend, speed, today(), down);
     const right = st.reached
       ? `<span class="val">${t('Atteint')}${st.reachedOn ? ' · ' + fmtDate(st.reachedOn, { day: 'numeric', month: 'short' }) : ''}</span>`
       : `<span class="val">${st.eta ? fmtDate(st.eta, { day: 'numeric', month: 'short', year: '2-digit' }) : '–'}</span>`;
-    return `<li class="cell ${st.reached ? 'done' : ''} ${m.auto ? '' : 'tap'}" ${m.auto ? '' : `data-ms="${esc(m.id)}"`}>
-      <span class="ms-check">${st.reached ? icon('check') : ''}</span>
+    const byTrend = st.reached && !m.done; // atteinte par la tendance : pas de décochage manuel possible
+    return `<li class="cell tap ms-row ${st.reached ? 'done' : ''}" data-ms="${esc(m.id)}">
+      <button type="button" class="ms-node" data-toggle="${esc(m.id)}" aria-pressed="${st.reached}" ${byTrend ? 'disabled' : ''}
+        aria-label="${st.reached ? t('Marquer comme non atteinte') : t('Marquer comme atteinte')}">${icon('check')}</button>
       <div class="grow"><span class="t num">${fmt(m.kg, 1)} kg${m.label ? ` · <span class="secondary">${esc(m.label)}</span>` : ''}</span>
-        <span class="s">${m.date ? t('Estimé : {d}', { d: fmtDate(m.date, { day: 'numeric', month: 'short', year: '2-digit' }) }) : m.auto ? t('Étape automatique') : t('Sans date')}${delta(st.deltaDays)}</span></div>
-      ${right}</li>`;
+        <span class="s">${m.date ? t('Prévu le {d}', { d: fmtDate(m.date, { day: 'numeric', month: 'short', year: '2-digit' }) }) : m.auto ? t('Étape proposée') : ''}${delta(st.deltaDays)}</span></div>
+      ${right}${icon('chevronRight', { cls: 'chev' })}</li>`;
   };
 
   const kgIn = (name, ph, val) => `<input class="input num" name="${name}" type="number" step="0.1" inputmode="decimal" placeholder="${ph}" value="${val ?? ''}" aria-label="${ph}">`;
@@ -82,11 +87,13 @@ export function render(root, go) {
         : (state.cycle?.enabled ? t('Points roses : pesées en rétention d\'eau probable (cycle). ') : '') + t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.'))}
     ${group(t('Timeline'), !target ? `<div class="cells"><div class="cell" style="display:block"><p class="t wrap" style="margin:.25rem 0">${t('Définis ton poids cible (plus bas) pour voir la date d\'arrivée estimée et tes étapes.')}</p></div></div>`
       : `<ul class="cells">
-        <li class="cell"><div class="grow"><span class="t headline">${t('Arrivée estimée')}</span><span class="s">${eta ? (speed === obs ? t('vitesse réelle') : t('rythme prévu')) + ` · ${fmt(Math.abs(speed), 2)} ${t('kg/sem')}` : t("Pas d'estimation : la tendance va dans le mauvais sens ou le rythme est nul.")}</span></div>
-          <span class="val headline">${eta ? fmtDate(eta, { day: 'numeric', month: 'short', year: 'numeric' }) : '–'}</span></li>
+        <li class="cell ms-head" style="display:block"><div class="row-between"><span class="t headline">${t('Arrivée estimée')}</span>
+          <span class="val headline">${eta ? fmtDate(eta, { day: 'numeric', month: 'short', year: 'numeric' }) : '–'}</span></div>
+          <div class="ms-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress * 100)}"><i style="width:${(progress * 100).toFixed(1)}%"></i></div>
+          <span class="s">${t('{p} % du chemin · {k} kg restants', { p: Math.round(progress * 100), k: fmt(Math.abs((last?.trend ?? target) - target), 1) })} · ${eta ? (speed === obs ? t('vitesse réelle') : t('rythme prévu')) + ` ${fmt(Math.abs(speed), 2)} ${t('kg/sem')}` : t("Pas d'estimation : la tendance va dans le mauvais sens ou le rythme est nul.")}</span></li>
         ${steps.map(stepRow).join('')}
-        <li class="cell action" data-a="add-ms" role="button">${icon('plus')} ${t('Ajouter une étape estimée')}</li></ul>`,
-      t('Une étape est cochée automatiquement quand ta tendance l\'atteint ; tu peux aussi la cocher à la main. Projection indicative : la perte ralentit avec le temps (Hall 2011).'))}
+        <li class="cell action" data-a="add-ms" role="button">${icon('plus')} ${t('Ajouter une étape')}</li></ul>`,
+      t('Touche un rond pour cocher une étape. Elle se coche aussi toute seule quand ta tendance l\'atteint. Projection indicative : la perte ralentit avec le temps (Hall 2011).'))}
     ${ideal ? group(t('Poids de référence pour {h} cm', { h: fmt(p.height) }), `<div class="cells">
         <div class="cell"><div class="grow"><span class="t wrap">${t('Fourchette santé (IMC 18,5–24,9, OMS)')}</span></div><span class="val headline">${fmt(ideal.bmiMin, 1)} – ${fmt(ideal.bmiMax, 1)} kg</span></div>
         <form class="cell" data-f="target">${kgIn('t', t('Mon poids cible (kg)'), target)}<button class="btn">${t('Définir')}</button></form></div>`,
@@ -125,20 +132,30 @@ export function render(root, go) {
     if (d && confirm(t('Supprimer cette pesée ?'))) { state.weights = state.weights.filter((w) => w.date !== d.dataset.del); save(); return keep(); }
     if (e.target.closest('[data-a=profile]')) return go('profile');
     if (e.target.closest('[data-a=add-ms]')) return editMilestone(null, { last, target, keep });
+    const tg = e.target.closest('[data-toggle]');
+    if (tg) { toggleMilestone(steps.find((m) => m.id === tg.dataset.toggle)); navigator.vibrate?.(8); return keep(); }
     const ms = e.target.closest('[data-ms]');
-    if (ms) editMilestone(custom.find((m) => m.id === ms.dataset.ms), { last, target, keep });
+    if (ms) { const m = steps.find((x) => x.id === ms.dataset.ms); editMilestone(m?.auto ? null : m, { last, target, keep, preset: m?.auto ? m : null }); }
   };
 }
 
-// Ajouter / modifier une étape estimée : poids, date estimée, nom, cochée à la main, supprimer.
-function editMilestone(m, { last, target, keep }) {
+// Cocher / décocher à la main. Une étape automatique cochée devient une étape personnalisée (elle garde son poids).
+function toggleMilestone(m) {
+  if (!m) return;
+  if (m.auto) { (state.milestones ||= []).push({ id: uid(), kg: m.kg, label: m.label, date: null, done: true, doneOn: today() }); return save(); }
+  const real = state.milestones.find((x) => x.id === m.id);
+  if (real) { real.done = !real.done; real.doneOn = real.done ? today() : null; save(); }
+}
+
+// Ajouter / modifier une étape : poids, date prévue, nom, cochée à la main, supprimer. `preset` = étape proposée à personnaliser.
+function editMilestone(m, { last, target, keep, preset }) {
   const isNew = !m;
-  const kg0 = m?.kg ?? (last && target ? +((last.trend + target) / 2).toFixed(1) : '');
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${isNew ? t('Nouvelle étape') : t('Étape')}</h3></div>
+  const kg0 = m?.kg ?? preset?.kg ?? (last && target ? +((last.trend + target) / 2).toFixed(1) : '');
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${preset ? t('Personnaliser l\'étape') : isNew ? t('Nouvelle étape') : t('Étape')}</h3></div>
     <form>${group('', `<div class="cells">
       <label class="cell field"><span>${t('Poids (kg)')}</span><input name="kg" type="number" step="0.1" inputmode="decimal" required value="${kg0}"></label>
       <label class="cell field"><span>${t('Date estimée')}</span><input name="date" type="date" value="${m?.date || ''}"></label>
-      <label class="cell field"><span>${t('Nom')}</span><input name="label" value="${esc(m?.label || '')}" placeholder="${t('Ex : mariage, vacances…')}"></label>
+      <label class="cell field"><span>${t('Nom')}</span><input name="label" value="${esc(m?.label || preset?.label || '')}" placeholder="${t('Ex : mariage, vacances…')}"></label>
       ${isNew ? '' : `<div class="cell toggle-row"><span class="grow">${t('Atteinte (cocher à la main)')}</span><label class="switch"><input type="checkbox" name="done" ${m.done ? 'checked' : ''}><span></span></label></div>`}</div>`,
       t('La date estimée sert à voir si tu es en avance ou en retard. L\'étape se coche toute seule quand ta tendance l\'atteint.'))}
       <button class="btn filled large">${t('Enregistrer')}</button></form>

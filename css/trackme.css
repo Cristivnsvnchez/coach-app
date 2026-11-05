@@ -148,3 +148,98 @@ html.tm { caret-color: var(--p-deep); accent-color: var(--p-deep); }
 /* Titres en casse de phrase : majuscule initiale seulement (les dates « mardi 4 nov. » gardent leur capitale). */
 html.tm .large-title, html.tm .nav .nav-title { text-transform: none; }
 html.tm .large-title::first-letter, html.tm .nav .nav-title::first-letter { text-transform: uppercase; }
+
+/* ---- Comportement d'app native ---- */
+/* Pas de zoom au double tap (les taps rapides restent des taps) ; le pincement reste possible pour l'accessibilité. */
+html, body, button, a, input, select, textarea, label, [role="button"] { touch-action: manipulation; }
+html.tm { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html.tm body { overscroll-behavior: none; }
+/* Retour tactile immédiat au toucher, comme iOS */
+html.tm button, html.tm .btn, html.tm .chip, html.tm .cell.tap, html.tm [data-a] { transition: transform .16s cubic-bezier(.2, .9, .25, 1), background-color .2s, opacity .2s; }
+html.tm button:active:not(:disabled), html.tm .btn:active, html.tm .chip:active, html.tm .cell.tap:active { transform: scale(.97); }
+html.tm .tabbar button:active { transform: scale(.94); }
+html.tm button:disabled, html.tm .btn:disabled { opacity: .45; }
+/* Souris : curseur et survol seulement là où il y a un pointeur fin */
+@media (hover: hover) and (pointer: fine) {
+  html.tm button:not(:disabled), html.tm .btn, html.tm .chip, html.tm .cell.tap, html.tm [data-a] { cursor: pointer; }
+  html.tm .cell.tap:hover { background-color: color-mix(in srgb, var(--p-tint) 45%, var(--cell)); }
+  html.tm .btn.filled:hover { filter: brightness(1.08); }
+  html.tm .btn:not(.filled):not(.plain):hover, html.tm .chip:not(.on):hover { background-color: color-mix(in srgb, var(--p-tint) 80%, #fff); }
+}
+/* Focus clavier visible, aux couleurs de la palette */
+html.tm :focus-visible { outline: 2.5px solid var(--p-mid); outline-offset: 2px; border-radius: 12px; }
+html.tm .btn:focus-visible, html.tm .chip:focus-visible, html.tm .tabbar button:focus-visible { border-radius: 999px; }
+/* Arrivée sur un écran : fondu + léger glissement, part d'un état déjà visible (jamais de contenu caché si l'animation saute) */
+html.tm #view.tm-enter > * { animation: tm-enter .22s cubic-bezier(.2, .9, .25, 1); }
+@keyframes tm-enter { from { opacity: .4; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  html.tm *, html.tm *::before, html.tm *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+/* Feuille : poignée de glissement (glisser vers le bas pour fermer) */
+html.tm .sheet { touch-action: pan-y; }
+html.tm .sheet-grab { position: sticky; top: 0; z-index: 2; display: block; height: 22px; margin: -.6rem 0 -.2rem; cursor: grab; }
+html.tm .sheet-grab::after { content: ''; position: absolute; left: 50%; top: 8px; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: var(--fill-2); }
+html.tm .sheet::before { display: none; }
+html.tm .sheet.dragging { transition: none; }
+html.tm .sheet.closing { transition: transform .22s ease-in; }
+/* Bandeau hors ligne / nouvelle version */
+.tm-banner { position: fixed; left: 50%; top: calc(var(--safe-t) + .5rem); z-index: 40; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem;
+  padding: .55rem .6rem .55rem 1rem; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); font-size: .88rem; font-weight: 600; white-space: nowrap; }
+.tm-banner .btn { min-height: 34px; padding: 0 .9rem; font-size: .85rem; }
+.tm-banner:not(:has(.btn)) { padding-right: 1rem; }
+
+/* ---- Ordinateur (≥ 1024 px) : barre latérale à gauche, contenu en colonnes ---- */
+html.tm .side-only { display: none; }
+@media (min-width: 1024px) {
+  html.tm { --side-w: 248px; --tabbar-h: 0px; }
+  html.tm .tabbar { top: 0; bottom: 0; left: 0; right: auto; width: var(--side-w); height: auto; max-width: none; margin: 0; border-radius: 0;
+    flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 2px; padding: calc(1.4rem + var(--safe-t)) .9rem 1.2rem;
+    border: 0; border-right: 1px solid var(--separator); box-shadow: none; }
+  html.tm .side-only { display: flex; }
+  html.tm .tabbar .side-brand { font-size: 1.7rem; padding: 0 .7rem 1.4rem; color: var(--label); }
+  html.tm .tabbar .side-sep { height: 1px; margin: .7rem .6rem; background: var(--separator); flex: 0 0 1px; }
+  html.tm .tabbar button, html.tm .tabbar button.on { flex: 0 0 auto; justify-content: flex-start; height: 44px; min-height: 44px; padding: 0 .8rem; gap: .75rem; border-radius: 14px; font-size: .95rem; }
+  html.tm .tabbar button span { display: inline; }
+  html.tm .tabbar button.on { background: var(--p-tint); }
+  html.tm .tabbar .tm-fab { order: -1; flex: 0 0 48px; height: 48px; min-height: 48px; margin: 0 0 1rem; border-radius: 24px; justify-content: center; gap: .5rem;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--p-deep) 28%, transparent); }
+  html.tm .tabbar .tm-fab svg.ic { width: 20px; height: 20px; }
+  html.tm .tabbar .tm-fab .side-only { display: inline; font-weight: 600; }
+  html.tm .tabbar .side-brand { order: -2; }
+  html.tm .tabbar .side-foot { margin-top: auto; }
+  html.tm #view { left: var(--side-w); bottom: 0; padding-bottom: 3rem; }
+  html.tm .composer { left: calc(var(--side-w) + 1rem); bottom: 1rem; }
+  html.tm .rest { left: calc(var(--side-w) + 1rem); bottom: 1rem; }
+  html.tm .toast, html.tm .tm-banner { left: calc(50% + var(--side-w) / 2); }
+  html.tm .sheet-wrap { padding-left: var(--side-w); }
+}
+@media (min-width: 1024px) and (prefers-color-scheme: dark) { html.tm .tabbar button.on { background: var(--fill-2); } }
+/* Mobile : l'onglet parent d'un écran secondaire reste allumé */
+@media (max-width: 1023px) {
+  html.tm .tabbar button.parent { flex: 1.9; background: var(--p-tint); color: var(--p-deep); padding: 0 12px; }
+  html.tm .tabbar button.parent span { display: inline; }
+}
+@media (max-width: 1023px) and (prefers-color-scheme: dark) { html.tm .tabbar button.parent { background: var(--fill-2); color: var(--label); } }
+/* Graphiques : proportions fixes (pas de texte étiré sur grand écran), plafonnés en hauteur */
+html.tm .chart { height: auto; max-height: 20rem; }
+@media (min-width: 1024px) { html.tm #view[data-view="weight"] > * { max-width: 820px; margin-left: auto; margin-right: auto; } }
+
+/* Poids → Timeline : ligne de progression verticale, nœuds tactiles (44 px de cible), étapes ouvrables */
+html.tm .ms-head .row-between { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+html.tm .ms-progress { height: 8px; margin: .7rem 0 .55rem; border-radius: 4px; background: var(--fill-2); overflow: hidden; }
+html.tm .ms-progress i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--p-deep), var(--p-mid)); }
+html.tm .ms-row { position: relative; gap: .8rem; }
+html.tm .ms-row::after { content: ''; position: absolute; left: calc(1rem + 21px); top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--fill-2); z-index: 0; }
+html.tm .ms-row.done::after { background: var(--p-deep); }
+html.tm .ms-row:has(+ .action)::after { bottom: 50%; }
+html.tm .ms-head + .ms-row::after { top: 50%; }
+html.tm .ms-node { position: relative; z-index: 1; flex: none; width: 44px; height: 44px; margin: -6px 0; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; color: transparent; }
+html.tm .ms-node::before { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--cell); border: 2px solid var(--label-3); transition: background .2s, border-color .2s, transform .2s; }
+html.tm .ms-node svg.ic { position: relative; width: 14px; height: 14px; stroke-width: 3; }
+html.tm .ms-row.done .ms-node { color: #fff; }
+html.tm .ms-row.done .ms-node::before { background: var(--p-deep); border-color: var(--p-deep); }
+html.tm .ms-node:not(:disabled):active::before { transform: scale(.85); }
+html.tm .ms-node:disabled { opacity: 1; }
+@media (hover: hover) and (pointer: fine) { html.tm .ms-node:not(:disabled):hover::before { border-color: var(--p-deep); } }
+html.tm .ms-row .chev { color: var(--label-3); }

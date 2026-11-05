@@ -27,14 +27,14 @@ TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 ## css/today.css (72 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
-## css/trackme.css (150 l.)
+## css/trackme.css (245 l.)
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
 ## js/ai.js (230 l.)
 Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 exports: MODELS,ALLOWED_DOMAINS SYSTEM,hasKey PRICES,USD_TO_EUR usage,costUsd userContext,ask testConnection,extractJson stripJson,imageToBase64 estimateMeal,programQuestions programGenerate
 
-## js/app.js (81 l.)
+## js/app.js (116 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go
 
@@ -98,15 +98,15 @@ exports: LEVELS,LEVEL_LABEL LANGS_T,pictogram getTechnique,allTechniques missing
 Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
 exports: PALETTES,VARIANTS SURFACES,palette variant,colors applyTheme,shape wordmark
 
-## js/ui.js (106 l.)
+## js/ui.js (163 l.)
 Petits utilitaires DOM, composants iOS et graphiques SVG.
-exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet
+exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop banner
 
 ## js/workout.js (165 l.)
 Logique des séances (pure, testée sous Node) : volume, records, précédent, streak hebdo, disques, échauffement.
 exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume workoutVolume,doneSets exerciseRecords,setPRs previousSets,exerciseSeries weekStart,weekStreak restDays,muscleSets plates,warmupSets routineDiffers,migrateProgram
 
-## js/i18n/extra.js (50 l.)
+## js/i18n/extra.js (58 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
 
 ## js/i18n/nl-base.js (234 l.)
@@ -152,7 +152,7 @@ exports: needsOnboarding,openOnboarding
 Choix de la palette (6 couleurs) et de la forme (3 variantes), avec aperçu en direct.
 exports: paletteSection,handlePaletteClick
 
-## js/views/profile.js (161 l.)
+## js/views/profile.js (165 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
@@ -172,7 +172,7 @@ exports: render
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render,importProgram
 
-## js/views/weight.js (157 l.)
+## js/views/weight.js (174 l.)
 Onglet Poids : pesée, courbe (pesées, tendance, projection, cible, étapes), poids de référence,
 exports: render
 
