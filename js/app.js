@@ -24,15 +24,16 @@ const TAB_OF = { cycle: 'today', profile: 'today', learn: 'training' };
 const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
 let tab = 'today';
+let enterTimer = 0; // retire .tm-enter après la cascade : les re-rendus suivants (eau, repas…) ne rejouent pas l'entrée
 
 // Mobile : capsule 4 onglets + « + » central. Ordinateur (CSS ≥ 1024 px) : la même barre devient une barre latérale
 // avec le logotype, le libellé du « + » et les écrans secondaires (éléments .side-only, masqués sur mobile).
 const SIDE = () => [['learn', 'Apprendre', 'flask'],
   ...(state.profile?.sex === 'F' && state.cycle?.enabled ? [['cycle', 'Cycle', 'drop']] : [])];
-function drawTabbar() {
+function drawTabbar(pop = false) {
   const active = tab;
   // .on = écran affiché ; .parent = onglet du menu mobile qui contient l'écran (Coach, Cycle… → Journal).
-  const btn = ([k, label, ic], cls = '') => `<button data-tab="${k}" class="${cls} ${k === active ? 'on' : TAB_OF[active] === k ? 'parent' : ''}" ${k === active ? 'aria-current="page"' : ''} aria-label="${t(label)}">${icon(ic)}<span>${t(label)}</span></button>`;
+  const btn = ([k, label, ic], cls = '') => `<button data-tab="${k}" class="${cls} ${k === active && pop ? 'tm-pop' : ''} ${k === active ? 'on' : TAB_OF[active] === k ? 'parent' : ''}" ${k === active ? 'aria-current="page"' : ''} aria-label="${t(label)}">${icon(ic)}<span>${t(label)}</span></button>`;
   tabbar.innerHTML = `<span class="side-only side-brand">${wordmark()}</span>` + TABS.map((x) => x[0] === 'add'
     ? `<button class="tm-fab" data-tab="add" aria-label="${t('Ajouter un aliment')}">${icon('plus')}<span class="side-only">${t('Ajouter un aliment')}</span></button>`
     : btn(x)).join('') + `<span class="side-only side-sep" aria-hidden="true"></span>` + SIDE().map((x) => btn(x, 'side-only')).join('')
@@ -47,7 +48,7 @@ export function go(name, arg, { push = true } = {}) {
   if (!VIEWS[name]) return;
   const changed = name !== tab, first = !tab;
   tab = name;
-  drawTabbar();
+  drawTabbar(changed && !first); // rebond de l'icône du nouvel onglet
   main.scrollTo(0, 0);
   main.classList.remove('scrolled');
   main.dataset.view = name;
@@ -55,7 +56,7 @@ export function go(name, arg, { push = true } = {}) {
   document.body.classList.remove('typing');
   VIEWS[name].render(main, go, arg);
   // Fondu court à l'arrivée sur un autre écran (rendu synchrone : un tap = une réaction immédiate).
-  if (changed && !first) { main.classList.remove('tm-enter'); void main.offsetWidth; main.classList.add('tm-enter'); }
+  if (changed && !first) { main.classList.remove('tm-enter'); void main.offsetWidth; main.classList.add('tm-enter'); clearTimeout(enterTimer); enterTimer = setTimeout(() => main.classList.remove('tm-enter'), 600); }
   if (push && changed) history.pushState({ tab: name }, '', '#' + name);
   try { sessionStorage.setItem('tab', name); } catch {}
 }

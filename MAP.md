@@ -1,6 +1,6 @@
 # MAP — carte du code TrackMe (générée)
 
-## index.html (31 l.)
+## index.html (32 l.)
 <!doctype html>
 
 ## sw.js (36 l.)
@@ -12,8 +12,11 @@ Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 ## css/cycle.css (58 l.)
 TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 
-## css/learn.css (41 l.)
+## css/learn.css (53 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
+
+## css/motion.css (51 l.)
+TrackMe : motion design sobre et natif iOS (ressort au toucher, entrée des écrans, feuilles, coche).
 
 ## css/onboarding.css (138 l.)
 TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
@@ -28,7 +31,7 @@ TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 exports: MODELS,ALLOWED_DOMAINS SYSTEM,hasKey PRICES,USD_TO_EUR usage,costUsd userContext,ask testConnection,extractJson stripJson,imageToBase64 estimateMeal,programQuestions programGenerate
 
-## js/app.js (118 l.)
+## js/app.js (119 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go
 
@@ -72,6 +75,10 @@ exports: isStandalone,exportBackup startupNudges
 Objectifs du jour calculés à partir du profil, du dernier poids et de la dépense adaptative.
 exports: current,observedKgPerWeek weeklyVolume,habitStatus habitRates
 
+## js/motion.js (24 l.)
+Motion : petits utilitaires d'animation (compteur animé, préférence « réduire les animations »).
+exports: reducedMotion,countUp
+
 ## js/net.js (35 l.)
 Réseau résilient pour toutes les API externes (Claude, Open Food Facts) :
 exports: retryDelay,shouldRetry fetchRetry
@@ -88,9 +95,9 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog uid,sum intakesByDay,latestWeight recentFoods
 
-## js/technique.js (470 l.)
+## js/technique.js (476 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
-exports: LEVELS,LEVEL_LABEL LANGS_T,pictogram getTechnique,allTechniques missingTechniques
+exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure pictogram,getTechnique allTechniques,missingTechniques
 
 ## js/theme.js (80 l.)
 Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
@@ -154,7 +161,7 @@ exports: openWizard,planCard plannedDays,exportCalendar
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
 exports: active,persist startWorkout,renderSession
 
-## js/views/today.js (180 l.)
+## js/views/today.js (197 l.)
 Onglet Journal : en-tête (Coach, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
@@ -162,7 +169,7 @@ exports: render
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render,importProgram
 
-## js/views/weight.js (174 l.)
+## js/views/weight.js (180 l.)
 Onglet Poids : pesée, courbe (pesées, tendance, projection, cible, étapes), poids de référence,
 exports: render
 

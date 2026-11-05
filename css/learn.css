@@ -39,3 +39,15 @@
 .lrn-entry b { font-weight: 600; } .lrn-entry small { opacity: .85; font-size: .78rem; }
 .lrn-entry-ic { width: 40px; height: 40px; border-radius: 14px; background: rgba(255,255,255,.18); display: grid; place-items: center; }
 .lrn-entry svg { color: #fff; }
+
+/* Figure 3D (2 poses) : la seconde apparaît puis disparaît en boucle = le mouvement ; ombre au sol douce */
+.lrn-3d { position: relative; display: block; overflow: visible; }
+.lrn-3d img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(20, 30, 70, .18)); }
+.lrn-3d img + img { animation: lrn-move 3s linear infinite; }
+.lrn-3d img:first-child { animation: lrn-move-out 3s linear infinite; }
+.lrn-3d::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 2%; height: 7%; border-radius: 50%; background: radial-gradient(closest-side, rgba(20, 30, 70, .22), transparent); }
+@keyframes lrn-move { 0%, 40% { opacity: 0; } 47%, 88% { opacity: 1; } 95%, 100% { opacity: 0; } }
+@keyframes lrn-move-out { 0%, 40% { opacity: 1; } 47%, 88% { opacity: 0; } 95%, 100% { opacity: 1; } }
+.lrn-hero .lrn-3d.big { width: 220px; height: 220px; margin: 0 auto; }
+@media (prefers-reduced-motion: reduce) { .lrn-3d img { animation: none !important; } .lrn-3d img + img { opacity: 0; } }
+.lrn-pic-box .lrn-3d { width: 56px; height: 56px; } .lrn-day-pic .lrn-3d img { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .3)) brightness(1.25); }

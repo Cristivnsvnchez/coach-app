@@ -11,6 +11,7 @@ import { shape } from '../theme.js';
 import { phaseOn } from '../cycle.js';
 import { GOALS, addPortion, getPortions, weekTotal, avg7 } from '../foodgroups.js';
 import { openAddFood, MEALS } from './addfood.js';
+import { countUp } from '../motion.js';
 import { habitsCells, handleHabitClick } from './habits.js';
 
 register({
@@ -29,6 +30,7 @@ register({
 });
 
 let date = null;
+let lastShown = null; // { date, big, bars } : dernières valeurs affichées, pour animer d'un rendu à l'autre
 let renderedOn = null; // jour réel du dernier rendu : si on a changé de jour, on revient à aujourd'hui
 
 // Pictogrammes de repas (trait 1,9 px), locaux à la vue.
@@ -48,11 +50,15 @@ function portionRing(n, goal) {
     <text x="36" y="42" text-anchor="middle" class="td-pnum">${n}</text></svg>`;
 }
 
-const macroTile = (label, v, max) => {
+// Largeur de départ d'une barre : celle du rendu précédent (même jour), sinon la cible (pas d'animation).
+let prevBars = {};
+const startW = (key, pct) => prevBars[key] ?? pct;
+
+const macroTile = (label, v, max, key) => {
   const over = max && v > max;
   const pct = max ? Math.min(100, Math.round((v / max) * 100)) : 0;
   return `<div class="td-macro ${over ? 'over' : ''}"><span class="td-ml">${label}</span><b class="num">${fmt(v, 0)}<small> / ${fmt(max || 0, 0)} g</small></b>
-    <span class="td-track"><i style="width:${pct}%"></i></span></div>`;
+    <span class="td-track"><i style="width:${startW(key, pct)}%" data-to="${pct}" data-k="${key}"></i></span></div>`;
 };
 
 export function render(root, go) {
@@ -71,6 +77,7 @@ export function render(root, go) {
   // Héros : budget du jour = objectif calorique.
   const budget = targets ? targets.kcal : 0;
   const diff = budget - tot.kcal;
+  prevBars = lastShown?.date === date ? lastShown.bars : {};
   const eatPct = budget ? Math.min(100, Math.round((tot.kcal / budget) * 100)) : 0;
   const dayNav = `<div class="td-daynav"><button class="td-arrow" data-a="prev" aria-label="${t('Jour précédent')}">${icon('chevronLeft')}</button>
       <span>${esc(isToday ? t("Aujourd'hui") : fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' }))}</span>
@@ -83,10 +90,10 @@ export function render(root, go) {
         <p class="td-sub">${t('Mangé')} ${fmt(tot.kcal)} · ${t('objectif')} ${fmt(budget)} kcal</p>
         <div class="td-big num">${fmt(Math.abs(diff))}</div>
         <p class="td-cap">${diff < 0 ? t('kcal en trop') : t('kcal restantes')}</p>
-        <div class="td-bars"><div class="td-bar"><span>${t('Mangé')} <b class="num">${fmt(tot.kcal)}</b></span><i><u style="width:${eatPct}%"></u></i></div></div>
+        <div class="td-bars"><div class="td-bar"><span>${t('Mangé')} <b class="num">${fmt(tot.kcal)}</b></span><i><u style="width:${startW('eat', eatPct)}%" data-to="${eatPct}" data-k="eat"></u></i></div></div>
         <p class="td-note">${energy.method === 'adaptatif' ? t('dépense adaptative') : t('dépense estimée')} ${fmt(targets.tdee)}${targets.floored ? ' · ' + t('plancher de sécurité appliqué') : ''}</p>
       </section>
-      <div class="td-macros">${macroTile(t('Protéines'), tot.p, targets.protein)}${macroTile(t('Glucides'), tot.c, targets.carbs)}${macroTile(t('Lipides'), tot.f, targets.fat)}</div>`;
+      <div class="td-macros">${macroTile(t('Protéines'), tot.p, targets.protein, 'p')}${macroTile(t('Glucides'), tot.c, targets.carbs, 'c')}${macroTile(t('Lipides'), tot.f, targets.fat, 'f')}</div>`;
 
   // Pastille cycle (utilisatrice, suivi activé).
   const ph = state.cycle?.enabled && state.profile?.sex === 'F' ? phaseOn(state.cycle, date) : null;
@@ -127,6 +134,16 @@ export function render(root, go) {
     <header class="td-head"><h1 class="td-title">${esc(title)}</h1>
       <div class="td-btns"><button class="td-round" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
     <div class="split td-split"><div>${summary}${cyclePill}${quick}${anses}</div><div>${meals}</div></div>`;
+
+  // Animations : chiffre héros et barres partent de leur ancienne valeur (même jour seulement).
+  const bars = {};
+  root.querySelectorAll('[data-to]').forEach((b) => { bars[b.dataset.k] = +b.dataset.to; });
+  void root.offsetWidth; // fixe la largeur de départ avant d'appliquer la cible
+  root.querySelectorAll('[data-to]').forEach((b) => { b.style.width = b.dataset.to + '%'; });
+  const bigEl = root.querySelector('.td-big');
+  const big = bigEl ? Math.abs(diff) : null;
+  if (bigEl && lastShown?.date === date && lastShown.big != null && lastShown.big !== big) countUp(bigEl, lastShown.big, big);
+  lastShown = { date, big, bars };
 
   root.onclick = (e) => {
     if (handleHabitClick(e, date, keep)) return;

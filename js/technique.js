@@ -58,7 +58,13 @@ const POSES = {
   cablecrunch: HEAD(40, 28) + P('M46 36L52 58L38 74', 'M52 58H68L72 74', 'M36 14L42 34', 'M36 6v8'),
 };
 const SVG_ATTR = 'viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
+// Figures 3D (mannequin argile rendu dans Blender, design/mannequin.blend) : 2 poses par exercice, enchaînées en boucle.
+// Les exercices sans rendu gardent le pictogramme au trait.
+const FIGURES = { Squat: 'squat' };
+export const hasFigure = (name) => !!FIGURES[name];
 export const pictogram = (name, cls = '') => {
+  const f = FIGURES[name];
+  if (f) return `<span class="lrn-pic lrn-3d ${cls}" aria-hidden="true"><img src="img/ex/${f}-1.webp" alt="" decoding="async"><img src="img/ex/${f}-2.webp" alt="" decoding="async"></span>`;
   const k = (TECH[name] || {}).pose;
   return `<svg class="lrn-pic ${cls}" ${SVG_ATTR}>${POSES[k] || POSES.plank}</svg>`;
 };

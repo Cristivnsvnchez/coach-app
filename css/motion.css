@@ -1,0 +1,51 @@
+/* TrackMe : motion design sobre et natif iOS (ressort au toucher, entrée des écrans, feuilles, coche).
+   Animations en transform/opacity ; exceptions notées (width des barres, stroke-dashoffset de la coche).
+   Rien ne dépend de animationend : l'état final est toujours l'état normal de l'élément. */
+
+/* ---- 1. Ressort au toucher : appui rapide, retour élastique au relâchement ---- */
+html.tm button, html.tm .btn, html.tm .chip, html.tm .cell.tap, html.tm [data-a], html.tm .td-item {
+  transition: transform .38s cubic-bezier(.34, 1.56, .64, 1), background-color .2s, opacity .2s; }
+html.tm .tabbar button { transition: transform .38s cubic-bezier(.34, 1.56, .64, 1), color .2s, background-color .2s; }
+html.tm button:active:not(:disabled), html.tm .btn:active, html.tm .chip:active, html.tm .cell.tap:active, html.tm [data-a]:active, html.tm .td-item:active {
+  transform: scale(.96); transition-duration: 90ms, .2s, .2s; }
+html.tm .tabbar button:active { transform: scale(.92); transition-duration: 90ms, .2s, .2s; }
+/* Icône de l'onglet qui devient actif : petit rebond */
+html.tm .tabbar button.tm-pop svg.ic { animation: tm-bounce .46s cubic-bezier(.2, .9, .25, 1); }
+@keyframes tm-bounce { 0% { transform: scale(1); } 28% { transform: scale(.86); } 62% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+/* ---- 2. Entrée des écrans : cascade (30 ms × rang, 8 enfants max), part d'un état visible ---- */
+html.tm #view.tm-enter > * { animation: tm-rise .34s cubic-bezier(.2, .9, .25, 1) backwards; }
+html.tm #view.tm-enter > :nth-child(2) { animation-delay: 30ms; }
+html.tm #view.tm-enter > :nth-child(3) { animation-delay: 60ms; }
+html.tm #view.tm-enter > :nth-child(4) { animation-delay: 90ms; }
+html.tm #view.tm-enter > :nth-child(5) { animation-delay: 120ms; }
+html.tm #view.tm-enter > :nth-child(6) { animation-delay: 150ms; }
+html.tm #view.tm-enter > :nth-child(7) { animation-delay: 180ms; }
+html.tm #view.tm-enter > :nth-child(8) { animation-delay: 210ms; }
+html.tm #view.tm-enter > :nth-child(n + 9) { animation: none; }
+@keyframes tm-rise { from { opacity: .5; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ---- 3. Barres du Journal : remplissage depuis l'ancienne largeur (exception : width, éléments rares et peu coûteux) ---- */
+html.tm .td-bar u, html.tm .td-track i { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+
+/* ---- 4. Coche d'une étape : tracé du chemin (exception : stroke-dashoffset) + pulsation du rond ---- */
+html.tm .ms-node.ms-pop svg.ic path { stroke-dasharray: 20; animation: tm-draw .28s ease-out .06s backwards; }
+html.tm .ms-node.ms-pop::before { animation: tm-pulse .4s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes tm-draw { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+@keyframes tm-pulse { 0% { transform: scale(.8); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
+
+/* ---- 5. Feuilles : fond qui s'assombrit en fondu (pseudo-élément, pour ne pas fondre la feuille) ---- */
+html.tm .sheet-wrap { background: none; animation: none; }
+html.tm .sheet-wrap::before { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .3); animation: tm-dim .32s ease-out; }
+@keyframes tm-dim { from { opacity: 0; } to { opacity: 1; } }
+/* Mobile : ouverture en ressort ; fermeture (geste) plus rapide que l'ouverture. Le halo sous la feuille masque le dépassement. */
+@media (max-width: 819px) {
+  html.tm .sheet { animation: tm-sheet-in .42s cubic-bezier(.2, .9, .25, 1.05); box-shadow: 0 48px 0 0 var(--bg); }
+  html.tm .sheet.closing { transition: transform .2s ease-in; }
+}
+@keyframes tm-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+
+/* ---- 6. Réduire les animations : tout est coupé ---- */
+@media (prefers-reduced-motion: reduce) {
+  html.tm *, html.tm *::before, html.tm *::after { animation: none !important; transition: none !important; }
+}

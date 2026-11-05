@@ -133,7 +133,13 @@ export function render(root, go) {
     if (e.target.closest('[data-a=profile]')) return go('profile');
     if (e.target.closest('[data-a=add-ms]')) return editMilestone(null, { last, target, keep });
     const tg = e.target.closest('[data-toggle]');
-    if (tg) { toggleMilestone(steps.find((m) => m.id === tg.dataset.toggle)); navigator.vibrate?.(8); return keep(); }
+    if (tg) { const m = steps.find((x) => x.id === tg.dataset.toggle);
+      toggleMilestone(m); navigator.vibrate?.(8); keep();
+      // Animation de la coche sur l'étape qui vient d'être cochée (une étape automatique cochée reçoit un nouvel id).
+      const id = m?.auto ? state.milestones.at(-1)?.id : m?.id;
+      const row = [...root.querySelectorAll('[data-ms]')].find((r) => r.dataset.ms === id);
+      if (row?.classList.contains('done')) row.querySelector('.ms-node')?.classList.add('ms-pop');
+      return; }
     const ms = e.target.closest('[data-ms]');
     if (ms) { const m = steps.find((x) => x.id === ms.dataset.ms); editMilestone(m?.auto ? null : m, { last, target, keep, preset: m?.auto ? m : null }); }
   };
