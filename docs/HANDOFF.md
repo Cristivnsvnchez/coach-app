@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v30** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v31** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -165,7 +165,7 @@ Retesté depuis la session Mixamo de l'utilisateur (navigateur intégré, Air Sq
 - Corps qui marche : `{ character_id, product_name, type: 'Motion', preferences: { format: 'fbx7_2019', skin: 'true', fps: '30', reducekf: '0' }, gms_hash: [{ 'model-id', mirror, trim, overdrive: 0, params: "<valeurs,jointes>", 'arm-space', inplace: true }] }`.
 - Rien n'a été téléchargé ni modifié côté 3D (réservé à la session Blender) : la section 6 « Reste à faire » est débloquée.
 
-## 13. 3D : 28 exercices animés + 14 nouveaux mouvements (2026-11-05, non publié)
+## 13. 3D : 28 exercices animés + 14 nouveaux mouvements (2026-11-05, v31)
 - **Pipeline Mixamo qui marche** (voir section 12 pour `params`) : export depuis la session de l'utilisateur dans le navigateur intégré ; la CSP de mixamo.com bloque `fetch` vers le Mac, donc la page *navigue* vers un récepteur local (`http://127.0.0.1:5199/?name=…&url=…`, script jetable, télécharge le FBX dans `~/trackme-3d/mx-<clip>.fbx` puis renvoie vers Mixamo).
 - **Retarget obligatoire dans Blender** : les FBX Mixamo n'ont pas la même orientation d'os au repos que nos corps (réimportés depuis glTF). Pour chaque clip : import FBX → contraintes `COPY_ROTATION` (monde) sur chaque os de `Armature.001` + `COPY_LOCATION` sur Hips → `nla.bake` (visual keying, contraintes retirées) → action nommée `<clip>` (fake user) dans `design/trackme-human.blend`. Sans ça, le corps est tordu.
 - **Un fichier d'animation par exercice** : `models/anim/<clip>.glb` (squelette seul, 80-790 Ko), commun aux deux corps (mêmes os). Exporté depuis `Armature.001` en `ACTIVE_ACTIONS`. Les corps `models/trackme-human(-f).glb` ne gardent que `squat` (doublon `squat.001` supprimé). `viewer3d.js` charge corps + animation en parallèle (`anim` dans `model3D()`), le service worker met l'animation en cache à la première ouverture.
