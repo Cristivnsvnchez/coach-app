@@ -17,6 +17,14 @@ export function avgCycleLen(c) {
   const gaps = s.slice(1).map((d, i) => diffDays(s[i], d)).filter((g) => g >= 18 && g <= 45).slice(-6);
   return gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : (c?.cycleLen || 28);
 }
+// Écart-type (en jours, arrondi) des intervalles plausibles ; null tant qu'il y a moins de 3 cycles mesurés.
+export function cycleSd(c) {
+  const s = starts(c);
+  const gaps = s.slice(1).map((d, i) => diffDays(s[i], d)).filter((g) => g >= 18 && g <= 45).slice(-6);
+  if (gaps.length < 3) return null;
+  const m = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  return Math.round(Math.sqrt(gaps.reduce((a, g) => a + (g - m) ** 2, 0) / gaps.length));
+}
 export function avgPeriodLen(c) {
   const done = (c?.periods || []).filter((p) => p.start && p.end).map((p) => diffDays(p.start, p.end) + 1).filter((n) => n >= 1 && n <= 12).slice(-6);
   return done.length ? Math.round(done.reduce((a, b) => a + b, 0) / done.length) : (c?.periodLen || 5);

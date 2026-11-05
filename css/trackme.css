@@ -64,3 +64,87 @@ html.tm .composer { bottom: calc(var(--tabbar-h) + .2rem); }
 html.tm .rest { bottom: calc(var(--tabbar-h) + .3rem); border-radius: 999px; }
 html.tm .sheet { border-radius: 32px 32px 0 0; background: var(--bg); }
 @media (min-width: 820px) { html.tm .sheet { border-radius: 32px; } }
+
+/* Matière « Brume » (Profil → Apparence) : fond flou à dégradé neutre teinté par la palette, cartes translucides,
+   verre givré réservé aux contrôles posés sur le contenu (menu, segments, pastilles, boutons ronds, feuilles).
+   Les cartes n'ont pas de backdrop-filter : sur un fond déjà flou il n'apporterait rien et coûterait au défilement. */
+html.tm[data-surface="brume"] {
+  --bg: #e6ecf4; --cell: rgba(255, 255, 255, .66); --elevated: rgba(255, 255, 255, .8);
+  --label-2: #4f5866; --separator: rgba(40, 56, 80, .12); --fill: rgba(255, 255, 255, .5); --fill-2: rgba(255, 255, 255, .7);
+  --frost: rgba(255, 255, 255, .42); --frost-edge: rgba(255, 255, 255, .75);
+  --frost-shadow: 0 8px 24px rgba(30, 48, 80, .12), inset 0 1px 0 rgba(255, 255, 255, .85);
+  --glass: rgba(255, 255, 255, .55); --glass-edge: rgba(255, 255, 255, .8);
+}
+@media (prefers-color-scheme: dark) {
+  html.tm[data-surface="brume"] {
+    --bg: #0f141c; --cell: rgba(255, 255, 255, .07); --elevated: rgba(30, 36, 46, .9);
+    --label-2: #a9b2bf; --separator: rgba(255, 255, 255, .1); --fill: rgba(255, 255, 255, .08); --fill-2: rgba(255, 255, 255, .14);
+    --frost: rgba(255, 255, 255, .09); --frost-edge: rgba(255, 255, 255, .16);
+    --frost-shadow: 0 8px 24px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .12);
+    --glass: rgba(28, 34, 44, .6); --glass-edge: rgba(255, 255, 255, .12);
+  }
+}
+html.tm[data-surface="brume"] body::before { display: block; content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(70% 45% at 10% 0%, color-mix(in srgb, var(--p-mid) 30%, #f2f6fb), transparent 72%),
+    radial-gradient(60% 40% at 105% 35%, color-mix(in srgb, var(--p-tint) 90%, #fff), transparent 70%),
+    radial-gradient(80% 50% at 25% 105%, color-mix(in srgb, var(--p-deep) 16%, #dbe3ee), transparent 72%),
+    linear-gradient(180deg, #eef2f8, #dce4ee); }
+@media (prefers-color-scheme: dark) {
+  html.tm[data-surface="brume"] body::before { background:
+    radial-gradient(70% 45% at 10% 0%, color-mix(in srgb, var(--p-mid) 26%, transparent), transparent 72%),
+    radial-gradient(60% 40% at 105% 35%, color-mix(in srgb, var(--p-deep) 30%, transparent), transparent 70%),
+    linear-gradient(180deg, #121925, #0b0f15); }
+}
+html.tm[data-surface="brume"], html.tm[data-surface="brume"] body { background: var(--bg); }
+html.tm[data-surface="brume"] body { background: transparent; }
+html.tm[data-surface="brume"] .cells, html.tm[data-surface="brume"] .summary, html.tm[data-surface="brume"] .cta {
+  border: 1px solid var(--frost-edge); box-shadow: 0 6px 18px rgba(30, 48, 80, .06); }
+
+/* Verre givré : contrôles uniquement */
+html.tm[data-surface="brume"] .tabbar, html.tm[data-surface="brume"] .seg, html.tm[data-surface="brume"] .chip,
+html.tm[data-surface="brume"] .icon-btn.round, html.tm[data-surface="brume"] .sheet {
+  -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); }
+html.tm[data-surface="brume"] .seg { background: var(--frost); border: 1px solid var(--frost-edge); box-shadow: var(--frost-shadow); padding: 4px; border-radius: 999px; }
+html.tm[data-surface="brume"] .seg button { border-radius: 999px; }
+html.tm[data-surface="brume"] .seg button.on { background: #fff; color: var(--p-deep); box-shadow: 0 4px 12px rgba(30, 48, 80, .14); }
+html.tm[data-surface="brume"] .chip { background: var(--frost); border: 1px solid var(--frost-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); }
+html.tm[data-surface="brume"] .chip.on { background: var(--p-deep); border-color: transparent; color: #fff; }
+html.tm[data-surface="brume"] .icon-btn.round { background: var(--frost); border: 1px solid var(--frost-edge); box-shadow: var(--frost-shadow); }
+html.tm[data-surface="brume"] .sheet { background: color-mix(in srgb, var(--bg) 82%, transparent); border-top: 1px solid var(--frost-edge); }
+html.tm[data-surface="brume"] .tabbar .tm-fab { box-shadow: 0 10px 22px color-mix(in srgb, var(--p-deep) 35%, transparent), 0 0 0 5px rgba(255, 255, 255, .55); }
+@media (prefers-color-scheme: dark) {
+  html.tm[data-surface="brume"] .seg button.on { background: rgba(255, 255, 255, .9); color: #10151d; }
+  html.tm[data-surface="brume"] .tabbar .tm-fab { box-shadow: 0 10px 22px rgba(0, 0, 0, .4), 0 0 0 5px rgba(255, 255, 255, .08); }
+}
+
+/* Bouton principal : dégradé de la palette (moyenne → principale), reflet haut ; texte blanc sur la teinte principale ≥ 4,5:1 */
+html.tm[data-surface="brume"] .btn.filled, html.tm[data-surface="brume"] .btn.large.filled, html.tm[data-surface="brume"] .tabbar .tm-fab {
+  background: linear-gradient(100deg, var(--p-deep) 20%, color-mix(in srgb, var(--p-mid) 70%, var(--p-deep))); }
+html.tm[data-surface="brume"] .btn.filled { box-shadow: 0 10px 24px color-mix(in srgb, var(--p-deep) 28%, transparent), inset 0 1px 0 rgba(255, 255, 255, .28); }
+html.tm[data-surface="brume"] .btn:not(.filled):not(.plain):not(.destructive) { background: var(--frost); color: var(--p-deep); border: 1px solid var(--frost-edge); }
+@media (prefers-color-scheme: dark) { html.tm[data-surface="brume"] .btn:not(.filled):not(.plain):not(.destructive) { color: var(--label); } }
+@media (prefers-reduced-transparency: reduce) {
+  html.tm[data-surface="brume"] { --cell: #ffffff; --frost: #f4f6fa; --glass: #ffffff; }
+  html.tm[data-surface="brume"] * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+
+/* Marque et typographie : Funnel Display (OFL, embarquée) pour la voix d'affichage — logotype, titres, grands chiffres.
+   Le texte courant et les contrôles restent en Geist. Funnel est étroite à l'œil : approche serrée en grand, jamais sous 0,95rem. */
+@font-face { font-family: 'Funnel Display'; src: url('../vendor/fonts/FunnelDisplay-Variable.woff2') format('woff2'); font-weight: 300 800; font-display: swap; }
+html.tm { --display: 'Funnel Display', 'Geist', system-ui, sans-serif; }
+html.tm h1, html.tm h2, html.tm .large-title, html.tm .td-title, html.tm .td-big, html.tm .cy-hero-t, html.tm .ac-h,
+html.tm .onb-num, html.tm .onb-kcal b, html.tm .stats b, html.tm .ring-big, html.tm .live-line b {
+  font-family: var(--display); font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }
+html.tm .large-title, html.tm .td-title, html.tm h1 { letter-spacing: -0.035em; }
+html.tm .td-big { font-weight: 500; letter-spacing: -0.04em; }
+html.tm .group-title, html.tm .td-h, html.tm .cy-h { font-family: var(--display); font-weight: 600; letter-spacing: -0.015em; }
+
+/* Logotype */
+.tm-wordmark { display: inline-flex; align-items: baseline; font-family: var(--display); font-weight: 650; letter-spacing: -0.055em; line-height: 1; }
+.tm-wordmark i { display: inline-block; width: .2em; height: .2em; margin-left: .07em; border-radius: 50%; background: var(--p-warm); }
+html.tm ::selection { background: color-mix(in srgb, var(--p-mid) 30%, transparent); }
+html.tm { caret-color: var(--p-deep); accent-color: var(--p-deep); }
+/* Titres en casse de phrase : majuscule initiale seulement (les dates « mardi 4 nov. » gardent leur capitale). */
+html.tm .large-title, html.tm .nav .nav-title { text-transform: none; }
+html.tm .large-title::first-letter, html.tm .nav .nav-title::first-letter { text-transform: uppercase; }

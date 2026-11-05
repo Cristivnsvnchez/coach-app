@@ -1,16 +1,36 @@
 // Onboarding : accueil, puis une question par écran, surtout par sélection (cartes, pastilles, stepper).
 // Remplit le profil, active le suivi du cycle si l'utilisatrice le souhaite, montre les besoins calculés.
 import * as S from '../science.js';
-import { state, save, today } from '../store.js';
-import { esc, fmt } from '../ui.js';
+import { state, save, today, replace } from '../store.js';
+import { esc, fmt, toast } from '../ui.js';
 import { icon } from '../icons.js';
-import { t, getLang, setLang } from '../i18n.js';
+import { t, getLang, setLang, register, LANGS } from '../i18n.js';
+import { shape, wordmark } from '../theme.js';
+import { paletteSection, handlePaletteClick } from './palette.js';
+
+register({
+  en: { 'Ton corps, tes chiffres, ton rythme.': 'Your body, your numbers, your rhythm.', "J'ai déjà mes données": 'I already have my data',
+    'Ta palette': 'Your palette', 'Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.': 'Pick your colour and shape. You can change them later in Profile.',
+    'Tes calories': 'Your calories', 'Proposition : {k} kcal': 'Suggested: {k} kcal', 'Revenir à la proposition': 'Back to the suggestion',
+    'Modifiable par pas de 50 kcal. Les macros se recalculent.': 'Adjust in steps of 50 kcal. Macros are recalculated.',
+    'Baisser de 50 kcal': 'Lower by 50 kcal', 'Monter de 50 kcal': 'Raise by 50 kcal', 'Étape {i} sur {n}': 'Step {i} of {n}' },
+  nl: { 'Ton corps, tes chiffres, ton rythme.': 'Jouw lichaam, jouw cijfers, jouw ritme.', "J'ai déjà mes données": 'Ik heb al gegevens',
+    'Ta palette': 'Jouw palet', 'Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.': 'Kies je kleur en vorm. Je kunt ze later wijzigen in Profiel.',
+    'Tes calories': 'Jouw calorieën', 'Proposition : {k} kcal': 'Voorstel: {k} kcal', 'Revenir à la proposition': 'Terug naar het voorstel',
+    'Modifiable par pas de 50 kcal. Les macros se recalculent.': "Aanpasbaar in stappen van 50 kcal. De macro's worden herberekend.",
+    'Baisser de 50 kcal': '50 kcal minder', 'Monter de 50 kcal': '50 kcal meer', 'Étape {i} sur {n}': 'Stap {i} van {n}' },
+});
 
 const p = () => state.profile;
+let langPicked = false; // la langue a déjà été choisie sur l'écran d'accueil
+let kc = null; // calories modifiées : { base, val } (null = proposition Mifflin-St Jeor)
+
+const proposal = () => (S.isProfileComplete(p()) ? S.targets({ ...p() }, S.tdeeInitial(p())) : null);
+const shownKcal = () => { const tg = proposal(); if (!tg) return null; if (kc && kc.base !== tg.kcal) kc = null; return kc ? kc.val : tg.kcal; };
 
 // Chaque étape : { id, title, why?, body(), valid?(), skip?() } — `skip` masque l'étape (ex. cycle pour un homme).
 const STEPS = [
-  { id: 'lang', title: () => t('Choisis ta langue'), body: () => choice('lang', { fr: 'Français', en: 'English' }, getLang()) },
+  { id: 'lang', title: () => t('Choisis ta langue'), skip: () => langPicked, body: () => choice('lang', LANGS, getLang()) },
   { id: 'sex', title: () => t('Tu es…'), why: () => t('Sert au calcul de ta dépense énergétique (Mifflin-St Jeor).'),
     body: () => choice('sex', { F: t('Une femme'), M: t('Un homme') }, p().sex), valid: () => !!p().sex },
   { id: 'body', title: () => t('Tes mesures'), why: () => t('Pour calculer tes besoins. Tu pourras les changer à tout moment.'),
@@ -33,7 +53,8 @@ const STEPS = [
         + stepper('cycleLen', t('Durée habituelle du cycle'), state.cycle.cycleLen ?? 28, 18, 45, 1, t('jours'))
         + stepper('periodLen', t('Durée des règles'), state.cycle.periodLen ?? 5, 2, 10, 1, t('jours'))
         + `<p class="onb-label">${t('Contraception hormonale (pilule, stérilet hormonal, implant…)')}</p>` + choice('hormonal', { no: t('Non'), yes: t('Oui') }, state.cycle.hormonal ? 'yes' : 'no') : '') },
-  { id: 'done', title: () => t('C\'est prêt'), body: summary },
+  { id: 'palette', title: () => t('Ta palette'), why: () => t('Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.'), body: paletteSection },
+  { id: 'calories', title: () => t('Tes calories'), why: () => t('Modifiable par pas de 50 kcal. Les macros se recalculent.'), body: summary },
 ];
 
 function choice(name, opts, sel) {
@@ -49,11 +70,16 @@ function stepper(name, label, val, min, max, step, unit) {
       <button type="button" class="icon-btn round" data-step-dir="1" aria-label="+">${icon('plus')}</button></div></div>`;
 }
 function summary() {
-  const prof = { ...p() };
-  const tg = S.isProfileComplete(prof) ? S.targets(prof, S.tdeeInitial(prof)) : null;
-  if (!tg) return `<p class="secondary">${t('Complète les étapes précédentes pour voir tes besoins.')}</p>`;
-  return `<div class="onb-hero"><p class="onb-hero-t">${t('{k} kcal par jour', { k: `<b class="num">${fmt(tg.kcal)}</b>` })}</p>
+  const base = proposal();
+  if (!base) return `<p class="secondary">${t('Complète les étapes précédentes pour voir tes besoins.')}</p>`;
+  const kcal = shownKcal(), tg = kc ? S.applyCustom(base, { enabled: true, kcal }, p().sex) : base;
+  return `<div class="onb-hero"><p class="onb-kcal"><b class="num" aria-live="polite">${fmt(tg.kcal)}</b><span>${t('kcal/j')}</span></p>
+      <div class="onb-kcal-row"><button type="button" class="icon-btn round" data-kc="-50" aria-label="${t('Baisser de 50 kcal')}">${icon('minus')}</button>
+        <span class="onb-prop">${t('Proposition : {k} kcal', { k: fmt(base.kcal) })}</span>
+        <button type="button" class="icon-btn round" data-kc="50" aria-label="${t('Monter de 50 kcal')}">${icon('plus')}</button></div>
+      ${kc ? `<button type="button" class="btn plain" data-a="kc-reset">${t('Revenir à la proposition')}</button>` : ''}
       <div class="onb-tiles"><div><b class="num">${fmt(tg.protein)} g</b><span>${t('Protéines')}</span></div><div><b class="num">${fmt(tg.carbs)} g</b><span>${t('Glucides')}</span></div><div><b class="num">${fmt(tg.fat)} g</b><span>${t('Lipides')}</span></div></div></div>
+    ${tg.floored ? `<p class="secondary onb-note">${t('plancher de sécurité appliqué')}</p>` : ''}
     <p class="secondary onb-note">${t('Calculé avec Mifflin-St Jeor et ton activité. Après 10 jours de saisie, la dépense s\'ajuste à tes vrais résultats. Tu peux modifier ces objectifs dans Profil.')}</p>`;
 }
 
@@ -66,20 +92,26 @@ export function openOnboarding(done) {
   document.body.appendChild(el);
   const steps = () => STEPS.filter((s) => !s.skip?.());
 
+  const cta = (a, label) => `<button class="btn filled large onb-cta" data-a="${a}"><span>${label}</span><i class="onb-arrow">${icon('chevronRight')}</i></button>`;
   const draw = () => {
     if (i < 0) {
-      el.innerHTML = `<div class="onb-welcome"><div class="onb-glow" aria-hidden="true"></div>
-        <div class="onb-welcome-text"><h1>${t('Ton coach sport et nutrition')}</h1><p>${t('Calories, poids, séances et conseils sourcés, dans une seule app qui reste sur ton téléphone. 2 minutes pour démarrer.')}</p></div>
-        <button class="btn filled large" data-a="start">${t('Commencer')}</button>
-        <button class="btn plain wide" data-a="skip">${t('Passer, je remplirai plus tard')}</button></div>`;
+      el.innerHTML = `<div class="onb-welcome"><div class="onb-stage">${shape({ cls: 'onb-bigshape', grain: 0.55 })}
+          ${wordmark('onb-brand')}
+          <div class="onb-langs seg" role="radiogroup">${Object.entries(LANGS).map(([k, l]) => `<button type="button" role="radio" aria-checked="${getLang() === k}" class="${getLang() === k ? 'on' : ''}" data-set="lang" data-v="${k}">${k.toUpperCase()}<span class="sr-only"> ${l}</span></button>`).join('')}</div></div>
+        <div class="onb-sheet"><h1>${t('Ton corps, tes chiffres, ton rythme.')}</h1>
+          <p>${t('Calories, poids, séances et conseils sourcés, dans une seule app qui reste sur ton téléphone. 2 minutes pour démarrer.')}</p>
+          ${cta('start', t('Commencer'))}
+          <label class="onb-have btn plain wide">${t("J'ai déjà mes données")}<input type="file" accept="application/json" hidden data-a="import"></label>
+          <button class="btn plain wide" data-a="skip">${t('Passer, je remplirai plus tard')}</button></div></div>`;
       return;
     }
     const list = steps(), st = list[i];
-    el.innerHTML = `<div class="onb-top"><button class="icon-btn" data-a="back" aria-label="${t('Retour')}">${icon('chevronLeft')}</button>
-        <div class="onb-progress" role="progressbar" aria-valuenow="${i + 1}" aria-valuemax="${list.length}"><i style="width:${((i + 1) / list.length) * 100}%"></i></div>
+    el.innerHTML = `<div class="onb-step">${shape({ cls: 'onb-orb', grain: 0.4 })}
+      <div class="onb-top"><button class="icon-btn" data-a="back" aria-label="${t('Retour')}">${icon('chevronLeft')}</button>
+        <div class="onb-progress" role="progressbar" aria-label="${t('Étape {i} sur {n}', { i: i + 1, n: list.length })}" aria-valuenow="${i + 1}" aria-valuemin="1" aria-valuemax="${list.length}"><i style="width:${((i + 1) / list.length) * 100}%"></i></div>
         <button class="btn plain" data-a="skip">${t('Passer')}</button></div>
       <div class="onb-body"><h2>${st.title()}</h2>${st.why ? `<p class="onb-why">${st.why()}</p>` : ''}<div class="onb-content">${st.body()}</div></div>
-      <div class="onb-foot"><button class="btn filled large" data-a="next">${st.id === 'done' ? t('Aller à mon tableau de bord') : t('Continuer')}</button></div>`;
+      <div class="onb-foot">${cta('next', st.id === 'calories' ? t('Aller à mon tableau de bord') : t('Continuer'))}</div></div>`;
   };
 
   const readInputs = () => {
@@ -95,6 +127,8 @@ export function openOnboarding(done) {
 
   const finish = () => {
     readInputs();
+    const tg = proposal(), v = shownKcal();
+    if (kc && tg && v !== tg.kcal) p().custom = { enabled: true, kcal: v }; // seulement si modifiée
     state.onboarded = true;
     if (p().weight && !state.weights.length) state.weights.push({ date: today(), kg: p().weight });
     save(); el.classList.add('out');
@@ -102,8 +136,16 @@ export function openOnboarding(done) {
   };
 
   el.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-a],[data-set],[data-chip],[data-step-dir]');
+    if (handlePaletteClick(e, draw)) return;
+    const b = e.target.closest('[data-a],[data-set],[data-chip],[data-step-dir],[data-kc]');
     if (!b) return;
+    if (b.dataset.kc) {
+      const base = proposal(); if (!base) return;
+      const floor = p().sex === 'F' ? 1200 : 1500;
+      kc = { base: base.kcal, val: Math.max(floor, Math.round((shownKcal() + +b.dataset.kc) / 50) * 50) };
+      if (kc.val === base.kcal) kc = null;
+      navigator.vibrate?.(5); return draw();
+    }
     if (b.dataset.stepDir) {
       const box = b.closest('.onb-stepper'), inp = box.querySelector('input');
       const v = Math.min(+box.dataset.max, Math.max(+box.dataset.min, (+inp.value || 0) + (+b.dataset.stepDir) * (+box.dataset.step)));
@@ -112,7 +154,7 @@ export function openOnboarding(done) {
     if (b.dataset.set) {
       readInputs();
       const k = b.dataset.set, v = b.dataset.v;
-      if (k === 'lang') { setLang(v); }
+      if (k === 'lang') { setLang(v); langPicked = true; }
       else if (k === 'cycleOn') { state.cycle = { ...(state.cycle || {}), enabled: v === 'yes' }; }
       else if (k === 'hormonal') { state.cycle.hormonal = v === 'yes'; }
       else if (k === 'rate') p().rate = +v;
@@ -127,15 +169,27 @@ export function openOnboarding(done) {
     }
     const a = b.dataset.a;
     if (a === 'start') { i = 0; return draw(); }
+    if (a === 'kc-reset') { kc = null; return draw(); }
     if (a === 'skip') return finish();
     if (a === 'back') { readInputs(); i = Math.max(-1, i - 1); return draw(); }
     if (a === 'next') {
       readInputs();
       const list = steps(), st = list[i];
       if (st.valid && !st.valid()) { el.querySelector('.onb-content').classList.add('shake'); setTimeout(() => el.querySelector('.onb-content')?.classList.remove('shake'), 400); return; }
-      if (st.id === 'done') return finish();
+      if (st.id === 'calories') return finish();
       i = Math.min(steps().length - 1, i + 1); draw();
     }
+  });
+  // « J'ai déjà mes données » : restaure une sauvegarde JSON exportée depuis Profil.
+  el.addEventListener('change', async (e) => {
+    const f = e.target.files?.[0]; if (!f || e.target.dataset.a !== 'import') return;
+    try {
+      const data = JSON.parse(await f.text());
+      if (!data.profile || !data.logs) throw new Error('bad');
+      replace({ ...data, onboarded: true }); el.classList.add('out');
+      setTimeout(() => { el.remove(); done(); }, 250);
+    } catch { toast(t('Fichier non reconnu')); }
+    e.target.value = '';
   });
   draw();
 }

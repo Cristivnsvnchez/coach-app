@@ -61,9 +61,21 @@ surélevé, entouré d'un anneau couleur fond.
 - Pastilles de filtre : inactive `--surface` + filet `--line` ; active `--ink` + texte `--surface`.
 Les couleurs de données n'apparaissent jamais en fond de bouton.
 
+## Marque
+Logotype « TrackMe. » : Funnel Display 650, approche -0.055em, point final rond (couleur chaude de la palette, blanc sur
+une forme). Icône d'app : monogramme « T. » blanc sur la forme Océan granuleuse. Pas d'autre ornement.
+
 ## Typographie
-Geist (OFL, embarquée) : 32/700 titre d'écran (-0.04em) · 24/600 titre de feuille · 19/600 titre de section ·
-16/600 libellé · 15/400 corps · 13/400 secondaire · 11/500 légende. Chiffres en `tabular-nums`.
+Deux voix, toutes deux OFL et embarquées : **Funnel Display** (affichage : logotype, titres, grands chiffres ; 600,
+approche -0.035em, chiffres tabulaires) et **Geist** (texte courant, libellés, contrôles). Titres en casse de phrase.
+32/600 titre d'écran · 24/600 titre de feuille · 19/600 titre de section · 16/600 libellé · 15/400 corps ·
+13/400 secondaire · 11/500 légende. Grand chiffre du Journal : 72/500.
+
+## Matière
+Profil → Apparence → Matière. **Papier** : fond crème #F3F0EA mat. **Brume** (par défaut) : fond flou à dégradé
+neutre bleu-gris teinté par la palette, cartes blanches translucides sans flou, verre givré (blur 22 px) réservé aux
+contrôles posés sur le contenu (menu, segments, pastilles, boutons ronds, feuilles). Bouton principal en dégradé
+principale → moyenne. Respecte `prefers-reduced-transparency`.
 
 ## Icônes
 Un seul jeu dessiné, trait 1,9 px, extrémités rondes, grille 24 px. Onglet actif : pastille `--ink`, icône `--surface`.

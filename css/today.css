@@ -1,1 +1,72 @@
-/* TrackMe — styles de la vue today (voir DESIGN.md, css/trackme.css). */
+/* TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs. */
+.td-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0 14px; }
+.td-title { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; }
+.td-btns { display: flex; gap: 8px; flex: none; }
+.td-round { width: 44px; height: 44px; border-radius: 22px; border: 0; background: var(--cell); color: var(--label); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 2px rgba(30,24,16,.05); }
+.td-round:active { background: var(--fill); }
+.td-split > div > * + * { margin-top: 12px; }
+
+/* Héros */
+.td-hero { padding: 16px 20px 20px; }
+.td-hero p { margin: 0; }
+.td-daynav { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: .95rem; }
+.td-arrow { width: 40px; height: 40px; border-radius: 20px; border: 0; background: rgba(255,255,255,.18); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.td-arrow:disabled { opacity: .35; cursor: default; }
+.td-sub { margin-top: 14px !important; font-size: .9rem; opacity: .92; }
+.td-big { font-size: 72px; line-height: 1; font-weight: 700; letter-spacing: -.05em; margin-top: 4px; }
+.td-cap { font-size: .95rem; font-weight: 600; margin-top: 2px !important; }
+.td-bars { display: grid; gap: 10px; margin-top: 16px; }
+.td-bar span { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 4px; }
+.td-bar i { display: block; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+.td-bar u { display: block; height: 100%; border-radius: 4px; background: #fff; text-decoration: none; }
+.td-bar u.warm { background: var(--p-warm); }
+.td-note { font-size: .75rem; opacity: .85; margin-top: 8px !important; }
+
+/* Tuiles macros */
+.td-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.td-macro { background: var(--cell); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.td-ml { font-size: .75rem; color: var(--label-2); }
+.td-macro b { font-size: 1.15rem; letter-spacing: -.02em; white-space: nowrap; }
+.td-macro small { font-size: .7rem; font-weight: 500; color: var(--label-2); }
+.td-track { display: block; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.td-track i { display: block; height: 100%; border-radius: 3px; background: var(--p-deep); }
+.td-macro.over .td-track i { background: #a15c00; }
+.td-macro.over b { color: #a15c00; }
+
+/* Pastille cycle */
+.td-cycle { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 999px; padding: 12px 16px; background: var(--cell); color: var(--label); font: inherit; font-weight: 600; font-size: .9rem; cursor: pointer; text-align: left; }
+.td-cycle .dot { width: 10px; height: 10px; border-radius: 50%; background: #c2255c; flex: none; }
+.td-cycle .chev { margin-left: auto; color: var(--label-3); width: 1rem; height: 1rem; }
+
+/* Cartes */
+.td-card { background: var(--cell); border-radius: 24px; box-shadow: 0 1px 2px rgba(30,24,16,.04); overflow: hidden; }
+.td-card .cells { background: transparent; box-shadow: none; }
+.td-quick .cell + .cell::before { display: none; }
+.td-quick .cell.sub { background: var(--fill); margin: 0 12px 6px; border-radius: 16px; }
+.td-h { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 4px 8px; font-size: 1.2rem; font-weight: 600; letter-spacing: -.02em; }
+.td-h b { font-size: .9rem; color: var(--label-2); font-weight: 500; }
+.td-meal + .td-meal { margin-top: 8px; }
+.td-mhead { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; }
+.td-mhead .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.td-mhead .s, .td-item .s, .td-group .s { font-size: .8rem; color: var(--label-2); }
+.td-pill { width: 40px; height: 40px; border-radius: 14px; background: var(--p-tint); color: var(--p-deep); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.td-pill .ic { width: 22px; height: 22px; }
+@media (prefers-color-scheme: dark) { .td-pill { background: var(--fill-2); color: var(--label); } }
+.td-add { width: 44px; height: 44px; border-radius: 22px; border: 0; background: var(--p-deep); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+.td-items { list-style: none; margin: 0; padding: 0 8px 8px; }
+.td-item { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-radius: 14px; cursor: pointer; min-height: 44px; }
+.td-item:active { background: var(--fill); }
+.td-item .grow { flex: 1; min-width: 0; }
+.td-item .t { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-item .val { color: var(--label-2); font-variant-numeric: tabular-nums; }
+
+/* Repères ANSES */
+.td-anses { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.td-group { position: relative; padding: 14px 12px 12px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.td-ringbtn { border: 0; background: none; padding: 0; width: 84px; height: 84px; cursor: pointer; border-radius: 50%; }
+.td-ringbtn:active { transform: scale(.96); }
+.td-pring { width: 100%; height: 100%; }
+.td-pnum { font-size: 22px; font-weight: 700; fill: var(--label); font-family: inherit; }
+.td-group b { margin-top: 6px; font-size: .95rem; }
+.td-minus { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; color: var(--label-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.td-minus:disabled { opacity: .3; cursor: default; }

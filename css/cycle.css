@@ -1,1 +1,58 @@
-/* TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css). */
+/* TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
+   Le rose reste réservé aux données ; les boutons principaux restent en var(--p-deep). */
+.cy { display: grid; gap: 1rem; padding-bottom: 1rem; }
+.cy-empty { text-align: center; padding: 1.5rem 0; display: grid; gap: 1rem; }
+.cy-lead { font-size: 1.2rem; font-weight: 600; margin: 0; }
+.cy-hero { color: #fff; border-radius: 28px; padding: 1.4rem 1.25rem; background:
+  radial-gradient(120% 90% at 0% 0%, #ff5f8f 0%, transparent 60%), radial-gradient(90% 80% at 100% 20%, #b36bff 0%, transparent 62%),
+  radial-gradient(90% 80% at 70% 110%, #ff9a5c 0%, transparent 60%), #d23f74; position: relative; overflow: hidden; }
+.cy-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.3)); pointer-events: none; }
+.cy-hero > * { position: relative; z-index: 1; }
+.cy-hero-k { margin: 0; font-size: .8rem; font-weight: 500; opacity: .92; }
+.cy-hero-t { margin: .15rem 0 1rem; font-size: 1.7rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.15; }
+.cy-hero-rows { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.cy-hero-rows:has(> div:only-child) { grid-template-columns: 1fr; }
+.cy-hero-rows > div { background: rgba(255,255,255,.16); border-radius: 18px; padding: .7rem .8rem; display: grid; gap: 2px; }
+.cy-hero-rows small { font-size: .74rem; opacity: .92; }
+.cy-hero-rows b { font-size: 1.05rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cy-hero-rows b i { font-style: normal; font-size: .75rem; font-weight: 500; opacity: .95; white-space: nowrap; }
+.cy-hero-rows span { font-size: .78rem; opacity: .92; }
+.cy-card { background: var(--cell); border-radius: 24px; padding: 1rem; }
+.cy-h { margin: 0 0 .5rem; font-size: 1.1rem; font-weight: 600; }
+.cy-monthbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+.cy-month { text-transform: capitalize; font-size: 1.05rem; font-weight: 600; }
+.cy-chips { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.cy-chips.wrap { padding: .25rem 1rem .5rem; }
+.cy-chips .chip { cursor: pointer; }
+.cy-wk, .cy-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cy-wk span { text-align: center; font-size: .72rem; color: var(--label-2); padding-bottom: 4px; }
+.cy-day { appearance: none; border: 2px solid transparent; background: none; color: var(--label); font: inherit; font-size: .9rem; font-variant-numeric: tabular-nums;
+  aspect-ratio: 1; min-height: 40px; border-radius: 50%; cursor: pointer; position: relative; padding: 0; }
+.cy-day.k-period { background: #c2255c; color: #fff; }
+.cy-day.k-fertile { background: #ead9ff; color: #3b1b73; }
+.cy-day.k-pms { background: #ffe1d1; color: #6b2e0b; }
+.cy-day.pred { background: transparent; }
+.cy-day.k-period.pred { border-color: #c2255c; color: #c2255c; }
+.cy-day.k-fertile.pred { border-color: #b896ee; color: var(--label); }
+.cy-day.k-pms.pred { border-color: #f0a47a; color: var(--label); }
+.cy-day.dim { opacity: .28; }
+.cy-day.today { font-weight: 800; box-shadow: 0 0 0 2px var(--label) inset; }
+.cy-day.has-log::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
+.cy-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.cy-tiles > div { background: var(--cell); border-radius: 24px; padding: .9rem 1rem; display: grid; gap: .25rem; }
+.cy-tiles small { color: var(--label-2); font-size: .78rem; }
+.cy-tiles b { font-size: 1.5rem; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.cy-fxs { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.cy-fx { display: flex; gap: .6rem; align-items: flex-start; font-size: .92rem; line-height: 1.35; }
+.cy-dot { flex: none; width: 10px; height: 10px; margin-top: .35rem; border-radius: 50%; background: #c2255c; }
+.cy-alert { margin: 0; padding: .85rem 1rem; border-radius: 20px; background: color-mix(in srgb, var(--warn, #a15c00) 12%, var(--cell)); color: var(--label); border: 1px solid color-mix(in srgb, var(--warn, #a15c00) 40%, transparent); font-size: .92rem; line-height: 1.35; }
+.cy-off { justify-self: center; }
+/* Poids : pesées en rétention d'eau probable */
+.cy-wdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #c2255c; margin-right: .4rem; vertical-align: middle; }
+.cy-wnote { color: #c2255c; font-size: .78rem; }
+@media (prefers-color-scheme: dark) { .cy-wnote { color: #ff7fa8; } .cy-day.k-period.pred { color: #ff7fa8; } }
+/* Séance : bandeau conseil */
+.cy-banner { display: grid; gap: .5rem; margin: 0 0 .75rem; padding: .8rem 1rem; border-radius: 20px; background: color-mix(in srgb, #c2255c 10%, var(--cell)); border: 1px solid color-mix(in srgb, #c2255c 30%, transparent); font-size: .9rem; line-height: 1.35; }
+.cy-banner .row { flex-wrap: wrap; }
+.cy-banner a, .cy-banner button.link { appearance: none; background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--p-deep); text-decoration: underline; cursor: pointer; min-height: 32px; }
+.cyc-dot { fill: #c2255c; r: 4px; stroke: var(--cell); stroke-width: 1.5px; } .chart .cyc { fill: none; stroke: none; }

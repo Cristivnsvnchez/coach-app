@@ -6,6 +6,10 @@ import { current, observedKgPerWeek } from '../metrics.js';
 import { esc, fmt, fmtDate, lineChart, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
+import * as Cy from '../cycle.js';
+import { register } from '../i18n.js';
+register({ en: { 'rétention d\'eau probable': 'water retention likely', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Pink dots: weigh-ins with likely water retention (cycle). ' },
+  nl: { 'rétention d\'eau probable': 'waarschijnlijk vochtretentie', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Roze stippen: wegingen met waarschijnlijke vochtretentie (cyclus). ' } });
 
 let range = 90;
 
@@ -32,9 +36,12 @@ export function render(root, go) {
     const st = S.milestoneStatus(m, trend, speed, today(), down);
     return { x: S.parseDate(m.date), y: m.kg, done: st.reached };
   }).filter((m) => !since || +m.x >= since);
+  // Cycle actif : pesées tombant en rétention d'eau probable (fin de phase lutéale, début des règles).
+  const retention = (d) => state.cycle?.enabled && Cy.weightNote(state.cycle, d) === 'retention';
   const chart = !trend.length ? `<p class="empty footnote">${t('Enregistre ta première pesée pour voir la courbe.')}</p>` : lineChart([
     { points: shown.map((x) => ({ x: S.parseDate(x.date), y: x.kg })), cls: 'raw', dots: true },
     { points: shown.map((x) => ({ x: S.parseDate(x.date), y: x.trend })), cls: 'trend' },
+    { points: shown.filter((x) => retention(x.date)).map((x) => ({ x: S.parseDate(x.date), y: x.kg })), cls: 'cyc', dots: true },
     { points: proj, cls: 'proj' },
     { points: msPts.filter((m) => !m.done), cls: 'ms', dots: true },
     { points: msPts.filter((m) => m.done), cls: 'msdone', dots: true },
@@ -72,7 +79,7 @@ export function render(root, go) {
         ${chart}
       </div></div>`,
       trend.length < 2 ? t('Pèse-toi 3 à 7 fois par semaine, le matin à jeun : la tendance devient fiable après une à deux semaines.')
-        : t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.'))}
+        : (state.cycle?.enabled ? t('Points roses : pesées en rétention d\'eau probable (cycle). ') : '') + t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.'))}
     ${group(t('Timeline'), !target ? `<div class="cells"><div class="cell" style="display:block"><p class="t wrap" style="margin:.25rem 0">${t('Définis ton poids cible (plus bas) pour voir la date d\'arrivée estimée et tes étapes.')}</p></div></div>`
       : `<ul class="cells">
         <li class="cell"><div class="grow"><span class="t headline">${t('Arrivée estimée')}</span><span class="s">${eta ? (speed === obs ? t('vitesse réelle') : t('rythme prévu')) + ` · ${fmt(Math.abs(speed), 2)} ${t('kg/sem')}` : t("Pas d'estimation : la tendance va dans le mauvais sens ou le rythme est nul.")}</span></div>
@@ -86,7 +93,7 @@ export function render(root, go) {
       t('Formules cliniques (Devine, Robinson, Hamwi) : {a} – {b} kg', { a: fmt(ideal.formulaMin, 1), b: fmt(ideal.formulaMax, 1) })
         + (ideal.reliable ? '' : t(' (peu fiables sous 152 cm)')) + '. ' + t("L'IMC ignore la masse musculaire : si tu es musclé, vise plutôt un % de masse grasse."))
     : `<div class="cta"><b class="headline">${t('Renseigne taille et sexe dans Profil')}</b><button class="btn filled" data-a="profile">${t('Profil')}</button></div>`}
-    ${group(t('Historique'), `<ul class="cells">${[...trend].reverse().slice(0, 30).map((x) => `<li class="cell"><div class="grow"><span class="t num">${fmt(x.kg, 1)} kg</span><span class="s">${fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${t('tendance')} ${fmt(x.trend, 1)}</span></div>
+    ${group(t('Historique'), `<ul class="cells">${[...trend].reverse().slice(0, 30).map((x) => `<li class="cell"><div class="grow"><span class="t num">${retention(x.date) ? '<span class="cy-wdot" aria-hidden="true"></span>' : ''}${fmt(x.kg, 1)} kg</span><span class="s">${retention(x.date) ? `<span class="cy-wnote">${t('rétention d\'eau probable')}</span> · ` : ''}${fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${t('tendance')} ${fmt(x.trend, 1)}</span></div>
       <button class="icon-btn" data-del="${x.date}" aria-label="${t('Supprimer')}">${icon('trash')}</button></li>`).join('') || `<li class="empty">${t('Aucune pesée.')}</li>`}</ul>`)}`;
 
   root.querySelector('[data-f=w]').onsubmit = (e) => {

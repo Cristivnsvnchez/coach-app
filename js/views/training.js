@@ -5,11 +5,14 @@ import { state, save, today, uid, latestWeight } from '../store.js';
 import { findExercise } from '../exercises.js';
 import { esc, fmt, fmtDate, sheet, nav, group } from '../ui.js';
 import { icon } from '../icons.js';
-import { t, locale } from '../i18n.js';
+import { t, locale, register } from '../i18n.js';
 import { active, startWorkout, renderSession } from './session.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 import { openWizard, planCard, plannedDays, exportCalendar } from './program.js';
 import { isDeload, weekOf } from '../planner.js';
+
+register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements' },
+  nl: { 'Apprendre les mouvements': 'Bewegingen leren', 'Apprends les bons mouvements': 'Leer de juiste bewegingen' } });
 
 let month = null; // mois affiché dans le calendrier ('YYYY-MM')
 
@@ -32,6 +35,7 @@ export function render(root, go) {
       <div><small>${t('Repos')}</small><b>${rest ?? '–'} <span class="u">${t('j')}</span></b></div>
       <div><small>${t('Ce mois-ci')}</small><b>${ws.filter((w) => w.date.slice(0, 7) === today().slice(0, 7)).length} <span class="u">${t('séances')}</span></b></div>
     </div>
+    <button class="lrn-entry" data-a="learn"><span class="lrn-entry-ic">${icon('sparkles')}</span><span class="grow"><b>${t('Apprendre les mouvements')}</b><small>${t('Apprends les bons mouvements')}</small></span>${icon('chevronRight', { cls: 'chev' })}</button>
     ${planCard()}
     <button class="btn large" data-a="empty" style="margin-bottom:1.75rem">${icon('plus')} ${t('Démarrer une séance vide')}</button>
     ${folders.map((f) => group(esc(t(f || 'Mes routines')), `<ul class="cells">${state.routines.filter((r) => (r.folder || '') === f).map((r) => `
@@ -65,6 +69,7 @@ export function render(root, go) {
     if (el.dataset.cal) { month = el.dataset.cal; return render(root, go); }
     const a = el.dataset.a;
     if (a === 'empty') { startWorkout(null); return render(root, go); }
+    if (a === 'learn') return go('learn');
     if (a === 'wizard') return openWizard(back);
     if (a === 'ics') return exportCalendar();
     if (a === 'plates') return platesSheet();

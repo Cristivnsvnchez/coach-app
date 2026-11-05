@@ -1,1 +1,41 @@
 /* TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css). */
+.lrn-search { margin-bottom: 1rem; border-radius: 20px; min-height: 44px; }
+.lrn-day { position: relative; overflow: hidden; background: var(--p-deep); color: #fff; border-radius: 28px; padding: 1.25rem 1.25rem 1.1rem; margin-bottom: 1rem; min-height: 168px; }
+.lrn-day small { display: none; } /* le fond de couleur suffit à signaler le geste du jour */
+.lrn-day h2 { font-size: 1.45rem; font-weight: 700; letter-spacing: -.02em; margin: .25rem 0 .1rem; max-width: 62%; color: #fff; }
+.lrn-day p { margin: 0 0 1rem; font-size: .85rem; opacity: .85; max-width: 62%; }
+.lrn-day-pic { position: absolute; right: .75rem; top: .75rem; width: 96px; height: 96px; color: rgba(255,255,255,.9); }
+.lrn-day-pic .lrn-pic { width: 100%; height: 100%; }
+.lrn-day-btn { background: #fff; color: var(--p-deep); border-radius: 28px; font-weight: 600; min-height: 44px; padding: 0 1.1rem; display: inline-flex; align-items: center; gap: .35rem; }
+.lrn-levels { margin-bottom: .25rem; }
+.lrn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.lrn-card { display: flex; align-items: center; gap: .8rem; background: var(--cell); border-radius: 24px; padding: .7rem .8rem; cursor: pointer; min-height: 44px; }
+.lrn-card:focus-visible { outline: 2px solid var(--p-deep); outline-offset: 2px; }
+.lrn-card:active { opacity: .7; }
+.lrn-pic-box { flex: none; width: 56px; height: 56px; border-radius: 18px; background: var(--p-tint); color: var(--p-deep); display: grid; place-items: center; }
+.lrn-pic-box .lrn-pic { width: 42px; height: 42px; }
+.lrn-info { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.lrn-name { font-weight: 600; font-size: 1rem; color: var(--label); }
+.lrn-muscles { font-size: .8rem; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lrn-mastery { display: flex; align-items: center; gap: .5rem; margin-top: .2rem; }
+.lrn-mastery small { font-size: .7rem; color: var(--label-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lrn-track { flex: 1; max-width: 90px; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.lrn-fill { display: block; height: 100%; border-radius: 3px; background: var(--p-deep); }
+.lrn-lvl { flex: none; font-size: .68rem; font-weight: 600; padding: .2rem .55rem; border-radius: 999px; background: var(--p-tint); color: var(--p-deep); }
+.lrn-hero { display: grid; place-items: center; background: var(--p-tint); color: var(--p-deep); border-radius: 28px; padding: 1rem; margin-bottom: .8rem; }
+.lrn-pic.big { width: 148px; height: 148px; }
+.lrn-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.lrn-tag { font-size: .78rem; font-weight: 600; padding: .25rem .7rem; border-radius: 999px; background: var(--fill); color: var(--label); }
+.lrn-tabs { margin-bottom: .8rem; }
+.lrn-steps { margin: 0 0 1.25rem; padding: 0; list-style: none; counter-reset: lrn; display: grid; gap: .6rem; }
+.lrn-steps li { counter-increment: lrn; position: relative; padding: .75rem .9rem .75rem 3rem; background: var(--cell); border-radius: 20px; line-height: 1.4; font-size: .95rem; }
+.lrn-steps li::before { content: counter(lrn); position: absolute; left: .8rem; top: .7rem; width: 26px; height: 26px; border-radius: 50%; background: var(--p-deep); color: #fff; font-weight: 700; font-size: .8rem; display: grid; place-items: center; }
+.lrn-actions { display: grid; gap: .6rem; }
+.lrn-actions .btn.large:not(.filled) { background: var(--p-tint); color: var(--p-deep); border-radius: 28px; }
+.lrn-actions .btn.filled { border-radius: 28px; }
+/* Entrée « Apprendre » en tête de l'onglet Sport */
+.lrn-entry { display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; border: 0; font: inherit; cursor: pointer; background: var(--p-deep); color: #fff; border-radius: 24px; padding: .85rem 1rem; margin-bottom: 1rem; min-height: 56px; }
+.lrn-entry .grow { display: grid; }
+.lrn-entry b { font-weight: 600; } .lrn-entry small { opacity: .85; font-size: .78rem; }
+.lrn-entry-ic { width: 40px; height: 40px; border-radius: 14px; background: rgba(255,255,255,.18); display: grid; place-items: center; }
+.lrn-entry svg { color: #fff; }

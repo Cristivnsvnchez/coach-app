@@ -2,6 +2,7 @@
 // Pas de SDK : l'app n'a pas d'étape de build, on appelle l'API Messages en HTTP.
 import { state, save } from './store.js';
 import { getLang } from './i18n.js';
+import { fetchRetry } from './net.js';
 
 export const MODELS = {
   'claude-opus-5-5': 'Claude Opus 5.5 — le plus fiable (~4 $/20 $ par M tokens)',
@@ -108,12 +109,13 @@ export async function ask(messages, { search = false, json = null, maxTokens = 8
   const content = [];
   let paused = false;
   for (let turn = 0; turn < 4; turn++) {
-    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(body) });
+    // Surcharge (429/529) ou coupure : jusqu'à 2 nouvelles tentatives espacées ; recherche web longue → délai 120 s.
+    const r = await fetchRetry('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(body) }, { retries: 2, timeoutMs: 120000 });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = j.error?.message || r.statusText;
       if (r.status === 401) throw new Error('Clé API invalide. Vérifie-la dans Profil.');
-      if (r.status === 429) throw new Error('Trop de requêtes, réessaie dans une minute.');
+      if (r.status === 429 || r.status === 529) throw new Error('Service IA surchargé, réessaie dans une minute.');
       if (r.status === 400 && /credit|balance/i.test(msg)) throw new Error('Crédit API épuisé : recharge sur console.anthropic.com.');
       throw new Error(`Erreur API ${r.status} : ${msg}`);
     }

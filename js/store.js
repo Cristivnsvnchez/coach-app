@@ -5,10 +5,17 @@ import { migrateProgram } from './workout.js';
 import { DEFAULT_PROGRAM } from './exercises.js';
 
 const KEY = 'coach.v1';
+// Version du schéma des données : incrémenter et ajouter une étape dans MIGRATIONS à chaque changement de forme.
+export const SCHEMA = 2;
+const MIGRATIONS = {
+  // 1 → 2 : TrackMe (palette, matière, cycle, repères ANSES, Strava) ; les champs manquants viennent de empty().
+  2: (d) => d,
+};
 
 const empty = () => ({
+  _v: SCHEMA,
   profile: { goal: 'perte', rate: 0.5, activity: 'leger' },
-  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow' },
+  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume' },
   usage: null,    // { month: 'YYYY-MM', usd, calls } : dépense IA estimée du mois
   foods: {},      // id -> { name, per100: {kcal,p,c,f,fib}, source, serving }
   favorites: [],  // ids d'aliments
@@ -43,18 +50,41 @@ export function load() {
   return state;
 }
 
+// Enregistrement groupé : plusieurs save() dans la même tâche donnent une seule écriture (sérialisation coûteuse).
+// Écriture forcée quand l'app passe en arrière-plan (iOS peut la fermer sans prévenir).
+let pending = false;
 export function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {
-    alert('Stockage plein : exporte tes données depuis Profil.');
-  }
+  if (pending) return;
+  pending = true;
+  queueMicrotask(flush);
+}
+export function flush() {
+  pending = false;
+  const json = JSON.stringify(state);
+  try { localStorage.setItem(KEY, json); return; } catch {}
+  // Stockage plein : on libère d'abord ce qui se régénère (cache Strava, ancien historique du coach), puis on réessaie.
+  if (state.strava?.activities?.length > 60) state.strava.activities = state.strava.activities.slice(0, 60);
+  if (state.chat.length > 40) state.chat = state.chat.slice(-40);
+  try { localStorage.removeItem(KEY + '.corrupt'); localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch { alert('Stockage plein : exporte tes données depuis Profil.'); }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pending) flush(); });
+  addEventListener('pagehide', () => { if (pending) flush(); });
 }
 
 // Fusion avec les valeurs par défaut + types vérifiés (import de fichier, ancienne version).
 function sanitize(data) {
-  const base = empty(), out = { ...base, ...data };
+  for (let v = (Number(data._v) || 1) + 1; v <= SCHEMA; v++) data = MIGRATIONS[v]?.(data) ?? data;
+  const base = empty(), out = { ...base, ...data, _v: SCHEMA };
   for (const k of ['weights', 'workouts', 'chat', 'favorites', 'habits', 'routines', 'customExercises', 'milestones']) if (!Array.isArray(out[k])) out[k] = base[k];
   for (const k of ['profile', 'settings', 'foods', 'logs', 'habitLog']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   out.settings = { ...base.settings, ...out.settings };
+  for (const k of ['foodGroups']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
+  const c = out.cycle && typeof out.cycle === 'object' ? out.cycle : {};
+  out.cycle = { ...base.cycle, ...c, periods: Array.isArray(c.periods) ? c.periods : [], logs: c.logs && typeof c.logs === 'object' ? c.logs : {} };
+  if (out.strava && (typeof out.strava !== 'object' || Array.isArray(out.strava))) out.strava = null;
+  if (out.strava && !Array.isArray(out.strava.activities)) out.strava.activities = [];
   if (out.plan && (!Array.isArray(out.plan.routineIds) || !Array.isArray(out.plan.weekdays))) out.plan = null;
   for (const d in out.logs) {
     const l = out.logs[d];

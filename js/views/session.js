@@ -6,8 +6,18 @@ import { state, save, today, uid, latestWeight } from '../store.js';
 import { findExercise } from '../exercises.js';
 import { esc, fmt, toast, sheet, nav, group } from '../ui.js';
 import { icon } from '../icons.js';
-import { t } from '../i18n.js';
+import { t, register } from '../i18n.js';
+import { trainingNote } from '../cycle.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
+
+register({
+  en: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cycle: an easier session is advised. You can drop one set per exercise.',
+    'Retirer une série par exercice': 'Remove one set per exercise', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cycle: listen to your body today and adjust if needed.',
+    'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed' },
+  nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
+    'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
+    'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt' },
+});
 
 const ACTIVE_KEY = 'coach.active';
 export let active = null;
@@ -84,6 +94,7 @@ export function renderSession(root, go, back) {
       right: `<button class="btn filled" style="min-height:34px;border-radius:17px" data-a="finish">${t('Terminer')}</button>`,
     })}
     ${active.deload ? `<p class="footnote tint" style="margin:-.5rem 0 .75rem">${t('Semaine de décharge : volume réduit (~60 %).')}</p>` : ''}
+    ${cycleBanner()}
     <p class="live-line"><b data-live="dur">${hms(Date.now() - active.start)}</b> · ${fmt(vol)} kg · ${sets} ${t(sets > 1 ? 'séries' : 'série')}</p>
     <div class="rest" hidden role="timer"><div class="rest-bar"></div>
       <button class="icon-btn" data-a="rest-" aria-label="−15 s">−15</button>
@@ -114,6 +125,18 @@ function prevFor(prev, sets, j) {
   const warm = (s) => s.type === 'warmup';
   const rank = sets.slice(0, j).filter((s) => warm(s) === warm(sets[j])).length;
   return prev.filter((s) => warm(s) === warm(sets[j]))[rank] || null;
+}
+
+// Bandeau cycle : conseil du jour (trainingNote) si le suivi est actif ; lien vers la vue cycle.
+function cycleBanner() {
+  const c = state.cycle;
+  if (!c?.enabled || state.profile?.sex !== 'F') return '';
+  const note = trainingNote(c, today());
+  if (!note) return '';
+  const removable = active.exercises.some((ex) => ex.sets.filter((x) => x.type !== 'warmup' && !x.done).length > 1);
+  return `<div class="cy-banner" role="note"><span>${t(note === 'ease' ? 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.' : 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.')}</span>
+    <div class="row">${note === 'ease' && removable ? `<button class="btn pill" data-a="cy-ease">${t('Retirer une série par exercice')}</button>` : ''}
+    <button class="link" data-a="cy-open">${t('Voir mon cycle')}</button></div></div>`;
 }
 
 function exerciseCard(ex, i, ssIndex) {
@@ -162,6 +185,15 @@ function onClick(e, root, go, back) {
   const a = el.dataset.a, i = +el.dataset.i, j = +el.dataset.j;
   const ex = active.exercises[i];
   const keep = () => { persist(); const y = root.scrollTop; renderSession(root, go, back); root.scrollTop = y; };
+
+  if (a === 'cy-open') return go('cycle');
+  if (a === 'cy-ease') { // retire la dernière série de travail non faite de chaque exercice (au moins 1 série restante)
+    for (const x of active.exercises) {
+      const idx = x.sets.map((q, k) => (q.type !== 'warmup' && !q.done ? k : -1)).filter((k) => k >= 0);
+      if (idx.length > 1) x.sets.splice(idx[idx.length - 1], 1);
+    }
+    toast(t('Séries retirées')); return keep();
+  }
 
   if (a === 'discard') {
     if (!confirm(t('Abandonner la séance ?'))) return;

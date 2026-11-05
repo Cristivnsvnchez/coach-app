@@ -1,5 +1,6 @@
 // Aliments : Open Food Facts (code-barres + recherche), cache local dans state.foods.
 import { state, save } from './store.js';
+import { fetchRetry } from './net.js';
 
 const OFF = 'https://world.openfoodfacts.org';
 const FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity';
@@ -20,7 +21,7 @@ function fromOff(p) {
 export async function lookupBarcode(ean) {
   const code = String(ean).replace(/\D/g, '');
   if (state.foods['off:' + code]) return state.foods['off:' + code];
-  const r = await fetch(`${OFF}/api/v2/product/${code}.json?fields=${FIELDS}`);
+  const r = await fetchRetry(`${OFF}/api/v2/product/${code}.json?fields=${FIELDS}`, {}, { retries: 1, timeoutMs: 10000 });
   if (!r.ok) throw new Error('Produit introuvable (' + r.status + ')');
   const j = await r.json();
   if (j.status !== 1 || !j.product) throw new Error('Produit introuvable dans Open Food Facts');
@@ -40,7 +41,7 @@ export async function searchFood(q) {
   const url = `${OFF}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&lc=fr&cc=fr&fields=${FIELDS}`;
   // La recherche texte OFF est souvent indisponible (503) : on renvoie alors les résultats locaux seuls.
   try {
-    const r = await fetch(url);
+    const r = await fetchRetry(url, {}, { retries: 0, timeoutMs: 6000 }); // repli rapide sur les résultats locaux
     if (!r.ok) throw new Error(String(r.status));
     const j = await r.json();
     return { local, remote: (j.products || []).map(fromOff).filter(Boolean) };

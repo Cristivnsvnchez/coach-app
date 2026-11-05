@@ -11,13 +11,16 @@ export const PALETTES = {
   encre: ['Encre', '#141418', '#5a5a66', '#e9a93b', '#ecebef'],
 };
 export const VARIANTS = ['flow', 'orb', 'swirl'];
+// Matière du fond : papier crème mat, ou brume (fond flou à dégradé neutre + contrôles en verre givré).
+export const SURFACES = ['papier', 'brume'];
 
 let current = 'ocean', currentVariant = 'flow';
 export const palette = () => current;
 export const variant = () => currentVariant;
 export const colors = (key = current) => { const [name, deep, mid, warm, tint] = PALETTES[key] || PALETTES.ocean; return { name, deep, mid, warm, tint }; };
 
-export function applyTheme(key = 'ocean', v = 'flow') {
+export function applyTheme(key = 'ocean', v = 'flow', surface) {
+  if (surface !== undefined) document.documentElement.dataset.surface = SURFACES.includes(surface) ? surface : 'papier';
   current = PALETTES[key] ? key : 'ocean';
   currentVariant = VARIANTS.includes(v) ? v : 'flow';
   const c = colors();
@@ -43,3 +46,6 @@ export function shape({ key = current, v = currentVariant, grain = 0.5, cls = ''
     <filter id="${id}g"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0"/></filter></defs>
     <g filter="url(#${id}b)">${blobs}</g><rect width="300" height="400" filter="url(#${id}g)" opacity="${grain}" style="mix-blend-mode:multiply"/></svg>`;
 }
+
+// Logotype TrackMe : Funnel Display serrée, point final à la couleur de la palette (voir DESIGN.md → Marque).
+export const wordmark = (cls = '') => `<span class="tm-wordmark ${cls}" aria-label="TrackMe">TrackMe<i aria-hidden="true"></i></span>`;

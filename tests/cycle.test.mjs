@@ -38,3 +38,12 @@ test('effets poids / entraînement et garde-fous', () => {
   const irr = { enabled: true, periods: [{ start: '2026-01-01' }, { start: '2026-01-19' }, { start: '2026-02-06' }] };
   assert.deepEqual(C.alerts(irr, '2026-02-10'), ['irregular']);
 });
+
+test('cycleSd : null sous 3 cycles, sinon écart-type arrondi', async () => {
+  const { cycleSd } = await import('../js/cycle.js');
+  assert.equal(cycleSd({ periods: [{ start: '2026-01-01' }, { start: '2026-01-29' }] }), null);
+  const c = { periods: ['2026-01-01', '2026-01-29', '2026-02-26', '2026-03-26'].map((start) => ({ start })) };
+  assert.equal(cycleSd(c), 0);
+  const d = { periods: ['2026-01-01', '2026-01-27', '2026-02-26', '2026-03-26'].map((start) => ({ start })) };
+  assert.ok(cycleSd(d) >= 1);
+});

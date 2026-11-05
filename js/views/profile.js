@@ -5,7 +5,8 @@ import { current } from '../metrics.js';
 import { MODELS, usage, testConnection } from '../ai.js';
 import { esc, fmt, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
-import { t, getLang, setLang } from '../i18n.js';
+import { t, getLang, setLang, LANGS } from '../i18n.js';
+import { paletteSection, handlePaletteClick } from './palette.js';
 
 const opt = (obj, sel, lab = (v) => v.label ?? v) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${esc(t(lab(v)))}</option>`).join('');
 const rateOpts = (goal, sel) => opt(Object.fromEntries((S.GOALS[goal]?.rates || [0]).map((r) => [r, r ? t('{r} % du poids / semaine', { r: fmt(r, 2).replace(/[,.]?0+$/, '') }) : '—'])), sel);
@@ -19,12 +20,8 @@ export function render(root, go) {
 
   root.innerHTML = `
     ${nav(t('Profil'))}
-    ${group(t('Apparence'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
-      <button type="button" data-look="classic" class="${st.look === 'classic' ? 'on' : ''}">${t('Classique')}</button>
-      <button type="button" data-look="glass" class="${(st.look || 'glass') === 'glass' ? 'on' : ''}">Liquid Glass</button></div></div></div>`)}
-    ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">
-      <button type="button" data-lang="fr" class="${getLang() === 'fr' ? 'on' : ''}" aria-selected="${getLang() === 'fr'}">Français</button>
-      <button type="button" data-lang="en" class="${getLang() === 'en' ? 'on' : ''}" aria-selected="${getLang() === 'en'}">English</button></div></div></div>`)}
+    ${group(t('Apparence'), `<div class="cells"><div class="cell pal-cell">${paletteSection()}</div></div>`)}
+    ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">${Object.entries(LANGS).map(([k, l]) => `<button type="button" data-lang="${k}" class="${getLang() === k ? 'on' : ''}" aria-selected="${getLang() === k}">${l}</button>`).join('')}</div></div></div>`)}
     ${targets ? group(targets.custom ? t('Mes objectifs (personnalisés)') : t('Tes besoins calculés'), `<div class="cells"><div class="stats">
         <div><small>${t('Dépense')}</small><b>${fmt(targets.tdee)}</b><small>${energy.method === 'adaptatif' ? t('adaptative ({n} j)', { n: energy.loggedDays }) : t('formule')}</small></div>
         <div><small>${t('Objectif')}</small><b>${fmt(targets.kcal)}</b><small>${t('kcal/j')}</small></div>
@@ -98,8 +95,7 @@ export function render(root, go) {
     save(); toast(t('Réglages IA enregistrés'));
   };
   root.onclick = (e) => {
-    const lk = e.target.closest('[data-look]');
-    if (lk) { state.settings.look = lk.dataset.look; save(); document.documentElement.dataset.look = lk.dataset.look; return render(root, go); }
+    if (handlePaletteClick(e, () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; })) return;
     const lg = e.target.closest('[data-lang]');
     if (lg) { setLang(lg.dataset.lang); return go('profile'); }
     const a = e.target.closest('[data-a]')?.dataset.a;
@@ -113,8 +109,10 @@ export function render(root, go) {
       return;
     }
     if (a === 'export') {
-      const data = { ...state, settings: { ...state.settings, apiKey: '' } };
-      const name = `coach-backup-${today()}.json`;
+      // Jamais de secret dans une sauvegarde (elle part vers Fichiers, iCloud, mail…) : clé IA et jetons Strava retirés.
+      const { clientSecret, token, refresh, ...strava } = state.strava || {};
+      const data = { ...state, settings: { ...state.settings, apiKey: '' }, strava: state.strava ? strava : null };
+      const name = `trackme-backup-${today()}.json`;
       const file = new File([JSON.stringify(data, null, 1)], name, { type: 'application/json' });
       // Sur iPhone, la feuille de partage permet d'enregistrer dans Fichiers / iCloud Drive.
       if (navigator.canShare?.({ files: [file] })) { navigator.share({ files: [file], title: name }).catch(() => {}); return; }
@@ -131,7 +129,9 @@ export function render(root, go) {
       const data = JSON.parse(await f.text());
       if (!data.profile || !data.logs) throw new Error(t('Fichier non reconnu'));
       if (!confirm(t('Remplacer les données actuelles par cette sauvegarde ?'))) return;
-      replace({ ...data, settings: { ...data.settings, apiKey: state.settings.apiKey } });
+      // On garde les secrets de cet appareil (absents des sauvegardes).
+      const keep = state.strava ? { clientSecret: state.strava.clientSecret, token: state.strava.token, refresh: state.strava.refresh, expiresAt: state.strava.expiresAt } : {};
+      replace({ ...data, settings: { ...data.settings, apiKey: state.settings.apiKey }, strava: data.strava ? { ...data.strava, ...keep } : state.strava });
       toast(t('Sauvegarde restaurée')); render(root, go);
     } catch (err) { toast(t('Import impossible : {e}', { e: err.message })); }
   };

@@ -4,6 +4,7 @@ import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { applyTheme } from './theme.js';
 import './i18n/nl-base.js'; // traductions néerlandaises des textes existants
+import './i18n/extra.js'; // compléments EN + NL (tests/i18n-scan.mjs)
 import * as today from './views/today.js';
 import * as weight from './views/weight.js';
 import * as training from './views/training.js';
@@ -52,7 +53,7 @@ main.addEventListener('scroll', () => main.classList.toggle('scrolled', main.scr
 load();
 document.documentElement.dataset.look = 'glass';
 document.documentElement.classList.add('tm');
-applyTheme(state.settings.palette, state.settings.shape);
+applyTheme(state.settings.palette, state.settings.shape, state.settings.surface);
 
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');
@@ -64,7 +65,7 @@ tabbar.addEventListener('click', (e) => {
 let saved = null;
 try { saved = sessionStorage.getItem('tab'); } catch {}
 go(saved || tab);
-if (needsOnboarding()) openOnboarding(() => { applyTheme(state.settings.palette, state.settings.shape); go('today'); });
+if (needsOnboarding()) openOnboarding(() => { applyTheme(state.settings.palette, state.settings.shape, state.settings.surface); go('today'); });
 
 let day = todayIso();
 document.addEventListener('visibilitychange', () => {

@@ -5,7 +5,10 @@ import { state, save, latestWeight } from '../store.js';
 import { LIBRARY, EQUIPMENT, findExercise } from '../exercises.js';
 import { esc, fmt, fmtDate, sheet, group, lineChart, toast } from '../ui.js';
 import { icon } from '../icons.js';
-import { t } from '../i18n.js';
+import { t, register } from '../i18n.js';
+import { getTechnique } from '../technique.js';
+
+register({ en: { 'Technique': 'Technique' }, nl: { 'Technique': 'Techniek' } });
 
 const TYPE_LABEL = { weight_reps: 'Charge + reps', bodyweight: 'Poids du corps', weighted_bw: 'Poids du corps lesté', assisted_bw: 'Poids du corps assisté', duration: 'Durée' };
 
@@ -70,6 +73,7 @@ export function openExercise(name) {
     const hist = state.workouts.filter((w) => w.exercises.some((e) => e.name === name)).slice(-15).reverse();
     s.querySelector('.body').innerHTML = `
       <p class="footnote secondary" style="margin:-.5rem 0 1rem">${esc(t(info.muscle || ''))}${info.secondary?.length ? ' · ' + info.secondary.map((m) => esc(t(m))).join(', ') : ''}${info.type ? ' · ' + t(TYPE_LABEL[info.type]) : ''}</p>
+      ${getTechnique(name) ? `<button class="btn plain bold" data-tech style="margin:-.5rem 0 .75rem">${icon('sparkles')} ${t('Technique')}</button>` : ''}
       ${group('', `<div class="cells"><div class="cell chart-cell" style="display:block">
         <div class="seg">${[['e1rm', '1RM estimé'], ['maxKg', 'Charge max'], ['volume', 'Volume']].map(([k, l]) => `<button data-m="${k}" class="${k === metric ? 'on' : ''}">${t(l)}</button>`).join('')}</div>
         ${lineChart([{ points: pts.map((p) => ({ x: parseDate(p.date), y: p.y })), cls: 'trend', dots: true }], { yPad: 2 })}
@@ -87,7 +91,8 @@ export function openExercise(name) {
           <span class="s num" style="white-space:normal">${ex.sets.filter((x) => x.done).map((x) => `${x.type && x.type !== 'normal' ? W.SET_LABEL[x.type] + ' ' : ''}${x.kg ? fmt(x.kg, 1) + '×' : ''}${x.reps}`).join(' · ')}</span></div></li>`;
       }).join('') || `<li class="empty">${t('Aucune séance.')}</li>`}</ul>`)}`;
   };
-  s.addEventListener('click', (e) => {
+  s.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-tech]')) { const { openTechnique } = await import('./learn.js'); return openTechnique(name); } // import différé : évite le cycle learn ↔ exsheets
     const m = e.target.closest('[data-m]'); if (m) { metric = m.dataset.m; return draw(); }
     const r = e.target.closest('[data-r]'); if (r) { range = +r.dataset.r; draw(); }
   });
