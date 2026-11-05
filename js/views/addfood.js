@@ -1,5 +1,5 @@
 // Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
-import { state, save, dayLog, recentFoods, uid } from '../store.js';
+import { state, save, dayLog, planDay, recentFoods, uid } from '../store.js';
 import { searchFood, searchBase, lookupBarcode, entryFor, saveFood, startScan } from '../food.js';
 import { esc, fmt, sheet, toast, group } from '../ui.js';
 import { icon } from '../icons.js';
@@ -7,11 +7,11 @@ import { getLang, t } from '../i18n.js';
 
 export const MEALS = { dej: 'Petit-déjeuner', midi: 'Déjeuner', diner: 'Dîner', snack: 'Collations' };
 
-export function openAddFood(meal, date, done) {
+export function openAddFood(meal, date, done, { target = 'log' } = {}) {
   let stopScan = null;
   let scanId = 0; // invalide un démarrage de caméra encore en cours si on ferme ou change d'onglet
   const s = sheet(`
-    <div class="sheet-head"><h3 class="title2">${t('Ajouter — {meal}', { meal: t(MEALS[meal]) })}</h3></div>
+    <div class="sheet-head"><h3 class="title2">${t(target === 'plan' ? 'Planifier — {meal}' : 'Ajouter — {meal}', { meal: t(MEALS[meal]) })}</h3></div>
     <form data-f="search" class="row" style="margin-bottom:.5rem">
       <label class="searchbar" style="flex:1">${icon('search')}<input name="q" type="search" placeholder="${t('Rechercher un aliment')}" autocomplete="off" enterkeyhint="search" aria-label="${t('Rechercher un aliment')}"></label>
     </form>
@@ -41,8 +41,8 @@ export function openAddFood(meal, date, done) {
   };
 
   const addEntries = (entries) => {
-    const log = dayLog(date);
-    entries.forEach((en) => log.meals.push({ ...en, id: uid(), meal }));
+    const bucket = target === 'plan' ? planDay(date)[meal] : dayLog(date).meals;
+    entries.forEach((en) => bucket.push({ ...en, id: uid(), meal }));
     save(); toast(entries.length > 1 ? t('{n} aliments ajoutés', { n: entries.length }) : t('Ajouté ✓'));
     s.close(); done();
   };

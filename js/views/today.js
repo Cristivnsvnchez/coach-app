@@ -132,7 +132,8 @@ export function render(root, go) {
 
   root.innerHTML = `
     <header class="td-head"><h1 class="td-title">${esc(title)}</h1>
-      <div class="td-btns"><button class="td-round" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
+      <div class="td-btns"><button class="td-round" data-a="planning" aria-label="${t('Planifier mes repas')}">${icon('calendar')}</button>
+        <button class="td-round" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
     <div class="split td-split"><div>${summary}${cyclePill}${quick}${anses}</div><div>${meals}</div></div>`;
 
   // Animations : chiffre héros et barres partent de leur ancienne valeur (même jour seulement).
@@ -155,6 +156,7 @@ export function render(root, go) {
     if (a === 'prev') return shift(-1);
     if (a === 'next') return shift(1);
     if (a === 'profile') return go('profile');
+    if (a === 'planning') return go('planning');
     if (a === 'coach') return go('coach');
     if (a === 'cycle') return go('cycle');
     if (a === 'water+' || a === 'water-') { log.water = Math.max(0, log.water + (a === 'water+' ? 250 : -250)); save(); return keep(); }

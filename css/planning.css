@@ -1,0 +1,13 @@
+/* TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.md, css/trackme.css). */
+.pl-strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 16px; scrollbar-width: none; }
+.pl-strip::-webkit-scrollbar { display: none; }
+.pl-day { flex: none; width: 56px; padding: 10px 0; border: 0; border-radius: 18px; background: var(--cell); color: var(--label); display: grid; gap: 2px; justify-items: center; cursor: pointer; }
+.pl-day.on { background: var(--p-deep); color: #fff; }
+.pl-dname { font-size: .7rem; text-transform: capitalize; opacity: .8; }
+.pl-dnum { font-size: 1.1rem; font-weight: 700; }
+.pl-shop-btn { margin-bottom: 16px; }
+.pl-empty { padding: 4px 14px 14px; margin: 0; }
+.pl-shop-actions { display: grid; gap: .6rem; margin-top: 1rem; }
+.pl-done .t { text-decoration: line-through; opacity: .55; }
+.pl-check { color: transparent; border: 2px solid var(--line); background: transparent; }
+.pl-check[aria-pressed="true"] { background: var(--p-deep); border-color: var(--p-deep); color: #fff; }

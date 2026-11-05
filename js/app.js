@@ -13,14 +13,15 @@ import * as coach from './views/coach.js';
 import * as profile from './views/profile.js';
 import * as cycle from './views/cycle.js';
 import * as learn from './views/learn.js';
+import * as planning from './views/planning.js';
 import { needsOnboarding, openOnboarding } from './views/onboarding.js';
 import { openAddFood } from './views/addfood.js';
 import { startupNudges } from './install.js';
 
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
-const VIEWS = { today, weight, training, coach, profile, cycle, learn };
+const VIEWS = { today, weight, training, coach, profile, cycle, learn, planning };
 const TABS = [['today', 'Journal', 'calendar'], ['weight', 'Poids', 'weight'], ['add'], ['training', 'Sport', 'training'], ['coach', 'Coach', 'sparkles']];
-const TAB_OF = { cycle: 'today', profile: 'today', learn: 'training' };
+const TAB_OF = { cycle: 'today', profile: 'today', learn: 'training', planning: 'today' };
 const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
 let tab = 'today';

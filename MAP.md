@@ -21,6 +21,9 @@ TrackMe : motion design sobre et natif iOS (ressort au toucher, entrée des écr
 ## css/onboarding.css (138 l.)
 TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 
+## css/planning.css (13 l.)
+TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.md, css/trackme.css).
+
 ## css/today.css (72 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
@@ -31,7 +34,7 @@ TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 exports: MODELS,ALLOWED_DOMAINS SYSTEM,hasKey PRICES,USD_TO_EUR usage,costUsd userContext,ask testConnection,extractJson stripJson,imageToBase64 estimateMeal,programQuestions programGenerate
 
-## js/app.js (119 l.)
+## js/app.js (120 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go
 
@@ -91,9 +94,13 @@ exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildP
 Calculs nutrition / entraînement. Fonctions pures, sans DOM (testées sous Node).
 exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeInitial emaTrend,slope trendSlope,adaptiveTdee bmi,targets applyCustom,idealRange etaDate,milestones reachedOn,milestoneStatus projection,epley1RM nextSet,MUSCLES REFS
 
-## js/store.js (142 l.)
+## js/shopping.js (54 l.)
+Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
+exports: dateRange,aggregatePlan regenerate,knownStores byStore
+
+## js/store.js (156 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
-exports: SCHEMA,state load,save flush,replace today,dayLog uid,sum intakesByDay,latestWeight recentFoods
+exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay latestWeight,recentFoods
 
 ## js/technique.js (625 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
@@ -153,6 +160,10 @@ exports: needsOnboarding,openOnboarding
 Choix de la palette (6 couleurs) et de la forme (3 variantes), avec aperçu en direct.
 exports: paletteSection,handlePaletteClick
 
+## js/views/planning.js (149 l.)
+Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
+exports: render
+
 ## js/views/profile.js (155 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
@@ -165,7 +176,7 @@ exports: openWizard,planCard plannedDays,exportCalendar
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
 exports: active,persist startWorkout,renderSession
 
-## js/views/today.js (197 l.)
+## js/views/today.js (199 l.)
 Onglet Journal : en-tête (Coach, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 

@@ -22,7 +22,7 @@ const EN = {
   'Ajouter': 'Add', 'Supprimer': 'Delete', 'Copier les repas de la veille': "Copy yesterday's meals",
   'Rien à copier pour la veille': 'Nothing to copy from yesterday', '{n} aliments copiés': '{n} foods copied',
   // Ajout d'aliment
-  'Ajouter — {meal}': 'Add — {meal}', 'Rechercher un aliment': 'Search for a food', 'OK': 'Go',
+  'Ajouter — {meal}': 'Add — {meal}', 'Planifier — {meal}': 'Plan — {meal}', 'Rechercher un aliment': 'Search for a food', 'OK': 'Go',
   'Code-barres': 'Barcode', 'Manuel': 'Manual',
   'Favoris': 'Favorites', 'Récents': 'Recent',
   'Cherche un aliment ou scanne un code-barres.': 'Search for a food or scan a barcode.',

@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v26** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v27** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -118,3 +118,15 @@ Proposition de réalisation :
 3. Une liste de courses générée depuis le calendrier, groupée par magasin, éditable à la main.
 
 Aucune dépendance externe ni IA pour ce chantier — 100 % local, l'utilisateur alimente les magasins lui-même au fil de l'eau.
+
+**Fait (v27) :**
+- `js/store.js` : `mealPlan` (repas prévus, distinct de `logs` = repas mangés) et `shoppingList` ajoutés au schéma (pas de bump `SCHEMA`, juste de nouveaux champs backfillés par `sanitize()`). `planDay(date)` miroir de `dayLog(date)`.
+- `js/shopping.js` (nouveau, pur, testé sous Node — `tests/shopping.test.mjs`) : `dateRange`, `aggregatePlan` (somme les grammes par aliment sur une période), `regenerate` (fusionne avec la liste existante : garde les articles manuels + les coches, met à jour les quantités auto), `knownStores`, `byStore`.
+- `js/views/planning.js` (nouveau) : bandeau 7 jours, 4 sections repas (réutilise `openAddFood` avec `{ target: 'plan' }`, nouveau paramètre qui écrit dans `planDay()` au lieu de `dayLog()`), feuille « Liste de courses » groupée par magasin avec coche persistée, édition du magasin par article (texte libre + datalist des magasins déjà vus), ajout d'article manuel. Accessible depuis un bouton calendrier dans l'en-tête du Journal (`js/views/today.js`).
+- `js/views/addfood.js` : bouton IA retiré (v26, voir plus haut) ; signature étendue `openAddFood(meal, date, done, { target })`.
+- Testé en local : ajout d'une banane au planning, régénération de la liste, coche, tag magasin (persiste sur l'aliment → réutilisé la prochaine fois), ajout manuel. Tout fonctionne.
+
+**Reste à faire pour ce chantier :**
+1. Édition/suppression d'un article de liste déjà ajouté à la main (pour l'instant seule la coche et le magasin sont modifiables après coup ; pas de suppression individuelle dans l'UI — l'utilisateur peut décocher au pire).
+2. Copier un repas déjà mangé (Journal) vers le planning, ou l'inverse (actuellement deux systèmes séparés, pas de pont).
+3. Export/partage de la liste de courses (texte, pour l'envoyer par message par exemple).

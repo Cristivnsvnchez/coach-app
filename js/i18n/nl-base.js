@@ -21,7 +21,7 @@ register({ nl: {
   "Ajouter": "Toevoegen", "Supprimer": "Verwijderen", "Copier les repas de la veille": "Maaltijden van gisteren kopiëren",
   "Rien à copier pour la veille": "Niets te kopiëren van gisteren", "{n} aliments copiés": "{n} producten gekopieerd",
   // Ajout d'aliment
-  "Ajouter — {meal}": "Toevoegen — {meal}", "Rechercher un aliment": "Zoek een product", "OK": "OK",
+  "Ajouter — {meal}": "Toevoegen — {meal}", "Planifier — {meal}": "Plannen — {meal}", "Rechercher un aliment": "Zoek een product", "OK": "OK",
   "Code-barres": "Barcode", "Manuel": "Handmatig",
   "Favoris": "Favorieten", "Récents": "Recent",
   "Cherche un aliment ou scanne un code-barres.": "Zoek een product of scan een barcode.",

@@ -34,6 +34,8 @@ const empty = () => ({
   cycle: { enabled: false, periods: [], logs: {}, cycleLen: 28, periodLen: 5, hormonal: false }, // suivi du cycle (utilisatrices)
   foodGroups: {}, // 'YYYY-MM-DD' -> { fruitVeg: n, fish: n } (repères ANSES)
   plan: null,     // programme daté : { id, name, goal, start, end, weeks, weekdays, deloadEvery, phases, routineIds }
+  mealPlan: {},   // 'YYYY-MM-DD' -> { dej: [entry], midi: [entry], diner: [entry], snack: [entry] } (repas prévus, distinct de logs = repas mangés)
+  shoppingList: [], // [{ id, foodId, name, grams, store, checked, auto }] (auto = regénéré depuis mealPlan, sinon ajouté à la main)
 });
 
 export let state = empty();
@@ -80,7 +82,13 @@ function sanitize(data) {
   for (const k of ['weights', 'workouts', 'chat', 'favorites', 'habits', 'routines', 'customExercises', 'milestones']) if (!Array.isArray(out[k])) out[k] = base[k];
   for (const k of ['profile', 'settings', 'foods', 'logs', 'habitLog']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   out.settings = { ...base.settings, ...out.settings };
-  for (const k of ['foodGroups']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
+  for (const k of ['foodGroups', 'mealPlan']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
+  if (!Array.isArray(out.shoppingList)) out.shoppingList = base.shoppingList;
+  for (const d in out.mealPlan) {
+    const p = out.mealPlan[d];
+    if (!p || typeof p !== 'object') { out.mealPlan[d] = { dej: [], midi: [], diner: [], snack: [] }; continue; }
+    for (const k of ['dej', 'midi', 'diner', 'snack']) if (!Array.isArray(p[k])) p[k] = [];
+  }
   const c = out.cycle && typeof out.cycle === 'object' ? out.cycle : {};
   out.cycle = { ...base.cycle, ...c, periods: Array.isArray(c.periods) ? c.periods : [], logs: c.logs && typeof c.logs === 'object' ? c.logs : {} };
   delete out.strava; // intégration Strava retirée (v17) : on efface les anciens jetons
@@ -104,6 +112,12 @@ export const today = () => isoDate(new Date());
 export function dayLog(date = today()) {
   if (!state.logs[date]) state.logs[date] = { meals: [], water: 0 };
   return state.logs[date];
+}
+
+// Repas prévus (planning), distinct des repas réellement mangés (dayLog).
+export function planDay(date = today()) {
+  if (!state.mealPlan[date]) state.mealPlan[date] = { dej: [], midi: [], diner: [], snack: [] };
+  return state.mealPlan[date];
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
