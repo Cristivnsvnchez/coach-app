@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateRange, aggregatePlan, regenerate, knownStores, byStore } from '../js/shopping.js';
+import { dateRange, aggregatePlan, regenerate, knownStores, byStore, listToText } from '../js/shopping.js';
 
 test('dateRange : n jours consécutifs à partir du départ', () => {
   const d = dateRange('2026-11-04', 3);
@@ -48,4 +48,19 @@ test('byStore : groupe par magasin, non classé en dernier', () => {
   ];
   const groups = byStore(list);
   assert.deepEqual(groups.map(([k]) => k), ['Albert Heijn', 'Lidl', '']);
+});
+
+test('listToText : articles non cochés groupés par magasin, non classés à la fin', () => {
+  const list = [
+    { id: '1', name: 'Papier', grams: 0, store: '', checked: false },
+    { id: '2', name: 'Banane', grams: 240, store: 'Albert Heijn', checked: false },
+    { id: '3', name: 'Riz', grams: 500, store: 'Albert Heijn', checked: true },
+  ];
+  const txt = listToText(list, { title: 'Liste de courses', unsorted: 'Non classé' });
+  assert.equal(txt, 'Liste de courses\n\nAlbert Heijn\n- Banane (240 g)\n\nNon classé\n- Papier');
+});
+
+test('listToText : liste vide ou tout coché → chaîne vide', () => {
+  assert.equal(listToText([], {}), '');
+  assert.equal(listToText([{ id: '1', name: 'Riz', grams: 0, store: '', checked: true }], {}), '');
 });

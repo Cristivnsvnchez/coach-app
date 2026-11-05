@@ -52,3 +52,13 @@ export function byStore(list) {
   for (const it of list) (groups[it.store || ''] ||= []).push(it);
   return Object.entries(groups).sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
 }
+
+// Texte à partager (message, notes) : seulement ce qui reste à acheter (non coché), groupé par magasin.
+// Libellés passés en paramètre pour garder ce module pur (pas d'i18n ici). '' si rien à acheter.
+export function listToText(list, { title = '', unsorted = '' } = {}) {
+  const groups = byStore(list.filter((x) => !x.checked));
+  if (!groups.length) return '';
+  const blocks = groups.map(([store, items]) =>
+    [store || unsorted, ...items.map((it) => `- ${it.name}${it.grams ? ` (${it.grams} g)` : ''}`)].filter(Boolean).join('\n'));
+  return [title, ...blocks].filter(Boolean).join('\n\n');
+}

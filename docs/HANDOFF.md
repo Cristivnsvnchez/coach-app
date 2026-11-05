@@ -15,7 +15,7 @@ Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v27** · htt
 
 ## 3. Publier une version (checklist)
 1. Incrémenter `VERSION` dans `sw.js` et ajouter tout nouveau fichier au tableau `SHELL`.
-2. `node --test tests/*.test.mjs` (53 tests verts) · `node --check` sur les JS · `node tests/i18n-scan.mjs`.
+2. `node --test tests/*.test.mjs` (60 tests verts) · `node --check` sur les JS · `node tests/i18n-scan.mjs`.
 3. Régénérer `MAP.md` (boucle bash : 1re ligne de chaque fichier + `grep -oE '^export …'`).
 4. `git commit` + `git push origin main` ; attendre que `https://cristivnsvnchez.github.io/coach-app/sw.js` affiche la nouvelle VERSION.
 - Test local : `python3 -m http.server 5173` dans le dossier ; vider service worker + caches avant de vérifier (`fetch(f,{cache:'reload'})`).
@@ -130,3 +130,10 @@ Aucune dépendance externe ni IA pour ce chantier — 100 % local, l'utilisateur
 1. Édition/suppression d'un article de liste déjà ajouté à la main (pour l'instant seule la coche et le magasin sont modifiables après coup ; pas de suppression individuelle dans l'UI — l'utilisateur peut décocher au pire).
 2. Copier un repas déjà mangé (Journal) vers le planning, ou l'inverse (actuellement deux systèmes séparés, pas de pont).
 3. Export/partage de la liste de courses (texte, pour l'envoyer par message par exemple).
+
+## 9. Liste de courses — suite (2026-11-05, non publié)
+Complète les points 1 et 3 du « Reste à faire » de la section 8 :
+- **Modifier/supprimer un article** : le bouton magasin d'une ligne ouvre `editItem()` (`js/views/planning.js`) : magasin, nom (articles manuels seulement — le nom d'un article auto vient de l'aliment), bouton Supprimer. Un article auto supprimé revient à la prochaine régénération s'il est toujours au planning (voulu).
+- **Partager la liste** : `listToText()` (`js/shopping.js`, pur, 2 tests) → texte des articles non cochés groupés par magasin ; `navigator.share({ text })` (feuille iOS), sinon copie dans le presse-papiers.
+- Commit local seulement, `VERSION` de `sw.js` toujours `trackme-v27` : à incrémenter au moment de publier.
+- Reste : point 2 de la section 8 (pont Journal ↔ planning).

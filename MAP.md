@@ -94,9 +94,9 @@ exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildP
 Calculs nutrition / entraînement. Fonctions pures, sans DOM (testées sous Node).
 exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeInitial emaTrend,slope trendSlope,adaptiveTdee bmi,targets applyCustom,idealRange etaDate,milestones reachedOn,milestoneStatus projection,epley1RM nextSet,MUSCLES REFS
 
-## js/shopping.js (54 l.)
+## js/shopping.js (64 l.)
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
-exports: dateRange,aggregatePlan regenerate,knownStores byStore
+exports: dateRange,aggregatePlan regenerate,knownStores byStore,listToText
 
 ## js/store.js (156 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).

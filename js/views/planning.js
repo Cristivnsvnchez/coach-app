@@ -7,7 +7,7 @@ import { esc, fmt, fmtDate, nav, group, sheet, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, register } from '../i18n.js';
 import { MEALS, openAddFood } from './addfood.js';
-import { dateRange, aggregatePlan, regenerate, knownStores, byStore } from '../shopping.js';
+import { dateRange, aggregatePlan, regenerate, knownStores, byStore, listToText } from '../shopping.js';
 
 register({
   en: {
@@ -17,6 +17,8 @@ register({
     'Régénérer depuis le planning (7 prochains jours)': 'Regenerate from plan (next 7 days)',
     'Rien dans la liste. Régénère depuis le planning ou ajoute un article.': 'Nothing in the list yet. Regenerate from the plan or add an item.',
     'Article ajouté': 'Item added', 'Supprimer': 'Delete', 'Enregistrer': 'Save',
+    'Partager la liste': 'Share the list', 'Liste copiée': 'List copied', 'Tout est acheté.': 'Everything is bought.',
+    'Article supprimé': 'Item removed',
   },
   nl: {
     'Planifier mes repas': 'Maaltijden plannen', 'Aucun repas prévu.': 'Nog geen maaltijd gepland.',
@@ -25,6 +27,8 @@ register({
     'Régénérer depuis le planning (7 prochains jours)': 'Opnieuw genereren vanuit plan (volgende 7 dagen)',
     'Rien dans la liste. Régénère depuis le planning ou ajoute un article.': 'Nog niets in de lijst. Genereer vanuit het plan of voeg een artikel toe.',
     'Article ajouté': 'Artikel toegevoegd', 'Supprimer': 'Verwijderen', 'Enregistrer': 'Opslaan',
+    'Partager la liste': 'Lijst delen', 'Liste copiée': 'Lijst gekopieerd', 'Tout est acheté.': 'Alles is gekocht.',
+    'Article supprimé': 'Artikel verwijderd',
   },
 });
 
@@ -86,15 +90,16 @@ function openShoppingList() {
       <div class="grow ${it.checked ? 'pl-done' : ''}"><span class="t">${esc(it.name)}</span>${it.grams ? `<span class="s num">${fmt(it.grams)} g</span>` : ''}</div>
       <button class="btn plain" data-store="${esc(it.id)}">${esc(it.store || t('Magasin'))}</button></li>`;
   const storeGroup = ([store, items]) => group(esc(store || t('Non classé')), `<ul class="cells">${items.map(itemRow).join('')}</ul>`);
-  const actions = `<div class="pl-shop-actions">
+  const actions = () => `<div class="pl-shop-actions">
       <button class="btn large" data-a="regen">${icon('arrowDown')} ${t('Régénérer depuis le planning (7 prochains jours)')}</button>
-      <button class="btn large" data-a="add">${icon('plus')} ${t('Ajouter un article')}</button></div>`;
+      <button class="btn large" data-a="add">${icon('plus')} ${t('Ajouter un article')}</button>
+      ${state.shoppingList.length ? `<button class="btn large" data-a="share">${icon('share')} ${t('Partager la liste')}</button>` : ''}</div>`;
 
   const draw = () => {
     const body = state.shoppingList.length
       ? byStore(state.shoppingList).map(storeGroup).join('')
       : `<p class="empty footnote">${t('Rien dans la liste. Régénère depuis le planning ou ajoute un article.')}</p>`;
-    box.innerHTML = body + actions;
+    box.innerHTML = body + actions();
   };
   draw();
 
@@ -102,7 +107,8 @@ function openShoppingList() {
     const chk = e.target.closest('[data-check]');
     if (chk) { const it = state.shoppingList.find((x) => x.id === chk.dataset.check); it.checked = !it.checked; save(); return draw(); }
     const st = e.target.closest('[data-store]');
-    if (st) return editStore(state.shoppingList.find((x) => x.id === st.dataset.store), draw);
+    if (st) return editItem(state.shoppingList.find((x) => x.id === st.dataset.store), draw);
+    if (e.target.closest('[data-a=share]')) return shareList();
     if (e.target.closest('[data-a=regen]')) {
       const dates = dateRange(todayIso(), 7);
       const agg = aggregatePlan(state.mealPlan, dates);
@@ -113,20 +119,38 @@ function openShoppingList() {
   };
 }
 
-// Feuille : nom du magasin pour un article (texte libre, datalist des magasins déjà utilisés pour rester cohérent).
-function editStore(item, redraw) {
+// Partage la liste (ce qui reste à acheter) en texte : feuille de partage iOS, sinon presse-papiers.
+async function shareList() {
+  const text = listToText(state.shoppingList, { title: t('Liste de courses'), unsorted: t('Non classé') });
+  if (!text) return toast(t('Tout est acheté.'));
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(text); toast(t('Liste copiée')); } catch {}
+}
+
+// Feuille d'un article : magasin (datalist des magasins déjà utilisés), nom si ajouté à la main, suppression.
+// Un article auto supprimé revient à la prochaine régénération s'il est toujours au planning (voulu).
+function editItem(item, redraw) {
   if (!item) return;
   const stores = knownStores(state.foods);
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(item.name)}</h3></div>
-    ${group('', `<div class="cells"><label class="cell field"><span>${t('Magasin')}</span>
+    ${group('', `<div class="cells">
+      ${item.auto ? '' : `<label class="cell field"><span>${t("Nom de l'article")}</span><input name="name" value="${esc(item.name)}"></label>`}
+      <label class="cell field"><span>${t('Magasin')}</span>
       <input name="store" list="pl-stores" value="${esc(item.store || '')}" placeholder="${t('Ex : Albert Heijn')}"></label></div>`)}
     <datalist id="pl-stores">${stores.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-    <button class="btn filled large" data-a="save">${t('Enregistrer')}</button>`, () => redraw());
+    <button class="btn filled large" data-a="save">${t('Enregistrer')}</button>
+    ${group('', `<div class="cells"><div class="cell action destructive" data-a="del" role="button">${t('Supprimer')}</div></div>`)}`, () => redraw());
   s.querySelector('[data-a=save]').onclick = () => {
     const v = s.querySelector('[name=store]').value.trim();
+    const name = s.querySelector('[name=name]')?.value.trim();
+    if (name) item.name = name;
     item.store = v;
     if (item.foodId && state.foods[item.foodId]) state.foods[item.foodId].store = v; // réutilisé la prochaine fois
     save(); s.close();
+  };
+  s.querySelector('[data-a=del]').onclick = () => {
+    state.shoppingList.splice(state.shoppingList.indexOf(item), 1);
+    save(); toast(t('Article supprimé')); s.close();
   };
 }
 
