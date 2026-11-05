@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v24** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v25** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -76,12 +76,18 @@ Onboarding par choix (12 étapes, palette, kcal Mifflin modifiables, « Protège
 - ⚠️ **Pas encore visible dans l'app** : aucun de ces exercices n'a de clip 3D (Mixamo toujours en panne, voir plus haut), donc `model3D()` renvoie `null` pour eux et la fiche 2D s'affiche. Vérifié uniquement via un harnais de test dans la console (mount3D appelé à la main avec le clip squat + `equipment`/`name` forcés) — le décor s'affiche et a l'air correct, mais jamais testé avec une vraie pose assise/allongée puisqu'elle n'existe pas encore.
 - Mollets debout/assis, Dips assistés, Tractions assistées (aussi `equipment: 'machine'`) : pas encore de décor dédié — à faire quand on y arrive, chacun a une forme très différente.
 
+**Fait (v25) — tout le monde est « prêt » côté app, reste la vraie matière première :**
+- `mistakeFor(e)` (remplace l'ancien `MISTAKES` statique à une seule entrée) : règle générique par catégorie + muscle principal → 1 des 4 défauts réutilisables (`kneeCave`, `backRound`, `elbowFlare`, `elbowDrift`, `hipsDrop`). Couvre tout de suite les 46 exercices de `LIBRARY`, y compris ceux ajoutés plus tard, sans réglage manuel par nom (Squat garde le même résultat qu'avant, déjà vérifié).
+- Décor ajouté pour Leg extension/Leg curl (bâti + levier), Mollets debout/assis (plateforme + épaulières ou genouillères), Dips assistés/Tractions assistées (portique + plateforme de contrepoids) — même esprit que Presse à cuisses/poulie : vérifié seulement en harnais de test, pas avec une vraie pose.
+
+**⚠️ Point important pour la suite (demande explicite de l'utilisateur : « il me les faut pour tous les exercices ») :**
+Tout ce qui NE dépend PAS d'une animation réelle est maintenant générique et prêt pour les 46 exercices de `LIBRARY` (lueur musculaire, objets en main, décor de machine, déformation Erreurs, pose figée + surbrillance Conseils). **Mais aucun de ces automatismes ne peut s'afficher sans un clip 3D**, et la seule source de clips (export Mixamo) reste cassée côté serveur Adobe (revérifié 3 fois dans cette session, dernière fois juste avant ce commit, toujours la même erreur serveur). Ce n'est pas un bug de l'app : impossible de dire si/quand ça remarche. Prochaine session : retester l'export en premier (voir code dans l'historique de conversation ou refaire l'appel décrit section 5) avant de promettre une date à l'utilisateur.
+
 **Reste à faire pour ce chantier :**
-1. Dès que Mixamo refonctionne : télécharger les 9 motions notées plus haut, les assigner aux deux squelettes (le corps homme est déjà réimporté), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js`. Une fois Presse à cuisses/les exercices à poulie animés, vérifier que le décor s'aligne avec la vraie pose (assis/allongé) — pour l'instant il n'a été vérifié que posé à côté d'un Squat debout, la position devra sans doute être réajustée.
+1. Dès que Mixamo refonctionne : télécharger les 9 motions notées plus haut (section 6), les assigner aux deux squelettes (le corps homme est déjà réimporté), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js` — tout le reste (muscles, objets, décor, erreurs, conseils) suit automatiquement.
 2. Puis continuer avec les ~20 autres mouvements repérés et les ~36 exercices de `LIBRARY` qui n'ont toujours pas de clip.
-3. Décor pour les machines mollets/dips assistés/tractions assistées.
+3. Une fois des clips réels en place, revisiter la position des décors/objets en main et l'angle des défauts Erreurs (tout réglé à l'œil sur une pose debout générique, pas sur le vrai mouvement).
 4. Vignettes des tenues dans la feuille « Habiller » : pour l'instant juste 2 pastilles de couleur (haut/bas) + libellé, pas de rendu Blender comme prévu initialement.
-5. Régler plus finement l'angle du défaut « genoux qui rentrent » et la position de la barre/des décors (tout réglé à l'œil, une seule passe de vérif visuelle à chaque fois).
 
 Références photo : 6 images gardées en local chez l’utilisateur (`~/trackme-3d/refs/`, non publiées : photos de personnes réelles). Description :
 - **Homme** : survêtement gris chiné zippé + t-shirt blanc + baskets blanches · hoodie marine + jogging gris large + baskets argent · hoodie + jogging gris « cosy » + chaussettes blanches.

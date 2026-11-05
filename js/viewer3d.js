@@ -130,10 +130,11 @@ export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake
   const boxMesh = (w, h, d, mat, pos, rot) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); if (pos) m.position.set(...pos); if (rot) m.rotation.set(...rot); return m; };
   const metal = () => new THREE.MeshStandardMaterial({ color: 0x33363c, roughness: 0.35, metalness: 0.7 });
   const pad = () => new THREE.MeshStandardMaterial({ color: 0x1c1d22, roughness: 0.75, metalness: 0.05 });
+  const stack = (g, mat, pos, n = 7) => { for (let i = 0; i < n; i++) g.add(boxMesh(0.2, 0.022, 0.16, mat, [pos[0], pos[1] + i * 0.03, pos[2]])); };
   if (equipment === 'poulie') {
     const g = new THREE.Group(), mMetal = metal(), mPad = new THREE.MeshStandardMaterial({ color: 0x4a4d54, roughness: 0.4, metalness: 0.5 });
     g.add(boxMesh(0.26, 2.0, 0.22, mMetal, [0, 1.0, 0]));
-    for (let i = 0; i < 7; i++) g.add(boxMesh(0.2, 0.022, 0.16, mPad, [0, 0.32 + i * 0.03, 0.03]));
+    stack(g, mPad, [0, 0.32, 0.03]);
     const arm = boxMesh(0.5, 0.03, 0.03, mMetal, [0.25, 1.78, 0.12], null); g.add(arm);
     const pulley = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 16), mMetal); pulley.position.set(0.5, 1.78, 0.12); pulley.rotation.x = Math.PI / 2; g.add(pulley);
     const cable = boxMesh(0.012, 0.7, 0.012, mMetal, [0.5, 1.4, 0.12]); g.add(cable);
@@ -149,6 +150,39 @@ export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake
     g.add(boxMesh(0.44, 0.1, 0.42, mPad, [0, 0.26, -0.28])); // assise
     g.add(boxMesh(0.44, 0.55, 0.1, mPad, [0, 0.52, -0.02], [-0.25, 0, 0])); // dossier
     g.add(boxMesh(0.5, 0.08, 0.5, mMetal, [0, 0.04, -0.6])); // socle au sol
+    addDecor(g);
+  } else if (name === 'Leg extension' || name === 'Leg curl') {
+    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
+    g.add(boxMesh(0.5, 0.9, 0.5, mMetal, [0.45, 0.45, -0.3])); // bâti + pile de poids (bloc simplifié)
+    stack(g, mMetal.clone(), [0.45, 0.3, -0.05], 6);
+    g.add(boxMesh(0.42, 0.45, 0.1, mPad, [0, 0.5, -0.1], [-0.15, 0, 0])); // dossier/assise
+    g.add(boxMesh(0.42, 0.08, 0.4, mPad, [0, 0.26, 0.1])); // assise
+    const leverUp = name === 'Leg extension';
+    g.add(boxMesh(0.06, 0.06, 0.55, mMetal, [0, leverUp ? 0.45 : 0.1, 0.42], [leverUp ? -0.9 : 0.3, 0, 0])); // bras de levier
+    g.add(boxMesh(0.4, 0.06, 0.06, mPad, [0, leverUp ? 0.65 : -0.05, 0.6])); // rouleau cheville
+    addDecor(g);
+  } else if (name === 'Mollets debout' || name === 'Mollets assis') {
+    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
+    g.add(boxMesh(0.5, 0.14, 0.4, mMetal, [0, 0.07, -0.3])); // plateforme / cale-pieds
+    g.add(boxMesh(0.44, 0.04, 0.3, mPad, [0, 0.16, -0.22])); // bord de la cale
+    if (name === 'Mollets assis') {
+      g.add(boxMesh(0.4, 0.3, 0.1, mPad, [0, 0.45, 0.05])); // genouillères
+    } else {
+      g.add(boxMesh(0.08, 0.9, 0.08, mMetal, [-0.2, 0.85, -0.3]));
+      g.add(boxMesh(0.08, 0.9, 0.08, mMetal, [0.2, 0.85, -0.3]));
+      g.add(boxMesh(0.44, 0.1, 0.14, mPad, [0, 1.3, -0.3])); // épaulières
+    }
+    stack(g, mMetal.clone(), [0.4, 0.1, 0.1], 6);
+    addDecor(g);
+  } else if (name === 'Dips assistés' || name === 'Tractions assistées') {
+    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
+    g.add(boxMesh(0.08, 2.1, 0.08, mMetal, [-0.3, 1.05, -0.2]));
+    g.add(boxMesh(0.08, 2.1, 0.08, mMetal, [0.3, 1.05, -0.2]));
+    g.add(boxMesh(0.68, 0.06, 0.4, mMetal, [0, 2.1, -0.2])); // traverse haute
+    if (name === 'Dips assistés') g.add(boxMesh(0.5, 0.05, 0.05, mPad, [0, 1.2, 0.05])); // poignées parallèles
+    else g.add(boxMesh(0.5, 0.05, 0.05, mPad, [0, 1.95, -0.05])); // barre de traction
+    g.add(boxMesh(0.4, 0.06, 0.3, mPad, [0, 0.55, -0.15])); // plateforme d'assistance (contrepoids)
+    stack(g, mMetal.clone(), [0.42, 0.9, -0.2], 6);
     addDecor(g);
   }
   if (equipment === 'barre') {

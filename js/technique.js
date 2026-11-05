@@ -99,13 +99,32 @@ function combineMuscles(primary, secondary = []) {
 }
 // Déformation du mouvement correct pour illustrer l'erreur la plus fréquente (onglet Erreurs), appliquée en plus
 // de l'animation telle quelle : un décalage de rotation fixe sur certains os, visible pendant tout le mouvement.
-const MISTAKES = {
-  Squat: { LeftLeg: { z: -0.3 }, RightLeg: { z: 0.3 } }, // genoux qui rentrent vers l'intérieur
+// 4 défauts réutilisables (plutôt que 46 réglages inventés un par un) : chacun illustre le défaut le plus fréquent
+// de sa famille de mouvement. Affiné à l'œil une fois le vrai clip en place, comme pour Squat (déjà vérifié).
+const DEFORM = {
+  kneeCave: { LeftLeg: { z: -0.3 }, RightLeg: { z: 0.3 } }, // genoux qui rentrent (squat, fentes…)
+  backRound: { Spine1: { x: 0.28 }, Spine2: { x: 0.22 } }, // dos qui s'arrondit (hinge, tirage, épaules, cardio/haltéro)
+  elbowFlare: { LeftArm: { z: 0.3 }, RightArm: { z: -0.3 } }, // coudes qui partent trop sur le côté (poussées)
+  elbowDrift: { LeftArm: { x: -0.25 }, RightArm: { x: -0.25 } }, // coudes qui avancent (curl, triceps)
+  hipsDrop: { Spine: { x: 0.25 }, Hips: { x: 0.15 } }, // bassin qui tombe, dos qui perd sa position neutre (abdos)
 };
+// Règle par catégorie + muscle principal : à affiner exercice par exercice une fois son vrai clip disponible,
+// mais couvre tout de suite tout LIBRARY (y compris les exercices à venir) sans réglage manuel par nom.
+function mistakeFor(e) {
+  if (!e) return null;
+  if (e.category === 'jambes') return /Dos|Ischios|Fessiers/.test(e.muscle) ? DEFORM.backRound : DEFORM.kneeCave;
+  if (e.category === 'abdos') return DEFORM.hipsDrop;
+  if (e.category === 'haut') {
+    if (e.muscle === 'Pectoraux') return DEFORM.elbowFlare;
+    if (e.muscle === 'Biceps' || e.muscle === 'Triceps') return DEFORM.elbowDrift;
+    return DEFORM.backRound; // Dos, Épaules
+  }
+  return DEFORM.backRound; // cardio, haltéro
+}
 export function model3D(name, sex = 'M') {
   const clip = CLIPS[name]; if (!clip) return null;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: MISTAKES[name], name };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: mistakeFor(e), name };
 }
 // Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).
