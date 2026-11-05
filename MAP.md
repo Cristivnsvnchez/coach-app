@@ -117,8 +117,8 @@ Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilis�
 ## js/i18n/nl-base.js (235 l.)
 NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 
-## js/views/addfood.js (194 l.)
-Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
+## js/views/addfood.js (152 l.)
+Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, saisie manuelle.
 exports: MEALS,openAddFood
 
 ## js/views/coach.js (142 l.)

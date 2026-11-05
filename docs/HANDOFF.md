@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v25** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v26** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -105,3 +105,16 @@ Proposition de réalisation :
 3. Bandeau de petits corps (face/dos) avec le muscle ciblé en surbrillance + séries × répétitions (« 3×15 ») sur l'animation (références visuelles de l'utilisateur : style studio sombre, mannequin blanc, muscle orange/violet lumineux).
 4. Tester sur un vrai iPhone (installation, encoche, caméra code-barres, sauvegarde iCloud, 3D).
 5. Écrans Séance et Coach au nouveau style ; « Annuler » après suppression ; IndexedDB.
+
+## 8. Chantier en cours : repas sans IA + calendrier + liste de courses
+
+**Décision utilisateur (2026-11-05) : plus d'IA dans l'app pour la nutrition.** Le bouton « Photo / texte IA » dans Ajouter un aliment est retiré (v26) — trop peu fiable/pas assez optimisé pour lui en passant par une API. Le Coach IA (onglet séparé, `js/ai.js`, chat + génération de programme) n'a pas été touché, personne n'a demandé sa suppression à ce stade.
+
+**Constat important : le catalogue existant couvre déjà la plupart des besoins sans IA.** `js/foods-base.js` (215 aliments) a déjà des plats composés (ex. `lasagnes` 150 kcal/100g portion 300g, `pizza`…), + recherche Open Food Facts en ligne, + scan code-barres. Avant d'ajouter un plat « manquant », vérifier qu'il n'est pas déjà dans `foods-base.js`.
+
+**Demande : calendrier de repas + liste de courses par magasin** (ex. « bananes → Albert Heijn »). Pas d'API publique Albert Heijn (vérifié par recherche web) : seulement des libs non-officielles (reverse-engineering de l'API interne de l'app AH, nécessitent parfois un compte AH) ou des scrapers payants (Apify) — aucune fiabilité garantie, risque de casser sans préavis, zone grise CGU. **Décision : ne pas construire là-dessus.** À la place :
+1. Un champ « magasin » optionnel sur un aliment (`state.foods[id].store` ou équivalent) que l'utilisateur renseigne lui-même une fois ; l'app s'en souvient.
+2. Un calendrier de repas (jour → repas → aliments prévus), réutilisant le catalogue existant (`js/food.js`, `foods-base.js`, Open Food Facts).
+3. Une liste de courses générée depuis le calendrier, groupée par magasin, éditable à la main.
+
+Aucune dépendance externe ni IA pour ce chantier — 100 % local, l'utilisateur alimente les magasins lui-même au fil de l'eau.

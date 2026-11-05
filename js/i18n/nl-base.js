@@ -22,9 +22,10 @@ register({ nl: {
   "Rien à copier pour la veille": "Niets te kopiëren van gisteren", "{n} aliments copiés": "{n} producten gekopieerd",
   // Ajout d'aliment
   "Ajouter — {meal}": "Toevoegen — {meal}", "Rechercher un aliment": "Zoek een product", "OK": "OK",
-  "Code-barres": "Barcode", "Photo / texte IA": "AI-foto / tekst", "Manuel": "Handmatig",
+  "Code-barres": "Barcode", "Manuel": "Handmatig",
   "Favoris": "Favorieten", "Récents": "Recent",
-  "Cherche un aliment, scanne un code-barres ou décris ton repas à l'IA.": "Zoek een product, scan een barcode of beschrijf je maaltijd aan de AI.",
+  "Cherche un aliment ou scanne un code-barres.": "Zoek een product of scan een barcode.",
+  "Rien trouvé. Ajoute-le en manuel, il sera proposé la prochaine fois.": "Niets gevonden. Voeg het handmatig toe, het wordt de volgende keer voorgesteld.",
   "Ajouté ✓": "Toegevoegd ✓", "{n} aliments ajoutés": "{n} producten toegevoegd",
   "Quantité (g)": "Hoeveelheid (g)", "Favori": "Favoriet",
   "Recherche…": "Zoeken…", "Mes aliments": "Mijn producten",

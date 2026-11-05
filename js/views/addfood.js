@@ -1,7 +1,6 @@
 // Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
 import { state, save, dayLog, recentFoods, uid } from '../store.js';
 import { searchFood, searchBase, lookupBarcode, entryFor, saveFood, startScan } from '../food.js';
-import { estimateMeal, imageToBase64, hasKey } from '../ai.js';
 import { esc, fmt, sheet, toast, group } from '../ui.js';
 import { icon } from '../icons.js';
 import { getLang, t } from '../i18n.js';
@@ -18,7 +17,6 @@ export function openAddFood(meal, date, done) {
     </form>
     <div class="chips">
       <button class="chip" data-a="scan">${icon('barcode')} ${t('Code-barres')}</button>
-      <button class="chip" data-a="ai">${icon('sparkles')} ${t('Photo / texte IA')}</button>
       <button class="chip" data-a="manual">${icon('pencil')} ${t('Manuel')}</button>
     </div>
     <div class="results"></div>`, () => { scanId++; stopScan && stopScan(); });
@@ -33,7 +31,7 @@ export function openAddFood(meal, date, done) {
     const favs = state.favorites.map((id) => state.foods[id]).filter(Boolean);
     res.innerHTML = `${list(t('Favoris'), favs)}
       ${rec.length ? group(t('Récents'), `<ul class="cells">${rec.map((e, i) => `<li class="cell tap" data-recent="${i}"><div class="grow"><span class="t">${esc(e.name)}</span><span class="s num">${e.grams ? fmt(e.grams) + ' g · ' : ''}${fmt(e.kcal)} kcal</span></div><span class="tint">${icon('plus')}</span></li>`).join('')}</ul>`) : ''}
-      ${!rec.length && !favs.length ? `<p class="empty footnote">${t("Cherche un aliment, scanne un code-barres ou décris ton repas à l'IA.")}</p>` : ''}`;
+      ${!rec.length && !favs.length ? `<p class="empty footnote">${t('Cherche un aliment ou scanne un code-barres.')}</p>` : ''}`;
     res.onclick = (e) => {
       const r = e.target.closest('[data-recent]');
       if (r) { const src = rec[+r.dataset.recent]; addEntries([{ ...src, meal }]); return; }
@@ -80,12 +78,10 @@ export function openAddFood(meal, date, done) {
     const local = Object.values(state.foods).filter((f) => norm(f.name).includes(norm(q)) && !f.id.startsWith('base:')).slice(0, 8);
     res.innerHTML = list(t('Mes aliments'), local) + list(t('Aliments courants'), base)
       + (!base.length && !local.length ? `<p class="empty footnote">${t('Rien dans les aliments courants.')}</p>` : '')
-      + `<div class="af-more"><button class="btn" data-a="off">${icon('search')} ${esc(t('Chercher « {q} » en ligne', { q }))}</button>
-         <button class="btn" data-a="aiq">${icon('sparkles')} ${t("Estimer avec l'IA")}</button></div>`;
+      + `<div class="af-more"><button class="btn" data-a="off">${icon('search')} ${esc(t('Chercher « {q} » en ligne', { q }))}</button></div>`;
     const all = [...local, ...base];
     res.onclick = (e) => {
       if (e.target.closest('[data-a=off]')) return doSearch(q);
-      if (e.target.closest('[data-a=aiq]')) return doAi(q);
       const f = e.target.closest('[data-food]'); if (f) pickGrams(all.find((x) => x.id === f.dataset.food));
     };
   };
@@ -98,10 +94,9 @@ export function openAddFood(meal, date, done) {
       res.innerHTML = list(t('Mes aliments'), local) + list(t('Aliments courants'), base) + list('Open Food Facts', remote)
         + (throttled ? `<p class="empty footnote">${t('Recherche en ligne possible dans {n} s (limite Open Food Facts).', { n: throttled })}</p>` : '')
         + (offline ? `<p class="empty footnote">${t('Recherche Open Food Facts indisponible pour le moment.')}</p>` : '')
-        + `<button class="btn large" data-a="aiq">${icon('sparkles')} ${esc(t("Estimer « {q} » avec l'IA (Ciqual/USDA)", { q }))}</button>`;
+        + (!local.length && !base.length && !remote.length ? `<p class="empty footnote">${t('Rien trouvé. Ajoute-le en manuel, il sera proposé la prochaine fois.')}</p>` : '');
       const all = [...local, ...base, ...remote];
       res.onclick = (e) => {
-        if (e.target.closest('[data-a=aiq]')) return doAi(q);
         const f = e.target.closest('[data-food]'); if (f) pickGrams(all.find((x) => x.id === f.dataset.food));
       };
     } catch (err) { res.innerHTML = `<p class="error">${esc(err.message)}</p>`; }
@@ -128,43 +123,6 @@ export function openAddFood(meal, date, done) {
     catch (err) { res.querySelector('video')?.remove(); res.insertAdjacentHTML('afterbegin', `<p class="error">${esc(t('Caméra indisponible : {e}', { e: t(err.message, err.vars) }))}</p>`); }
   };
 
-  const doAi = (prefill = '') => {
-    if (!hasKey()) { res.innerHTML = `<p class="error">${t("Ajoute ta clé API Claude dans Profil pour utiliser l'IA.")}</p>`; return; }
-    res.innerHTML = `<form data-f="ai" class="stack">
-      <label class="btn">${icon('camera')} ${t('Prendre / choisir une photo')}<input type="file" accept="image/*" name="img" hidden></label>
-      <span class="footnote secondary imgname"></span>
-      <textarea class="input" name="desc" rows="3" placeholder="${t("Ex : 150 g de poulet, riz basmati, une cuillère d'huile d'olive")}">${esc(prefill)}</textarea>
-      <button class="btn filled large">${icon('sparkles')} ${t('Estimer')}</button></form>`;
-    const f = res.querySelector('form');
-    f.img.onchange = () => (res.querySelector('.imgname').textContent = f.img.files[0]?.name || '');
-    f.onsubmit = async (e) => {
-      e.preventDefault();
-      const file = f.img.files[0], desc = f.desc.value.trim();
-      if (!file && !desc) return toast(t('Ajoute une photo ou une description'));
-      res.innerHTML = `<p class="empty footnote"><span class="typing-dots"><i></i><i></i><i></i></span><br>${t('Analyse en cours… (10–30 s)')}</p>`;
-      try {
-        const out = await estimateMeal({ imageB64: file ? await imageToBase64(file) : null, description: desc });
-        showAiResult(out);
-      } catch (err) { res.innerHTML = `<p class="error">${esc(t(err.message, err.vars))}</p>`; }
-    };
-  };
-
-  const showAiResult = (out) => {
-    res.innerHTML = group(t('Estimation IA — modifie si besoin'), `<ul class="cells">${out.items.map((it, i) => `<li class="cell"><div class="grow"><span class="t">${esc(it.name)}</span>
-        <span class="s num">${fmt(it.kcal)} kcal · P ${fmt(it.p, 1)} · G ${fmt(it.c, 1)} · L ${fmt(it.f, 1)}</span></div>
-        <input class="input num" style="width:5rem;text-align:right" type="number" inputmode="decimal" data-i="${i}" value="${Math.round(it.grams)}" aria-label="${t('grammes')}"> g</li>`).join('')}</ul>`, out.note ? esc(out.note) : '')
-      + `<button class="btn filled large" data-a="addai">${t('Tout ajouter')}</button>`;
-    res.onclick = (e) => {
-      if (!e.target.closest('[data-a=addai]')) return;
-      const entries = out.items.map((it, i) => {
-        const g = +res.querySelector(`[data-i="${i}"]`).value || it.grams;
-        const k = it.grams ? g / it.grams : 1;
-        return { name: it.name, grams: g, source: 'Estimation IA', kcal: Math.round(it.kcal * k), p: +(it.p * k).toFixed(1), c: +(it.c * k).toFixed(1), f: +(it.f * k).toFixed(1), fib: +(it.fib * k).toFixed(1) };
-      });
-      addEntries(entries);
-    };
-  };
-
   const doManual = () => {
     const field = (name, label, attrs = '') => `<label class="cell field"><span>${label}</span><input name="${name}" type="number" inputmode="decimal" ${attrs}></label>`;
     res.innerHTML = `<form data-f="manual">${group('', `<div class="cells">
@@ -188,7 +146,7 @@ export function openAddFood(meal, date, done) {
   s.querySelector('.chips').onclick = (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     scanId++; stopScan && stopScan(); stopScan = null;
-    ({ scan: doScan, ai: () => doAi(), manual: doManual })[a]?.();
+    ({ scan: doScan, manual: doManual })[a]?.();
   };
   showHome();
 }

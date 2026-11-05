@@ -23,9 +23,10 @@ const EN = {
   'Rien à copier pour la veille': 'Nothing to copy from yesterday', '{n} aliments copiés': '{n} foods copied',
   // Ajout d'aliment
   'Ajouter — {meal}': 'Add — {meal}', 'Rechercher un aliment': 'Search for a food', 'OK': 'Go',
-  'Code-barres': 'Barcode', 'Photo / texte IA': 'AI photo / text', 'Manuel': 'Manual',
+  'Code-barres': 'Barcode', 'Manuel': 'Manual',
   'Favoris': 'Favorites', 'Récents': 'Recent',
-  "Cherche un aliment, scanne un code-barres ou décris ton repas à l'IA.": 'Search for a food, scan a barcode or describe your meal to the AI.',
+  'Cherche un aliment ou scanne un code-barres.': 'Search for a food or scan a barcode.',
+  'Rien trouvé. Ajoute-le en manuel, il sera proposé la prochaine fois.': "Nothing found. Add it manually, it'll be suggested next time.",
   'Ajouté ✓': 'Added ✓', '{n} aliments ajoutés': '{n} foods added',
   'Quantité (g)': 'Quantity (g)', 'Favori': 'Favorite',
   'Recherche…': 'Searching…', 'Mes aliments': 'My foods',
