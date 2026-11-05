@@ -70,7 +70,8 @@ addEventListener('beforeinstallprompt', (e) => {
 export function startupNudges() {
   if (isIOS() && !isStandalone() && !seen('install', 7)) return setTimeout(iosInstallHelp, 1200);
   const hasData = Object.keys(state.logs).length >= 7 || state.weights.length >= 5 || state.workouts.length >= 3;
-  if (hasData && daysSince(state.lastBackup) > 30 && !seen('backup', 7)) {
+  const every = state.settings.backupEvery ?? 7;
+  if (every && hasData && daysSince(state.lastBackup) > every && !seen('backup', Math.min(every, 7))) {
     setTimeout(() => banner(t('Pense à sauvegarder tes données.'), { action: t('Sauvegarder'), onAction: () => { mark('backup'); exportBackup(); } }), 1500);
   }
 }

@@ -129,3 +129,10 @@
   radial-gradient(110% 55% at 100% 0%, color-mix(in srgb, var(--p-mid) 16%, transparent), transparent 62%),
   radial-gradient(90% 45% at 0% 100%, color-mix(in srgb, var(--p-warm) 12%, transparent), transparent 62%),
   var(--bg); background-attachment: fixed; }
+/* Étape « Protège tes données » */
+.onb-safe { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.onb-safe li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 24px; background: var(--cell); line-height: 1.35; }
+.onb-safe-ic { flex: none; width: 36px; height: 36px; border-radius: 18px; display: grid; place-items: center; background: var(--p-tint); color: var(--p-deep); }
+@media (prefers-color-scheme: dark) { .onb-safe-ic { background: color-mix(in srgb, var(--p-deep) 30%, var(--cell)); color: #fff; } }
+.onb-safe-ic svg.ic { width: 18px; height: 18px; }
+.onb-backup { width: 100%; gap: 8px; margin-bottom: 8px; }

@@ -63,6 +63,7 @@ export function render(root, go) {
       t("La clé reste sur ce téléphone et n'est envoyée qu'à api.anthropic.com. Crée-la sur console.anthropic.com → API Keys, et fixe une limite de dépense mensuelle.") + ' ' + t("L'app bloque toute requête qui pourrait dépasser ton budget (estimation : tarifs publics, 1 $ ≈ 0,92 €). Pour une garantie absolue, fixe aussi la même limite dans console.anthropic.com → Billing → Limits."))}</form>
     ${group(t('Sauvegarde'), `<div class="cells">
       <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow"><span class="t">${t('Sauvegarder mes données')}</span><span class="s">${state.lastBackup ? t('Dernière sauvegarde : {d}', { d: fmtDate(state.lastBackup, { day: 'numeric', month: 'long' }) }) : t('Jamais sauvegardé · vers Fichiers ou iCloud Drive')}</span></span>${icon('chevronRight', { cls: 'chev' })}</div>
+      <label class="cell field"><span>${t('Me le rappeler')}</span><select name="backupEvery" data-backup-every>${[[7, t('Chaque semaine')], [30, t('Chaque mois')], [0, t('Jamais')]].map(([v, l]) => `<option value="${v}" ${v === (state.settings.backupEvery ?? 7) ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell tap with-icon"><span class="badge bg-green">${icon('download')}</span><span class="grow">${t('Importer')}</span>${icon('chevronRight', { cls: 'chev' })}<input type="file" accept="application/json" hidden data-a="import"></label>
     </div>`, t('Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).'))}
     ${group(t('Références scientifiques'), `<ul class="cells md-ref">${S.REFS.map((r) => `<li class="cell tap"><a href="${r.url}" target="_blank" rel="noopener" class="grow"><div class="grow"><span class="t">${esc(r.k)}</span><span class="s" style="white-space:normal">${esc(r.t)}</span></div>${icon('chevronRight', { cls: 'chev' })}</a></li>`).join('')}</ul>`,
@@ -95,6 +96,7 @@ export function render(root, go) {
     state.settings.budgetEur = Math.max(0, parseFloat(String(e.target.budgetEur.value).replace(',', '.')) || 0);
     save(); toast(t('Réglages IA enregistrés'));
   };
+  root.querySelector('[data-backup-every]')?.addEventListener('change', (e) => { state.settings.backupEvery = +e.target.value; save(); });
   root.onclick = (e) => {
     if (handlePaletteClick(e, () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; })) return;
     const lg = e.target.closest('[data-lang]');

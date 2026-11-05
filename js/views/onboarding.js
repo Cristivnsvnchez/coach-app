@@ -6,6 +6,7 @@ import { esc, fmt, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, getLang, setLang, register, LANGS } from '../i18n.js';
 import { shape, wordmark } from '../theme.js';
+import { exportBackup } from '../install.js';
 import { paletteSection, handlePaletteClick } from './palette.js';
 
 register({
@@ -13,12 +14,20 @@ register({
     'Ta palette': 'Your palette', 'Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.': 'Pick your colour and shape. You can change them later in Profile.',
     'Tes calories': 'Your calories', 'Proposition : {k} kcal': 'Suggested: {k} kcal', 'Revenir à la proposition': 'Back to the suggestion',
     'Modifiable par pas de 50 kcal. Les macros se recalculent.': 'Adjust in steps of 50 kcal. Macros are recalculated.',
-    'Baisser de 50 kcal': 'Lower by 50 kcal', 'Monter de 50 kcal': 'Raise by 50 kcal', 'Étape {i} sur {n}': 'Step {i} of {n}' },
+    'Baisser de 50 kcal': 'Lower by 50 kcal', 'Monter de 50 kcal': 'Raise by 50 kcal', 'Étape {i} sur {n}': 'Step {i} of {n}',
+    'Protège tes données': 'Protect your data', "Tes données restent sur ton iPhone. Une copie dans iCloud Drive te protège si tu changes de téléphone ou supprimes l'app.": 'Your data stays on your iPhone. A copy in iCloud Drive protects you if you change phones or delete the app.',
+    "Sur ton iPhone uniquement : personne d'autre ne les voit.": 'On your iPhone only: nobody else sees it.', 'Touche « Sauvegarder », puis « Enregistrer dans Fichiers » → iCloud Drive.': 'Tap "Back up", then "Save to Files" → iCloud Drive.',
+    'TrackMe te rappelle de refaire une copie.': 'TrackMe reminds you to make a new copy.', 'Sauvegardé · refaire une copie': 'Backed up · make a new copy', 'Sauvegarder dans iCloud Drive': 'Back up to iCloud Drive',
+    'Me le rappeler': 'Remind me', 'Chaque semaine': 'Every week', 'Chaque mois': 'Every month', 'Jamais': 'Never' },
   nl: { 'Ton corps, tes chiffres, ton rythme.': 'Jouw lichaam, jouw cijfers, jouw ritme.', "J'ai déjà mes données": 'Ik heb al gegevens',
     'Ta palette': 'Jouw palet', 'Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.': 'Kies je kleur en vorm. Je kunt ze later wijzigen in Profiel.',
     'Tes calories': 'Jouw calorieën', 'Proposition : {k} kcal': 'Voorstel: {k} kcal', 'Revenir à la proposition': 'Terug naar het voorstel',
     'Modifiable par pas de 50 kcal. Les macros se recalculent.': "Aanpasbaar in stappen van 50 kcal. De macro's worden herberekend.",
-    'Baisser de 50 kcal': '50 kcal minder', 'Monter de 50 kcal': '50 kcal meer', 'Étape {i} sur {n}': 'Stap {i} van {n}' },
+    'Baisser de 50 kcal': '50 kcal minder', 'Monter de 50 kcal': '50 kcal meer', 'Étape {i} sur {n}': 'Stap {i} van {n}',
+    'Protège tes données': 'Bescherm je gegevens', "Tes données restent sur ton iPhone. Une copie dans iCloud Drive te protège si tu changes de téléphone ou supprimes l'app.": 'Je gegevens blijven op je iPhone. Een kopie in iCloud Drive beschermt je als je van telefoon wisselt of de app verwijdert.',
+    "Sur ton iPhone uniquement : personne d'autre ne les voit.": 'Alleen op je iPhone: niemand anders ziet ze.', 'Touche « Sauvegarder », puis « Enregistrer dans Fichiers » → iCloud Drive.': 'Tik op „Back-up maken” en daarna „Bewaar in Bestanden” → iCloud Drive.',
+    'TrackMe te rappelle de refaire une copie.': 'TrackMe herinnert je eraan een nieuwe kopie te maken.', 'Sauvegardé · refaire une copie': 'Opgeslagen · nieuwe kopie maken', 'Sauvegarder dans iCloud Drive': 'Back-up naar iCloud Drive',
+    'Me le rappeler': 'Herinner me', 'Chaque semaine': 'Elke week', 'Chaque mois': 'Elke maand', 'Jamais': 'Nooit' },
 });
 
 const p = () => state.profile;
@@ -29,6 +38,18 @@ const proposal = () => (S.isProfileComplete(p()) ? S.targets({ ...p() }, S.tdeeI
 const shownKcal = () => { const tg = proposal(); if (!tg) return null; if (kc && kc.base !== tg.kcal) kc = null; return kc ? kc.val : tg.kcal; };
 
 // Chaque étape : { id, title, why?, body(), valid?(), skip?() } — `skip` masque l'étape (ex. cycle pour un homme).
+// Étape « Protège tes données » : sauvegarde immédiate vers iCloud Drive (feuille de partage → Fichiers) + rythme du rappel.
+const safeBody = () => {
+  const every = state.settings.backupEvery ?? 7;
+  return `<ul class="onb-safe">
+      <li><span class="onb-safe-ic">${icon('profile')}</span><span>${t('Sur ton iPhone uniquement : personne d\'autre ne les voit.')}</span></li>
+      <li><span class="onb-safe-ic">${icon('share')}</span><span>${t('Touche « Sauvegarder », puis « Enregistrer dans Fichiers » → iCloud Drive.')}</span></li>
+      <li><span class="onb-safe-ic">${icon('calendar')}</span><span>${t('TrackMe te rappelle de refaire une copie.')}</span></li></ul>
+    <button type="button" class="btn large onb-backup" data-a="backup">${icon('download')} ${state.lastBackup ? t('Sauvegardé · refaire une copie') : t('Sauvegarder dans iCloud Drive')}</button>
+    <p class="onb-label">${t('Me le rappeler')}</p>
+    ${choice('backupEvery', { d7: t('Chaque semaine'), d30: t('Chaque mois'), d0: t('Jamais') }, 'd' + every)}`;
+};
+
 const STEPS = [
   { id: 'lang', title: () => t('Choisis ta langue'), skip: () => langPicked, body: () => choice('lang', LANGS, getLang()) },
   { id: 'sex', title: () => t('Tu es…'), why: () => t('Sert au calcul de ta dépense énergétique (Mifflin-St Jeor).'),
@@ -55,6 +76,7 @@ const STEPS = [
         + `<p class="onb-label">${t('Contraception hormonale (pilule, stérilet hormonal, implant…)')}</p>` + choice('hormonal', { no: t('Non'), yes: t('Oui') }, state.cycle.hormonal ? 'yes' : 'no') : '') },
   { id: 'palette', title: () => t('Ta palette'), why: () => t('Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.'), body: paletteSection },
   { id: 'calories', title: () => t('Tes calories'), why: () => t('Modifiable par pas de 50 kcal. Les macros se recalculent.'), body: summary },
+  { id: 'safe', title: () => t('Protège tes données'), why: () => t("Tes données restent sur ton iPhone. Une copie dans iCloud Drive te protège si tu changes de téléphone ou supprimes l'app."), body: safeBody },
 ];
 
 function choice(name, opts, sel) {
@@ -111,7 +133,7 @@ export function openOnboarding(done) {
         <div class="onb-progress" role="progressbar" aria-label="${t('Étape {i} sur {n}', { i: i + 1, n: list.length })}" aria-valuenow="${i + 1}" aria-valuemin="1" aria-valuemax="${list.length}"><i style="width:${((i + 1) / list.length) * 100}%"></i></div>
         <button class="btn plain" data-a="skip">${t('Passer')}</button></div>
       <div class="onb-body"><h2>${st.title()}</h2>${st.why ? `<p class="onb-why">${st.why()}</p>` : ''}<div class="onb-content">${st.body()}</div></div>
-      <div class="onb-foot">${cta('next', st.id === 'calories' ? t('Aller à mon tableau de bord') : t('Continuer'))}</div></div>`;
+      <div class="onb-foot">${cta('next', st.id === 'safe' ? t('Aller à mon tableau de bord') : t('Continuer'))}</div></div>`;
   };
 
   const readInputs = () => {
@@ -158,6 +180,7 @@ export function openOnboarding(done) {
       else if (k === 'cycleOn') { state.cycle = { ...(state.cycle || {}), enabled: v === 'yes' }; }
       else if (k === 'hormonal') { state.cycle.hormonal = v === 'yes'; }
       else if (k === 'rate') p().rate = +v;
+      else if (k === 'backupEvery') state.settings.backupEvery = +v.slice(1);
       else if (k === 'goal') { p().goal = v; p().rate = S.GOALS[v].rates[Math.min(1, S.GOALS[v].rates.length - 1)]; }
       else p()[k] = v;
       return draw();
@@ -169,6 +192,7 @@ export function openOnboarding(done) {
     }
     const a = b.dataset.a;
     if (a === 'start') { i = 0; return draw(); }
+    if (a === 'backup') { readInputs(); state.onboarded = true; save(); return exportBackup().then(draw); }
     if (a === 'kc-reset') { kc = null; return draw(); }
     if (a === 'skip') return finish();
     if (a === 'back') { readInputs(); i = Math.max(-1, i - 1); return draw(); }
@@ -176,7 +200,7 @@ export function openOnboarding(done) {
       readInputs();
       const list = steps(), st = list[i];
       if (st.valid && !st.valid()) { el.querySelector('.onb-content').classList.add('shake'); setTimeout(() => el.querySelector('.onb-content')?.classList.remove('shake'), 400); return; }
-      if (st.id === 'calories') return finish();
+      if (st.id === 'safe') return finish(); // dernière étape
       i = Math.min(steps().length - 1, i + 1); draw();
     }
   });
