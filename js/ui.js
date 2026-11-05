@@ -155,8 +155,9 @@ export function banner(msg, { action, onAction, ms = action ? 0 : 3200 } = {}) {
   document.querySelectorAll('.tm-banner').forEach((x) => x.remove());
   const el = document.createElement('div');
   el.className = 'tm-banner'; el.setAttribute('role', 'status');
-  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button class="btn filled">${esc(action)}</button>` : ''}`;
-  el.querySelector('button')?.addEventListener('click', () => { el.remove(); onAction?.(); });
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button class="btn filled" data-go>${esc(action)}</button><button class="icon-btn tm-banner-x" data-x aria-label="${t('Fermer')}">${icon('close')}</button>` : ''}`;
+  el.querySelector('[data-go]')?.addEventListener('click', () => { el.remove(); onAction?.(); });
+  el.querySelector('[data-x]')?.addEventListener('click', () => el.remove());
   document.body.appendChild(el);
   if (ms) setTimeout(() => el.remove(), ms);
   return el;

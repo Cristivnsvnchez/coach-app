@@ -1,6 +1,8 @@
 // Aliments : Open Food Facts (code-barres + recherche), cache local dans state.foods.
 import { state, save } from './store.js';
 import { fetchRetry } from './net.js';
+import { BASE_FOODS } from './foods-base.js';
+import { getLang } from './i18n.js';
 
 const OFF = 'https://world.openfoodfacts.org';
 const FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity';
@@ -31,12 +33,41 @@ export async function lookupBarcode(ean) {
   return food;
 }
 
+// Normalisation : minuscules sans accents (œ -> oe, æ -> ae) pour une recherche tolérante.
+const norm = (s) => String(s || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Recherche dans la base embarquée (instantanée, hors ligne) : 3 langues, jusqu'à 12 résultats.
+// Classement : nom qui commence par la requête, puis mot qui commence, puis contient.
+export function searchBase(q, lang = getLang()) {
+  const nq = norm(q).trim();
+  if (!nq) return [];
+  const hits = [];
+  for (const b of BASE_FOODS) {
+    let best = 9;
+    for (const l of ['fr', 'en', 'nl']) {
+      const n = norm(b.name[l]);
+      const i = n.indexOf(nq);
+      if (i < 0) continue;
+      const rank = i === 0 ? 0 : n.split(/[^a-z0-9]+/).some((w) => w.startsWith(nq)) ? 1 : 2;
+      // Un match dans la langue courante prime sur un match dans une autre langue.
+      best = Math.min(best, rank * 2 + (l === lang ? 0 : 1));
+    }
+    if (best < 9) hits.push([best, b]);
+  }
+  hits.sort((a, b) => a[0] - b[0]);
+  return hits.slice(0, 12).map(([, b]) => ({
+    id: b.id, name: b.name[lang] || b.name.fr, per100: { ...b.per100 }, serving: b.serving, source: b.source,
+  }));
+}
+
 let last = 0;
 export async function searchFood(q) {
-  const local = Object.values(state.foods).filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
+  const nq = norm(q);
+  const local = Object.values(state.foods).filter((f) => norm(f.name).includes(nq));
+  const base = searchBase(q);
   // Limite OFF ~10 req/min : on espace les appels.
   const wait = 6000 - (Date.now() - last);
-  if (wait > 0) return { local, remote: [], throttled: Math.ceil(wait / 1000) };
+  if (wait > 0) return { local, base, remote: [], throttled: Math.ceil(wait / 1000) };
   last = Date.now();
   const url = `${OFF}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&lc=fr&cc=fr&fields=${FIELDS}`;
   // La recherche texte OFF est souvent indisponible (503) : on renvoie alors les résultats locaux seuls.
@@ -44,9 +75,9 @@ export async function searchFood(q) {
     const r = await fetchRetry(url, {}, { retries: 0, timeoutMs: 6000 }); // repli rapide sur les résultats locaux
     if (!r.ok) throw new Error(String(r.status));
     const j = await r.json();
-    return { local, remote: (j.products || []).map(fromOff).filter(Boolean) };
+    return { local, base, remote: (j.products || []).map(fromOff).filter(Boolean) };
   } catch {
-    return { local, remote: [], offline: true };
+    return { local, base, remote: [], offline: true };
   }
 }
 

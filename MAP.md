@@ -27,14 +27,14 @@ TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 ## css/today.css (72 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
-## css/trackme.css (245 l.)
+## css/trackme.css (269 l.)
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
 ## js/ai.js (230 l.)
 Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 exports: MODELS,ALLOWED_DOMAINS SYSTEM,hasKey PRICES,USD_TO_EUR usage,costUsd userContext,ask testConnection,extractJson stripJson,imageToBase64 estimateMeal,programQuestions programGenerate
 
-## js/app.js (116 l.)
+## js/app.js (118 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go
 
@@ -46,13 +46,17 @@ exports: SYMPTOMS,FLOWS avgCycleLen,cycleSd avgPeriodLen,cycleStartFor phaseOn,n
 Bibliothèque d'exercices (noms français = clés de l'historique ; traduits à l'affichage).
 exports: LIBRARY,EQUIPMENT findExercise,DEFAULT_PROGRAM
 
-## js/food.js (156 l.)
+## js/food.js (187 l.)
 Aliments : Open Food Facts (code-barres + recherche), cache local dans state.foods.
-exports: lookupBarcode,searchFood saveFood,entryFor loadZXing,decodeImage startScan
+exports: lookupBarcode,searchBase searchFood,saveFood entryFor,loadZXing decodeImage,startScan
 
 ## js/foodgroups.js (32 l.)
 Repères ANSES (pur, testé sous Node) : portions de fruits & légumes (5/jour) et de poisson (2/semaine).
 exports: GOALS,getPortions addPortion,weekDates weekTotal,avg7
+
+## js/foods-base.js (240 l.)
+Base d'aliments génériques embarquée (recherche instantanée, hors ligne).
+exports: BASE_FOODS
 
 ## js/habits.js (50 l.)
 Checklist quotidienne : habitudes auto-cochées d'après les données du jour + habitudes manuelles, et série de jours.
@@ -65,6 +69,10 @@ exports: register,LANGS getLang,locale setLang,t
 ## js/icons.js (50 l.)
 Icônes SVG au trait, dessinées pour l'app (les SF Symbols ne sont pas licenciés pour le web).
 exports: icon
+
+## js/install.js (76 l.)
+Installation et sécurité des données : aide « Sur l'écran d'accueil » (Safari iOS n'a pas de bouton d'installation),
+exports: isStandalone,exportBackup startupNudges
 
 ## js/metrics.js (52 l.)
 Objectifs du jour calculés à partir du profil, du dernier poids et de la dépense adaptative.
@@ -98,7 +106,7 @@ exports: LEVELS,LEVEL_LABEL LANGS_T,pictogram getTechnique,allTechniques missing
 Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
 exports: PALETTES,VARIANTS SURFACES,palette variant,colors applyTheme,shape wordmark
 
-## js/ui.js (163 l.)
+## js/ui.js (164 l.)
 Petits utilitaires DOM, composants iOS et graphiques SVG.
 exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop banner
 
@@ -106,7 +114,7 @@ exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop ba
 Logique des séances (pure, testée sous Node) : volume, records, précédent, streak hebdo, disques, échauffement.
 exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume workoutVolume,doneSets exerciseRecords,setPRs previousSets,exerciseSeries weekStart,weekStreak restDays,muscleSets plates,warmupSets routineDiffers,migrateProgram
 
-## js/i18n/extra.js (58 l.)
+## js/i18n/extra.js (60 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
 
 ## js/i18n/nl-base.js (234 l.)
@@ -116,7 +124,7 @@ NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 Vue « activities » : semaine, filtres, liste des activités Strava et détail avec l'effet dans TrackMe.
 exports: render
 
-## js/views/addfood.js (173 l.)
+## js/views/addfood.js (194 l.)
 Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
 exports: MEALS,openAddFood
 
@@ -152,7 +160,7 @@ exports: needsOnboarding,openOnboarding
 Choix de la palette (6 couleurs) et de la forme (3 variantes), avec aperçu en direct.
 exports: paletteSection,handlePaletteClick
 
-## js/views/profile.js (165 l.)
+## js/views/profile.js (154 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 

@@ -1,10 +1,10 @@
 // Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
-const VERSION = 'trackme-v12';
+const VERSION = 'trackme-v13';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
   'css/app.css', 'css/trackme.css', 'css/onboarding.css', 'css/today.css', 'css/cycle.css', 'css/activities.css', 'css/learn.css',
   'js/app.js', 'js/store.js', 'js/net.js', 'js/theme.js', 'js/science.js', 'js/metrics.js', 'js/ui.js', 'js/i18n.js', 'js/i18n/nl-base.js', 'js/i18n/extra.js', 'js/icons.js',
-  'js/habits.js', 'js/workout.js', 'js/exercises.js', 'js/technique.js', 'js/planner.js', 'js/food.js', 'js/foodgroups.js', 'js/ai.js', 'js/cycle.js', 'js/strava.js',
+  'js/habits.js', 'js/workout.js', 'js/exercises.js', 'js/technique.js', 'js/planner.js', 'js/food.js', 'js/foods-base.js', 'js/foodgroups.js', 'js/install.js', 'js/ai.js', 'js/cycle.js', 'js/strava.js',
   'js/views/today.js', 'js/views/addfood.js', 'js/views/weight.js', 'js/views/training.js', 'js/views/coach.js', 'js/views/profile.js', 'js/views/habits.js',
   'js/views/session.js', 'js/views/exsheets.js', 'js/views/program.js', 'js/views/onboarding.js', 'js/views/palette.js', 'js/views/cycle.js',
   'js/views/activities.js', 'js/views/connect.js', 'js/views/learn.js',

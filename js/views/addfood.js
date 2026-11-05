@@ -1,10 +1,10 @@
 // Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
 import { state, save, dayLog, recentFoods, uid } from '../store.js';
-import { searchFood, lookupBarcode, entryFor, saveFood, startScan } from '../food.js';
+import { searchFood, searchBase, lookupBarcode, entryFor, saveFood, startScan } from '../food.js';
 import { estimateMeal, imageToBase64, hasKey } from '../ai.js';
 import { esc, fmt, sheet, toast, group } from '../ui.js';
 import { icon } from '../icons.js';
-import { t } from '../i18n.js';
+import { getLang, t } from '../i18n.js';
 
 export const MEALS = { dej: 'Petit-déjeuner', midi: 'Déjeuner', diner: 'Dîner', snack: 'Collations' };
 
@@ -72,16 +72,34 @@ export function openAddFood(meal, date, done) {
     };
   };
 
+  // Pendant la frappe : résultats instantanés et hors ligne (aliments courants + mes aliments), sans réseau.
+  const norm = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const quick = (q) => {
+    if (!q.trim()) return showHome();
+    const base = searchBase(q, getLang());
+    const local = Object.values(state.foods).filter((f) => norm(f.name).includes(norm(q)) && !f.id.startsWith('base:')).slice(0, 8);
+    res.innerHTML = list(t('Mes aliments'), local) + list(t('Aliments courants'), base)
+      + (!base.length && !local.length ? `<p class="empty footnote">${t('Rien dans les aliments courants.')}</p>` : '')
+      + `<div class="af-more"><button class="btn" data-a="off">${icon('search')} ${esc(t('Chercher « {q} » en ligne', { q }))}</button>
+         <button class="btn" data-a="aiq">${icon('sparkles')} ${t("Estimer avec l'IA")}</button></div>`;
+    const all = [...local, ...base];
+    res.onclick = (e) => {
+      if (e.target.closest('[data-a=off]')) return doSearch(q);
+      if (e.target.closest('[data-a=aiq]')) return doAi(q);
+      const f = e.target.closest('[data-food]'); if (f) pickGrams(all.find((x) => x.id === f.dataset.food));
+    };
+  };
+
   const doSearch = async (q) => {
     if (!q.trim()) return showHome();
     res.innerHTML = `<p class="empty footnote">${t('Recherche…')}</p>`;
     try {
-      const { local, remote, throttled, offline } = await searchFood(q);
-      res.innerHTML = list(t('Mes aliments'), local) + list('Open Food Facts', remote)
+      const { local, remote, base = [], throttled, offline } = await searchFood(q);
+      res.innerHTML = list(t('Mes aliments'), local) + list(t('Aliments courants'), base) + list('Open Food Facts', remote)
         + (throttled ? `<p class="empty footnote">${t('Recherche en ligne possible dans {n} s (limite Open Food Facts).', { n: throttled })}</p>` : '')
         + (offline ? `<p class="empty footnote">${t('Recherche Open Food Facts indisponible pour le moment.')}</p>` : '')
         + `<button class="btn large" data-a="aiq">${icon('sparkles')} ${esc(t("Estimer « {q} » avec l'IA (Ciqual/USDA)", { q }))}</button>`;
-      const all = [...local, ...remote];
+      const all = [...local, ...base, ...remote];
       res.onclick = (e) => {
         if (e.target.closest('[data-a=aiq]')) return doAi(q);
         const f = e.target.closest('[data-food]'); if (f) pickGrams(all.find((x) => x.id === f.dataset.food));
@@ -163,7 +181,10 @@ export function openAddFood(meal, date, done) {
     };
   };
 
-  s.querySelector('[data-f=search]').onsubmit = (e) => { e.preventDefault(); e.target.q.blur(); doSearch(e.target.q.value); };
+  const form = s.querySelector('[data-f=search]');
+  form.onsubmit = (e) => { e.preventDefault(); e.target.q.blur(); doSearch(e.target.q.value); };
+  let typing = 0;
+  form.q.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => quick(form.q.value), 120); });
   s.querySelector('.chips').onclick = (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     scanId++; stopScan && stopScan(); stopScan = null;

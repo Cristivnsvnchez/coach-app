@@ -3,10 +3,11 @@ import * as S from '../science.js';
 import { state, save, replace, today } from '../store.js';
 import { current } from '../metrics.js';
 import { MODELS, usage, testConnection } from '../ai.js';
-import { esc, fmt, toast, nav, group, sheet } from '../ui.js';
+import { esc, fmt, fmtDate, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, getLang, setLang, LANGS } from '../i18n.js';
 import { paletteSection, handlePaletteClick } from './palette.js';
+import { exportBackup } from '../install.js';
 
 const opt = (obj, sel, lab = (v) => v.label ?? v) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${esc(t(lab(v)))}</option>`).join('');
 const rateOpts = (goal, sel) => opt(Object.fromEntries((S.GOALS[goal]?.rates || [0]).map((r) => [r, r ? t('{r} % du poids / semaine', { r: fmt(r, 2).replace(/[,.]?0+$/, '') }) : '—'])), sel);
@@ -61,7 +62,7 @@ export function render(root, go) {
       <button class="cell action" style="border:0;width:100%;background:none;font:inherit">${t('Enregistrer')}</button></div>`,
       t("La clé reste sur ce téléphone et n'est envoyée qu'à api.anthropic.com. Crée-la sur console.anthropic.com → API Keys, et fixe une limite de dépense mensuelle.") + ' ' + t("L'app bloque toute requête qui pourrait dépasser ton budget (estimation : tarifs publics, 1 $ ≈ 0,92 €). Pour une garantie absolue, fixe aussi la même limite dans console.anthropic.com → Billing → Limits."))}</form>
     ${group(t('Sauvegarde'), `<div class="cells">
-      <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow">${t('Exporter')}</span>${icon('chevronRight', { cls: 'chev' })}</div>
+      <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow"><span class="t">${t('Sauvegarder mes données')}</span><span class="s">${state.lastBackup ? t('Dernière sauvegarde : {d}', { d: fmtDate(state.lastBackup, { day: 'numeric', month: 'long' }) }) : t('Jamais sauvegardé · vers Fichiers ou iCloud Drive')}</span></span>${icon('chevronRight', { cls: 'chev' })}</div>
       <label class="cell tap with-icon"><span class="badge bg-green">${icon('download')}</span><span class="grow">${t('Importer')}</span>${icon('chevronRight', { cls: 'chev' })}<input type="file" accept="application/json" hidden data-a="import"></label>
     </div>`, t('Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).'))}
     ${group(t('Références scientifiques'), `<ul class="cells md-ref">${S.REFS.map((r) => `<li class="cell tap"><a href="${r.url}" target="_blank" rel="noopener" class="grow"><div class="grow"><span class="t">${esc(r.k)}</span><span class="s" style="white-space:normal">${esc(r.t)}</span></div>${icon('chevronRight', { cls: 'chev' })}</a></li>`).join('')}</ul>`,
@@ -108,19 +109,7 @@ export function render(root, go) {
         .catch((err) => toast(t(err.message, err.vars)));
       return;
     }
-    if (a === 'export') {
-      // Jamais de secret dans une sauvegarde (elle part vers Fichiers, iCloud, mail…) : clé IA et jetons Strava retirés.
-      const { clientSecret, token, refresh, ...strava } = state.strava || {};
-      const data = { ...state, settings: { ...state.settings, apiKey: '' }, strava: state.strava ? strava : null };
-      const name = `trackme-backup-${today()}.json`;
-      const file = new File([JSON.stringify(data, null, 1)], name, { type: 'application/json' });
-      // Sur iPhone, la feuille de partage permet d'enregistrer dans Fichiers / iCloud Drive.
-      if (navigator.canShare?.({ files: [file] })) { navigator.share({ files: [file], title: name }).catch(() => {}); return; }
-      const url = URL.createObjectURL(file);
-      const l = document.createElement('a');
-      l.href = url; l.download = name; l.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
+    if (a === 'export') return exportBackup();
     if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { replace({}); render(root, go); }
   };
   root.querySelector('[data-a=import]').onchange = async (e) => {

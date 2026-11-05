@@ -17,6 +17,7 @@ import * as connect from './views/connect.js';
 import * as learn from './views/learn.js';
 import { needsOnboarding, openOnboarding } from './views/onboarding.js';
 import { openAddFood } from './views/addfood.js';
+import { startupNudges } from './install.js';
 
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
 const VIEWS = { today, weight, training, coach, profile, cycle, activities, connect, learn };
@@ -84,7 +85,8 @@ try { saved ||= sessionStorage.getItem('tab'); } catch {}
 tab = '';
 go(saved || 'today', undefined, { push: false });
 history.replaceState({ tab }, '', '#' + tab);
-if (needsOnboarding()) openOnboarding(() => { applyTheme(state.settings.palette, state.settings.shape, state.settings.surface); go('today'); });
+if (needsOnboarding()) openOnboarding(() => { applyTheme(state.settings.palette, state.settings.shape, state.settings.surface); go('today'); startupNudges(); });
+else startupNudges();
 
 let day = todayIso();
 document.addEventListener('visibilitychange', () => {
