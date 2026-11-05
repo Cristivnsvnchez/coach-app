@@ -23,3 +23,15 @@ test('aucune fiche orpheline (clé absente de la bibliothèque)', () => {
   const names = new Set(LIBRARY.map((e) => e.name));
   for (const k of Object.keys(TECH)) assert.ok(names.has(k), k);
 });
+
+test('model3D : chaque exercice avec un clip 3D pointe vers un fichier d\'animation qui existe', async () => {
+  const { existsSync } = await import('node:fs');
+  const { LIBRARY } = await import('../js/exercises.js');
+  const { model3D } = await import('../js/technique.js');
+  const withClip = LIBRARY.map((e) => model3D(e.name)).filter(Boolean);
+  assert.ok(withClip.length >= 11, `au moins 11 exercices animés (trouvé ${withClip.length})`);
+  for (const m of withClip) {
+    assert.ok(existsSync(m.url), m.url);
+    if (m.anim) assert.ok(existsSync(m.anim), `${m.name} → ${m.anim}`);
+  }
+});

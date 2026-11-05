@@ -6,7 +6,7 @@ const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par
 
 const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
-export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake, name }, outfit = null) {
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equipment, mistake, name }, outfit = null) {
   let THREE, GLTFLoader, OrbitControls;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
@@ -41,10 +41,12 @@ export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(g), transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
 
-  let gltf;
+  // Corps (homme/femme) + animation de l'exercice dans un petit fichier à part (models/anim/<clip>.glb, squelette seul,
+  // commun aux deux corps : mêmes os Mixamo). Chargés en parallèle, gardés en cache pour la session.
+  const load = (u) => { if (!cache.has(u)) cache.set(u, new GLTFLoader().loadAsync(u)); return cache.get(u); };
+  let gltf, animGltf = null;
   try {
-    if (!cache.has(url)) cache.set(url, new GLTFLoader().loadAsync(url));
-    gltf = await cache.get(url);
+    [gltf, animGltf] = await Promise.all([load(url), animUrl ? load(animUrl).catch(() => { cache.delete(animUrl); return null; }) : null]);
   } catch { cache.delete(url); renderer.dispose(); return noop3D; }
 
   const model = gltf.scene; // le cache garde l'original : on travaille sur une copie liée au squelette
@@ -223,7 +225,7 @@ export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake
   };
 
   const mixer = new THREE.AnimationMixer(obj);
-  const anim = gltf.animations.find((a) => a.name.toLowerCase().includes((clip || '').toLowerCase())) || gltf.animations[0];
+  const anim = animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
   if (anim) { act = mixer.clipAction(anim); act.play(); if (reduce) { act.paused = true; act.time = anim.duration * 0.5; } }

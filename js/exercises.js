@@ -47,6 +47,21 @@ const RAW = [
   ['Arraché', 'Dos', ['Épaules', 'Quadriceps'], 'barre', 'weight_reps', false, 'haltero'],
   ['Épaulé-jeté', 'Quadriceps', ['Épaules', 'Dos'], 'barre', 'weight_reps', false, 'haltero'],
   ['Tirage sumo', 'Dos', ['Fessiers', 'Ischios'], 'barre', 'weight_reps', false, 'haltero'],
+  // Mouvements animés par Mixamo (ajoutés avec leur clip 3D).
+  ["Sit-up", "Abdos", [], "aucun", "bodyweight", true, "abdos"],
+  ["Crunch vélo", "Abdos", [], "aucun", "bodyweight", true, "abdos"],
+  ["Crunch circulaire", "Abdos", [], "aucun", "bodyweight", true, "abdos"],
+  ["Pompes sautées", "Pectoraux", ["Triceps", "Épaules"], "aucun", "bodyweight", true, "haut"],
+  ["Jumping jacks", "Mollets", ["Épaules", "Quadriceps"], "aucun", "duration", false, "cardio"],
+  ["Corde à sauter", "Mollets", ["Épaules"], "aucun", "duration", false, "cardio"],
+  ["Box jump", "Quadriceps", ["Fessiers", "Mollets"], "aucun", "bodyweight", false, "cardio"],
+  ["Footing", "Quadriceps", ["Ischios", "Mollets"], "aucun", "duration", false, "cardio"],
+  ["Tapis de course", "Quadriceps", ["Ischios", "Mollets"], "machine", "duration", false, "cardio"],
+  ["Sprint", "Ischios", ["Quadriceps", "Fessiers", "Mollets"], "aucun", "duration", false, "cardio"],
+  ["Kettlebell swing", "Fessiers", ["Ischios", "Dos"], "haltères", "weight_reps", false, "haltero"],
+  ["Échauffement", "Épaules", ["Quadriceps"], "aucun", "duration", true, "mobilite"],
+  ["Étirement de la nuque", "Épaules", [], "aucun", "duration", true, "mobilite"],
+  ["Étirement des bras", "Épaules", ["Triceps", "Pectoraux"], "aucun", "duration", true, "mobilite"],
 ];
 
 export const LIBRARY = RAW.map(([name, muscle, secondary, equipment, type, upper, category]) => ({ name, muscle, secondary, equipment, type, upper, category }));

@@ -36,6 +36,9 @@ TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pa
 ## css/trackme.css (292 l.)
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
+## models/anim/ (25 fichiers .glb, 4 Mo)
+Une animation Mixamo par exercice (squelette seul, commun homme/femme), chargée par js/viewer3d.js.
+
 ## js/ai.js (230 l.)
 Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
 exports: MODELS,ALLOWED_DOMAINS SYSTEM,hasKey PRICES,USD_TO_EUR usage,costUsd userContext,ask testConnection,extractJson stripJson,imageToBase64 estimateMeal,programQuestions programGenerate
