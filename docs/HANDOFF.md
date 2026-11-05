@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v29** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v30** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -148,7 +148,7 @@ Complète les points 1 et 3 du « Reste à faire » de la section 8 :
 - Corrigé au passage : l'erreur d'import de programme du Coach s'affichait sans traduction (`toast(err.message, err.vars)`).
 - Vérifié dans le navigateur (mobile clair/sombre, PC) ; pas sur un vrai iPhone. `sw.js` : `css/session.css` et `css/coach.css` ajoutés à `SHELL`. Publié en **trackme-v29**.
 
-## 11. Listes de courses : tous les cas d'usage (2026-11-05, non publié)
+## 11. Listes de courses : tous les cas d'usage (2026-11-05, v30)
 Demande : « si je rajoute une course pour aujourd'hui et j'achète aujourd'hui, je n'ai pas de liste » + préparer la semaine prochaine sans tout remettre sur le samedi déjà fait.
 - **Rattachement figé** : chaque repas prévu reçoit une fois `entry.trip` (`assignTrips`, `js/shopping.js`) et n'en bouge plus — un repas acheté samedi reste sur la liste du samedi.
   - Sortie régulière d'avant sa semaine si elle est à venir et pas faite (repas de mardi prochain → samedi 7).
