@@ -46,6 +46,7 @@ const mealNow = () => { const h = new Date().getHours() + new Date().getMinutes(
 export function go(name, arg, { push = true } = {}) {
   if (!VIEWS[name]) return;
   const changed = name !== tab, first = !tab;
+  if (changed && tab) VIEWS[tab].leave?.(); // libère ce que l'écran quitté garde en vie (ex. 3D de la carte du jour)
   tab = name;
   drawTabbar(changed && !first); // rebond de l'icône du nouvel onglet
   main.scrollTo(0, 0);
@@ -61,7 +62,8 @@ export function go(name, arg, { push = true } = {}) {
 }
 addEventListener('popstate', (e) => {
   if (sheetPop()) return;
-  go(e.state?.tab || (location.hash.slice(1) in VIEWS ? location.hash.slice(1) : 'today'), undefined, { push: false });
+  const t0 = e.state?.tab in VIEWS ? e.state.tab : location.hash.slice(1) in VIEWS ? location.hash.slice(1) : 'today';
+  go(t0, undefined, { push: false });
 });
 
 main.addEventListener('scroll', () => main.classList.toggle('scrolled', main.scrollTop > 8), { passive: true });
@@ -81,7 +83,8 @@ tabbar.addEventListener('click', (e) => {
   else go(b.dataset.tab);
 });
 let saved = location.hash.slice(1) in VIEWS ? location.hash.slice(1) : null;
-try { saved ||= sessionStorage.getItem('tab'); } catch {}
+// Onglet mémorisé : seulement s'il existe encore (ex. « coach » retiré → sinon écran vide sans menu).
+try { const s = sessionStorage.getItem('tab'); if (!saved && s in VIEWS) saved = s; } catch {}
 tab = '';
 go(saved || 'today', undefined, { push: false });
 history.replaceState({ tab }, '', '#' + tab);

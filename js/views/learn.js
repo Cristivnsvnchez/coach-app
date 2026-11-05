@@ -6,7 +6,7 @@ import { state, save } from '../store.js';
 import { LIBRARY, findExercise, CATEGORIES, CATEGORY_LABEL } from '../exercises.js';
 import { getTechnique, pictogram, model3D, outfitsFor, LEVELS, LEVEL_LABEL } from '../technique.js';
 import { mount3D } from '../viewer3d.js';
-import { BACKDROPS } from '../backdrops.js';
+import { shape } from '../theme.js';
 import { active, persist } from './session.js';
 import { openExercise } from './exsheets.js';
 import * as W from '../workout.js';
@@ -57,7 +57,7 @@ function card(e) {
 }
 
 // Mouvement mis en avant : un exercice animé au hasard à chaque retour sur l'écran (jamais deux fois de suite le même),
-// joué par l'avatar 3D devant un décor (Miami ou San Francisco, au hasard). Sans 3D possible : figure à la place.
+// joué par l'avatar 3D sur le fond de la palette (même forme que l'aperçu du Profil). Sans 3D possible : figure à la place.
 let showcase = null; // visionneuse de la carte, libérée à chaque nouveau rendu (une seule contexte WebGL à la fois)
 function pickShowcase() {
   const pool = LIBRARY.filter((e) => model3D(e.name));
@@ -65,13 +65,15 @@ function pickShowcase() {
   const choices = pool.filter((e) => e.name !== last);
   const e = (choices.length ? choices : pool)[Math.floor(Math.random() * (choices.length || pool.length))] || dayExercise();
   try { sessionStorage.setItem('lrn-day', e.name); } catch {}
-  const keys = Object.keys(BACKDROPS);
-  return { e, place: keys[Math.floor(Math.random() * keys.length)] };
+  return e;
 }
 
+// Appelé par app.js quand on quitte Apprendre : la visionneuse de la carte ne doit pas rester en vie.
+export function leave() { showcase?.dispose(); showcase = null; }
+
 export function render(root, go) {
-  showcase?.dispose(); showcase = null;
-  const { e: day, place } = pickShowcase();
+  leave();
+  const day = pickShowcase();
   const sex = state.profile?.sex === 'F' ? 'F' : 'M';
   const draw = () => {
     const ql = q.trim().toLowerCase();
@@ -88,9 +90,8 @@ export function render(root, go) {
   };
   root.innerHTML = `${nav(t('Apprends les bons mouvements'), { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Sport')}</button>` })}
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
-    <section class="lrn-day lrn-day-${place}"><span class="lrn-day-bg">${BACKDROPS[place].svg}</span>
+    <section class="lrn-day tm-hero">${shape({ cls: 'lrn-day-shape' })}
       <span class="lrn-day-3d">${pictogram(day.name, '', sex)}</span>
-      <span class="lrn-day-place">${icon('pin')} ${esc(BACKDROPS[place].label)}</span>
       <small>${t('Geste du jour')}</small><h2>${esc(t(day.name))}</h2>
       <p>${esc([day.muscle, ...day.secondary].map((m) => t(m)).join(' · '))}</p>
       <button class="btn lrn-day-btn" data-open="${esc(day.name)}">${t('Voir la technique')} ${icon('chevronRight')}</button></section>
@@ -105,7 +106,7 @@ export function render(root, go) {
   draw();
   const m3d = model3D(day.name, sex), stage = root.querySelector('.lrn-day-3d');
   if (m3d && stage) mount3D(stage, m3d, outfitsFor(sex)[Math.min(state.settings.outfit || 0, 2)], { showcase: true })
-    .then((d) => { if (stage.isConnected) showcase = d; else d.dispose(); });
+    .then((d) => { if (stage.isConnected) showcase = d; else d.dispose(); }).catch(() => {}); // échec : la figure reste affichée
   root.querySelector('[name=q]').oninput = (e) => { q = e.target.value; draw(); };
   root.onclick = (e) => {
     if (e.target.closest('[data-back]')) return go('training');
@@ -132,7 +133,7 @@ export function openTechnique(name, go) {
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
     <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big', state.profile?.sex)}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
       <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
-  if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); });
+  if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); }).catch(() => {});
   const openDress = () => {
     const ds = sheet(`<div class="sheet-head"><h3 class="title2">${t('Choisir une tenue')}</h3></div>
       <ul class="v3d-outfits">${outfits.map((o, i) => `<li><button class="v3d-outfit ${i === outfitIdx ? 'on' : ''}" data-outfit="${i}">

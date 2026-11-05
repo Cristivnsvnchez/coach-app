@@ -199,11 +199,21 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
       { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [-0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
       { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
     ];
-    if (L && R) {
+    if (L && R && name !== 'Squat') { // Squat (back squat) : barre sur le dos, pas dans les mains tendues du clip
       const group = new THREE.Group();
       for (const { geo, pos, rot } of parts) { const mesh = new THREE.Mesh(geo, mat); if (pos) mesh.position.set(...pos); if (rot) mesh.rotation.set(...rot); group.add(mesh); }
       scene.add(group); rigs.push({ hands: [L, R], group });
     } else attach(findBone(/Spine2$/) || findBone(/Spine1$/), mat, parts, [0, 0.04, 0.09]);
+  } else if (name === 'Kettlebell swing') {
+    // Un kettlebell tenu à deux mains (pas deux haltères) : poignée entre les mains, boule dessous.
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.45, metalness: 0.4 });
+    const L = findBone(/LeftHand$/), R = findBone(/RightHand$/);
+    if (L && R) {
+      const group = new THREE.Group();
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.012, 8, 20, Math.PI), mat);
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 14), mat); bell.position.set(0, -0.15, 0);
+      group.add(handle, bell); scene.add(group); rigs.push({ hands: [L, R], group, hang: true });
+    }
   } else if (equipment === 'haltères') {
     const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
     for (const side of ['Left', 'Right']) {
@@ -227,11 +237,13 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   const tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion(), tmpScale = new THREE.Vector3();
   const pL = new THREE.Vector3(), pR = new THREE.Vector3(), axisX = new THREE.Vector3(1, 0, 0), dirLR = new THREE.Vector3();
   const updateRigs = () => {
-    for (const { bone, group, offset, hands } of rigs) {
-      if (hands) { // barre entre les deux mains
+    for (const { bone, group, offset, hands, hang } of rigs) {
+      if (hands) { // barre (ou kettlebell) entre les deux mains
         hands[0].getWorldPosition(pL); hands[1].getWorldPosition(pR);
         group.position.copy(pL).add(pR).multiplyScalar(0.5);
-        group.quaternion.setFromUnitVectors(axisX, dirLR.subVectors(pR, pL).normalize());
+        dirLR.subVectors(pR, pL);
+        if (hang) dirLR.y = 0; // kettlebell : reste à la verticale (la boule pend sous la poignée)
+        if (dirLR.lengthSq() > 1e-6) group.quaternion.setFromUnitVectors(axisX, dirLR.normalize()); // mains confondues : on garde l'orientation précédente
         continue;
       }
       bone.matrixWorld.decompose(tmpPos, tmpQuat, tmpScale);
@@ -244,24 +256,93 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   const anim = animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
-  if (anim) { act = mixer.clipAction(anim); act.play(); if (reduce) { act.paused = true; act.time = anim.duration * 0.5; } }
+  if (anim) { act = mixer.clipAction(anim); act.play(); }
+
+  // Cadrage sur TOUT le mouvement (pas seulement la pose de repos) : on échantillonne le clip, on relève la position
+  // monde des os (+ les bouts de la barre), et on garde pour chaque point sa distance à l'axe vertical du corps
+  // (ρ) et sa hauteur (y) — l'orbite tourne autour de cet axe, donc seuls ρ et y comptent.
+  const MARGIN = 0.15; // tête, mains, pieds : l'os est au centre du membre
+  const pts = []; // [ρ, y, marge]
+  const wp = new THREE.Vector3(), sL = new THREE.Vector3(), sR = new THREE.Vector3(), sD = new THREE.Vector3();
+  const barL = equipment === 'barre' ? findBone(/LeftHand$/) : null, barR = barL ? findBone(/RightHand$/) : null;
+  const addPt = (v, m) => pts.push([Math.hypot(v.x, v.z), v.y, m]);
+  const samplePose = () => {
+    obj.updateMatrixWorld(true);
+    obj.traverse((o) => { if (o.isBone) addPt(o.getWorldPosition(wp), MARGIN); });
+    if (barL && barR) { // disques à ~0,65 m de chaque côté du milieu des mains (rayon 0,16 m)
+      barL.getWorldPosition(sL); barR.getWorldPosition(sR);
+      const mid = wp.copy(sL).add(sR).multiplyScalar(0.5); sD.subVectors(sR, sL).normalize().multiplyScalar(0.65);
+      addPt(sL.copy(mid).add(sD), 0.2); addPt(sR.copy(mid).sub(sD), 0.2);
+    }
+  };
+  if (anim) { const N = 24; for (let i = 0; i < N; i++) { mixer.setTime(anim.duration * i / N); samplePose(); } mixer.setTime(0); }
+  else samplePose();
+  if (reduce && act) { act.paused = true; act.time = anim.duration * 0.5; }
+  let yMin = 0, yMax = 0;
+  for (const [, y, m] of pts) { yMin = Math.min(yMin, y - m); yMax = Math.max(yMax, y + m); }
+  if (!pts.length) { yMin = 0; yMax = size.y || 1.7; }
+  const yMid = (yMin + yMax) / 2;
+
+  // Direction de vue 3/4 inchangée (rapport 1,05 : 0,62 : 1,5) ; seule la distance s'adapte au mouvement et au format.
+  const viewDir = new THREE.Vector3(1.05, 0.62, 1.5).normalize();
+  const elev = Math.asin(viewDir.y), cE = Math.cos(elev), sE = Math.sin(elev);
+  // Distance minimale pour que chaque point tienne dans le champ vertical ET horizontal, quel que soit l'angle
+  // d'orbite (16 azimuts testés). Pour un point p (relatif à la cible) : profondeur = D − p·dir, donc
+  // D ≥ p·dir + |p·haut| / tan(fov/2) et D ≥ p·dir + |p·droite| / tan(hfov/2).
+  const fitDistance = (aspect, list = pts, cap = true, mid = yMid) => {
+    const tV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), tH = tV * aspect;
+    let D = 0;
+    for (const [rho, y, m] of list) {
+      const r = rho + m;
+      for (const dy of [y + m - mid, y - m - mid]) {
+        for (let k = 0; k < 16; k++) {
+          const a = (k / 16) * Math.PI * 2, f = r * Math.cos(a), s = r * Math.sin(a); // f : vers la caméra, s : latéral
+          const depth = f * cE + dy * sE, up = -f * sE + dy * cE;
+          D = Math.max(D, depth + Math.abs(up) / tV, depth + Math.abs(s) / tH);
+        }
+      }
+    }
+    // Plafond : 1,3 × le cadrage d'un corps debout (1,75 m). Sans ça, une planche (burpee, pompes) vue sous tous
+    // les angles d'orbite éloigne trop la caméra et le mannequin devient minuscule ; on accepte qu'un bout dépasse.
+    if (cap) D = Math.min(D, 1.3 * fitDistance(aspect, [[0.3, 0, 0.15], [0.3, 1.75, 0.15]], false, 0.875));
+    return (D || 3.2) * (showcase && cap ? 1.06 : 1); // vitrine : léger recul, comme avant
+  };
 
   // Caméra 3/4, orbite au doigt (pas de translation), légère rotation automatique tant qu'on ne touche pas.
-  const h = size.y || 1.7;
-  camera.position.set(h * 1.05, h * 0.62, h * 1.5);
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, h * 0.48, 0);
+  controls.target.set(0, yMid, 0);
+  let fitD = fitDistance(1);
+  const fogFor = (d) => { if (scene.fog) { scene.fog.near = d * 1.0; scene.fog.far = d * 2.35; } };
+  fogFor(fitD);
+  camera.position.copy(viewDir).multiplyScalar(fitD).add(controls.target);
   controls.enableDamping = true; controls.enablePan = false;
-  controls.minDistance = h * 0.9; controls.maxDistance = h * 3;
+  controls.minDistance = fitD * 0.5; controls.maxDistance = fitD * 1.65;
   controls.minPolarAngle = 0.25; controls.maxPolarAngle = Math.PI / 2 - 0.05; // jamais sous le sol
   controls.autoRotate = !reduce; controls.autoRotateSpeed = 1.2;
   controls.addEventListener('start', () => { controls.autoRotate = false; box.classList.add('touched'); });
-  if (showcase) { controls.enabled = false; controls.autoRotateSpeed = 0.8; camera.position.multiplyScalar(1.06); }
+  if (showcase) { controls.enabled = false; controls.autoRotateSpeed = 0.8; }
   controls.update();
 
   box.prepend(canvas);
   box.classList.add('ready');
-  const fit = () => { const w = box.clientWidth, hh = box.clientHeight; renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix(); };
+  // Au redimensionnement : nouvel aspect → nouvelle distance de cadrage. On garde l'angle d'orbite courant et le
+  // zoom éventuel de l'utilisateur (rapport distance actuelle / distance de cadrage).
+  const camOff = new THREE.Vector3();
+  const fit = () => {
+    const w = box.clientWidth, hh = box.clientHeight; renderer.setSize(w, hh, false); camera.aspect = w / hh; camera.updateProjectionMatrix();
+    if (!w || !hh) return;
+    camOff.subVectors(camera.position, controls.target);
+    const zoom = THREE.MathUtils.clamp(camOff.length() / fitD, 0.5, 1.65);
+    fitD = fitDistance(camera.aspect);
+    fogFor(fitD);
+    if (showcase) { // vitrine : le sol (y = 0) tombe près du bas de la carte, l'avatar a les pieds posés
+      const halfH = fitD * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * cE;
+      controls.target.y = Math.max(yMid, halfH * 0.78);
+    }
+    controls.minDistance = fitD * 0.5; controls.maxDistance = fitD * 1.65;
+    camera.position.copy(controls.target).add(camOff.setLength(fitD * zoom));
+    controls.update();
+  };
   const ro = new ResizeObserver(fit); ro.observe(box); fit();
 
   // Boucle de rendu : arrêtée quand la fiche n'est pas visible (économie de batterie).
@@ -299,7 +380,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     decor.forEach((group) => { scene.remove(group); group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); });
     grid.geometry.dispose(); grid.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
-    renderer.dispose(); canvas.remove();
+    renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); // rend le contexte WebGL tout de suite (Safari en limite le nombre)
   };
   return { dispose, setOutfit, setMode };
 }

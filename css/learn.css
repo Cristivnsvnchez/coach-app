@@ -85,23 +85,20 @@
 .v3d-swatch + .v3d-swatch { margin-left: -14px; }
 .v3d-outfit-label { flex: 1; font-weight: 600; }
 .v3d-outfit svg.ic { width: 18px; height: 18px; color: var(--p-deep); }
-/* Vignettes « avatar » (exercices animés) : fond studio sombre comme la visionneuse, sinon l'avatar blanc disparaît. */
-.lrn-pic-box:has(.lrn-3d) { background: radial-gradient(120% 90% at 50% 30%, #2b3754, #12151c 75%); overflow: hidden; }
+/* Vignettes « avatar » (exercices animés) : fond de la palette (comme la carte du jour et l'aperçu du Profil) avec un sol
+   suggéré, sinon l'avatar blanc disparaît sur la case claire. */
+.lrn-pic-box:has(.lrn-3d) { background: radial-gradient(90% 55% at 50% 100%, rgba(255, 255, 255, .22), transparent 70%), linear-gradient(160deg, var(--p-mid), var(--p-deep) 70%); overflow: hidden; }
 .lrn-pic-box .lrn-3d img { inset: -4%; width: 108%; height: 108%; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }
 .lrn-pic-box .lrn-3d::after { display: none; }
 
-/* Carte « Geste du jour » : décor illustré (Miami / San Francisco) + avatar 3D animé à droite (visionneuse en vitrine). */
-.lrn-day { min-height: 214px; background: #1a1d33; isolation: isolate; }
-.lrn-day-bg { position: absolute; inset: 0; z-index: -2; }
-.lrn-day-bg svg { width: 100%; height: 100%; display: block; }
-.lrn-day::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(90deg, rgba(10, 12, 30, .72) 0%, rgba(10, 12, 30, .35) 48%, rgba(10, 12, 30, 0) 70%); }
-.lrn-day h2, .lrn-day p { max-width: 55%; text-shadow: 0 1px 8px rgba(0, 0, 0, .35); }
-.lrn-day-3d { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; z-index: 0; pointer-events: none; display: grid; place-items: center; }
+/* Carte « Geste du jour » : fond de la palette (forme floue granuleuse, comme l'aperçu du Profil) + avatar 3D animé à droite,
+   posé sur un sol suggéré (lueur douce en bas) avec son ombre de contact. */
+.lrn-day { min-height: 214px; }
+.lrn-day::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 38%; z-index: 0; pointer-events: none;
+  background: radial-gradient(60% 70% at 74% 100%, rgba(255, 255, 255, .16), transparent 70%); }
+.lrn-day h2, .lrn-day p { max-width: 55%; }
+.tm-hero.lrn-day > .lrn-day-3d { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; z-index: 1; pointer-events: none; display: grid; place-items: center; }
 .lrn-day-3d canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
 .lrn-day-3d .lrn-3d { width: 150px; height: 150px; }
 .lrn-day-3d.ready .lrn-3d { display: none; } /* la figure sert de repli tant que la 3D n'est pas prête */
-.lrn-day-place { position: absolute; right: .8rem; top: .8rem; z-index: 1; display: inline-flex; align-items: center; gap: .25rem; font-size: .72rem; font-weight: 600;
-  padding: .3rem .6rem; border-radius: 999px; background: rgba(10, 12, 30, .35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; }
-.lrn-day-place .ic { width: .85rem; height: .85rem; }
-.lrn-day-btn { position: relative; z-index: 1; }
+.lrn-day-btn { position: relative; z-index: 2; }

@@ -18,7 +18,6 @@ const empty = () => ({
   _v: SCHEMA,
   profile: { goal: 'perte', rate: 0.5, activity: 'leger' },
   settings: { look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7, outfit: 0, shopDay: 6 },
-  usage: null,    // { month: 'YYYY-MM', usd, calls } : dépense IA estimée du mois
   foods: {},      // id -> { name, per100: {kcal,p,c,f,fib}, source, serving }
   favorites: [],  // ids d'aliments
   logs: {},       // 'YYYY-MM-DD' -> { meals: [entry], water: ml }
@@ -46,7 +45,8 @@ export function load() {
     raw = localStorage.getItem(KEY);
     state = sanitize(raw ? JSON.parse(raw) : {}); // aussi au premier lancement : crée les routines par défaut
     // Ancienne clé API / historique du Coach IA (retiré) : on réécrit tout de suite pour ne pas les laisser sur le téléphone.
-    if (raw && /"apiKey"|"chat"/.test(raw)) localStorage.setItem(KEY, JSON.stringify(state));
+    // Essai séparé : un échec d'écriture (quota…) ne doit pas faire passer les données pour illisibles.
+    if (raw && /"apiKey"|"chat"|"usage"/.test(raw)) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
   } catch {
     // Données illisibles : on garde une copie brute avant de repartir de zéro.
     try { if (raw) localStorage.setItem(KEY + '.corrupt', raw); } catch {}
@@ -83,7 +83,7 @@ function sanitize(data) {
   for (const k of ['weights', 'workouts', 'favorites', 'habits', 'routines', 'customExercises', 'milestones']) if (!Array.isArray(out[k])) out[k] = base[k];
   for (const k of ['profile', 'settings', 'foods', 'logs', 'habitLog']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   out.settings = { ...base.settings, ...out.settings };
-  delete out.chat; delete out.settings.apiKey; delete out.settings.model; delete out.settings.budgetEur; // Coach IA retiré : on n'en garde aucune trace
+  delete out.chat; delete out.usage; delete out.settings.apiKey; delete out.settings.model; delete out.settings.budgetEur; // Coach IA retiré : on n'en garde aucune trace
   for (const k of ['foodGroups', 'mealPlan']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   if (!Array.isArray(out.shoppingList)) out.shoppingList = base.shoppingList;
   if (!Array.isArray(out.shoppingDone)) out.shoppingDone = base.shoppingDone;

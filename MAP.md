@@ -36,10 +36,6 @@ TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 ## models/anim/ (25 fichiers .glb, 4 Mo)
 Une animation Mixamo par exercice (squelette seul, commun homme/femme), chargée par js/viewer3d.js.
 
-## js/backdrops.js
-Décors illustrés (SVG) de la carte « Geste du jour » : Miami Beach, San Francisco.
-exports: BACKDROPS
-
 ## js/app.js (120 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go
