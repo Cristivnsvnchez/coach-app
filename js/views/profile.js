@@ -120,9 +120,8 @@ export function render(root, go) {
       const data = JSON.parse(await f.text());
       if (!data.profile || !data.logs) throw new Error(t('Fichier non reconnu'));
       if (!confirm(t('Remplacer les données actuelles par cette sauvegarde ?'))) return;
-      // On garde les secrets de cet appareil (absents des sauvegardes).
-      const keep = state.strava ? { clientSecret: state.strava.clientSecret, token: state.strava.token, refresh: state.strava.refresh, expiresAt: state.strava.expiresAt } : {};
-      replace({ ...data, settings: { ...data.settings, apiKey: state.settings.apiKey }, strava: data.strava ? { ...data.strava, ...keep } : state.strava });
+      // On garde la clé IA de cet appareil (absente des sauvegardes).
+      replace({ ...data, settings: { ...data.settings, apiKey: state.settings.apiKey } });
       toast(t('Sauvegarde restaurée')); render(root, go);
     } catch (err) { toast(t('Import impossible : {e}', { e: err.message })); }
   };

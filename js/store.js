@@ -6,10 +6,12 @@ import { DEFAULT_PROGRAM } from './exercises.js';
 
 const KEY = 'coach.v1';
 // Version du schéma des données : incrémenter et ajouter une étape dans MIGRATIONS à chaque changement de forme.
-export const SCHEMA = 2;
+export const SCHEMA = 3;
 const MIGRATIONS = {
   // 1 → 2 : TrackMe (palette, matière, cycle, repères ANSES, Strava) ; les champs manquants viennent de empty().
   2: (d) => d,
+  // 2 → 3 : Strava retiré.
+  3: (d) => { delete d.strava; return d; },
 };
 
 const empty = () => ({
@@ -31,7 +33,6 @@ const empty = () => ({
   milestones: [], // étapes de poids estimées : [{ id, kg, date?, label?, done?, doneOn? }]
   cycle: { enabled: false, periods: [], logs: {}, cycleLen: 28, periodLen: 5, hormonal: false }, // suivi du cycle (utilisatrices)
   foodGroups: {}, // 'YYYY-MM-DD' -> { fruitVeg: n, fish: n } (repères ANSES)
-  strava: null,   // { clientId, clientSecret, token, refresh, expiresAt, athlete, activities: [], lastSync, prefs }
   plan: null,     // programme daté : { id, name, goal, start, end, weeks, weekdays, deloadEvery, phases, routineIds }
 });
 
@@ -62,8 +63,7 @@ export function flush() {
   pending = false;
   const json = JSON.stringify(state);
   try { localStorage.setItem(KEY, json); return; } catch {}
-  // Stockage plein : on libère d'abord ce qui se régénère (cache Strava, ancien historique du coach), puis on réessaie.
-  if (state.strava?.activities?.length > 60) state.strava.activities = state.strava.activities.slice(0, 60);
+  // Stockage plein : on libère d'abord ce qui se régénère (ancien historique du coach), puis on réessaie.
   if (state.chat.length > 40) state.chat = state.chat.slice(-40);
   try { localStorage.removeItem(KEY + '.corrupt'); localStorage.setItem(KEY, JSON.stringify(state)); }
   catch { alert('Stockage plein : exporte tes données depuis Profil.'); }
@@ -83,8 +83,7 @@ function sanitize(data) {
   for (const k of ['foodGroups']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   const c = out.cycle && typeof out.cycle === 'object' ? out.cycle : {};
   out.cycle = { ...base.cycle, ...c, periods: Array.isArray(c.periods) ? c.periods : [], logs: c.logs && typeof c.logs === 'object' ? c.logs : {} };
-  if (out.strava && (typeof out.strava !== 'object' || Array.isArray(out.strava))) out.strava = null;
-  if (out.strava && !Array.isArray(out.strava.activities)) out.strava.activities = [];
+  delete out.strava; // intégration Strava retirée (v17) : on efface les anciens jetons
   if (out.plan && (!Array.isArray(out.plan.routineIds) || !Array.isArray(out.plan.weekdays))) out.plan = null;
   for (const d in out.logs) {
     const l = out.logs[d];

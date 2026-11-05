@@ -8,7 +8,6 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import { register } from '../i18n.js';
 import { shape } from '../theme.js';
-import { kcalBurnedOn } from '../strava.js';
 import { phaseOn } from '../cycle.js';
 import { GOALS, addPortion, getPortions, weekTotal, avg7 } from '../foodgroups.js';
 import { openAddFood, MEALS } from './addfood.js';
@@ -69,13 +68,10 @@ export function render(root, go) {
   const keep = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
   state.foodGroups ||= {};
 
-  // Héros : budget = objectif (+ 50 % des kcal brûlées si l'option Strava est activée).
-  const burned = Math.round(kcalBurnedOn(date) || 0);
-  const useBurn = !!state.strava?.prefs?.kcal && burned > 0;
-  const budget = targets ? targets.kcal + (useBurn ? Math.round(burned * 0.5) : 0) : 0;
+  // Héros : budget du jour = objectif calorique.
+  const budget = targets ? targets.kcal : 0;
   const diff = budget - tot.kcal;
   const eatPct = budget ? Math.min(100, Math.round((tot.kcal / budget) * 100)) : 0;
-  const burnPct = Math.min(100, Math.round((burned / Math.max(budget, 1)) * 100));
   const dayNav = `<div class="td-daynav"><button class="td-arrow" data-a="prev" aria-label="${t('Jour précédent')}">${icon('chevronLeft')}</button>
       <span>${esc(isToday ? t("Aujourd'hui") : fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' }))}</span>
       <button class="td-arrow" data-a="next" aria-label="${t('Jour suivant')}" ${isToday ? 'disabled' : ''}>${icon('chevronRight')}</button></div>`;
@@ -87,9 +83,7 @@ export function render(root, go) {
         <p class="td-sub">${t('Mangé')} ${fmt(tot.kcal)} · ${t('objectif')} ${fmt(budget)} kcal</p>
         <div class="td-big num">${fmt(Math.abs(diff))}</div>
         <p class="td-cap">${diff < 0 ? t('kcal en trop') : t('kcal restantes')}</p>
-        <div class="td-bars"><div class="td-bar"><span>${t('Mangé')} <b class="num">${fmt(tot.kcal)}</b></span><i><u style="width:${eatPct}%"></u></i></div>
-          <div class="td-bar"><span>${t('Brûlé')} <b class="num">${fmt(burned)}</b></span><i><u class="warm" style="width:${burnPct}%"></u></i></div></div>
-        ${useBurn ? `<p class="td-note">${t('dont 50 % des kcal brûlées ajoutées au budget')}</p>` : ''}
+        <div class="td-bars"><div class="td-bar"><span>${t('Mangé')} <b class="num">${fmt(tot.kcal)}</b></span><i><u style="width:${eatPct}%"></u></i></div></div>
         <p class="td-note">${energy.method === 'adaptatif' ? t('dépense adaptative') : t('dépense estimée')} ${fmt(targets.tdee)}${targets.floored ? ' · ' + t('plancher de sécurité appliqué') : ''}</p>
       </section>
       <div class="td-macros">${macroTile(t('Protéines'), tot.p, targets.protein)}${macroTile(t('Glucides'), tot.c, targets.carbs)}${macroTile(t('Lipides'), tot.f, targets.fat)}</div>`;
@@ -131,8 +125,7 @@ export function render(root, go) {
 
   root.innerHTML = `
     <header class="td-head"><h1 class="td-title">${esc(title)}</h1>
-      <div class="td-btns"><button class="td-round" data-a="coach" aria-label="${t('Coach')}">${icon('sparkles')}</button>
-      <button class="td-round" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
+      <div class="td-btns"><button class="td-round" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
     <div class="split td-split"><div>${summary}${cyclePill}${quick}${anses}</div><div>${meals}</div></div>`;
 
   root.onclick = (e) => {

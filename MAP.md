@@ -1,16 +1,10 @@
 # MAP — carte du code TrackMe (générée)
 
-## index.html (32 l.)
+## index.html (31 l.)
 <!doctype html>
 
-## sw.js (38 l.)
+## sw.js (36 l.)
 Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
-
-## strava-callback.html (62 l.)
-<!doctype html>
-
-## css/activities.css (62 l.)
-TrackMe — vues activities et connect (voir DESIGN.md, css/trackme.css). Orange Strava #FC4C02 : marque uniquement.
 
 ## css/app.css (486 l.)
 Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
@@ -21,13 +15,13 @@ TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 ## css/learn.css (41 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 
-## css/onboarding.css (119 l.)
+## css/onboarding.css (138 l.)
 TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 
 ## css/today.css (72 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
-## css/trackme.css (269 l.)
+## css/trackme.css (292 l.)
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
 ## js/ai.js (230 l.)
@@ -70,7 +64,7 @@ exports: register,LANGS getLang,locale setLang,t
 Icônes SVG au trait, dessinées pour l'app (les SF Symbols ne sont pas licenciés pour le web).
 exports: icon
 
-## js/install.js (76 l.)
+## js/install.js (77 l.)
 Installation et sécurité des données : aide « Sur l'écran d'accueil » (Safari iOS n'a pas de bouton d'installation),
 exports: isStandalone,exportBackup startupNudges
 
@@ -79,7 +73,7 @@ Objectifs du jour calculés à partir du profil, du dernier poids et de la dépe
 exports: current,observedKgPerWeek weeklyVolume,habitStatus habitRates
 
 ## js/net.js (35 l.)
-Réseau résilient pour toutes les API externes (Claude, Open Food Facts, Strava) :
+Réseau résilient pour toutes les API externes (Claude, Open Food Facts) :
 exports: retryDelay,shouldRetry fetchRetry
 
 ## js/planner.js (138 l.)
@@ -90,21 +84,17 @@ exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildP
 Calculs nutrition / entraînement. Fonctions pures, sans DOM (testées sous Node).
 exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeInitial emaTrend,slope trendSlope,adaptiveTdee bmi,targets applyCustom,idealRange etaDate,milestones reachedOn,milestoneStatus projection,epley1RM nextSet,MUSCLES REFS
 
-## js/store.js (143 l.)
+## js/store.js (142 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog uid,sum intakesByDay,latestWeight recentFoods
-
-## js/strava.js (242 l.)
-Strava : OAuth personnel (client id/secret saisis par l'utilisateur), synchro des activités (API v3, CORS OK)
-exports: REDIRECT_URI,DEFAULT_PREFS kindOf,filterOf applyFilter,estimateKcal normalize,hrFactor trainingLoad,groupByDay weekSummary,compareLoad isHeavy,hrZone afterTs,mergeActivities authorizeUrl,isConnected prefs,activitiesOn kcalBurnedOn,shouldLighten saveCredentials,exchangeCode accessToken,disconnect sync
 
 ## js/technique.js (470 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
 exports: LEVELS,LEVEL_LABEL LANGS_T,pictogram getTechnique,allTechniques missingTechniques
 
-## js/theme.js (51 l.)
+## js/theme.js (80 l.)
 Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
-exports: PALETTES,VARIANTS SURFACES,palette variant,colors applyTheme,shape wordmark
+exports: PALETTES,VARIANTS SURFACES,palette variant,colors applyTheme,shape wordmark,SCHEMES applyScheme
 
 ## js/ui.js (164 l.)
 Petits utilitaires DOM, composants iOS et graphiques SVG.
@@ -120,10 +110,6 @@ Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilis�
 ## js/i18n/nl-base.js (234 l.)
 NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 
-## js/views/activities.js (151 l.)
-Vue « activities » : semaine, filtres, liste des activités Strava et détail avec l'effet dans TrackMe.
-exports: render
-
 ## js/views/addfood.js (194 l.)
 Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
 exports: MEALS,openAddFood
@@ -131,10 +117,6 @@ exports: MEALS,openAddFood
 ## js/views/coach.js (142 l.)
 Onglet Coach IA : chat sourcé + actions (recette, programme, bilan hebdo).
 exports: ACTIONS,render
-
-## js/views/connect.js (112 l.)
-Vue « connect » : connexion à Strava (OAuth personnel, flux « coller le code ») et réglages de l'intégration.
-exports: render
 
 ## js/views/cycle.js (297 l.)
 Vue « cycle » : héros (phase du jour, prochaines ovulation / règles), calendrier mensuel filtrable, statistiques,
@@ -152,15 +134,15 @@ exports: toggleHabits,habitsCells handleHabitClick
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise render,openTechnique
 
-## js/views/onboarding.js (195 l.)
+## js/views/onboarding.js (219 l.)
 Onboarding : accueil, puis une question par écran, surtout par sélection (cartes, pastilles, stepper).
 exports: needsOnboarding,openOnboarding
 
-## js/views/palette.js (55 l.)
+## js/views/palette.js (60 l.)
 Choix de la palette (6 couleurs) et de la forme (3 variantes), avec aperçu en direct.
 exports: paletteSection,handlePaletteClick
 
-## js/views/profile.js (154 l.)
+## js/views/profile.js (155 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
@@ -172,7 +154,7 @@ exports: openWizard,planCard plannedDays,exportCalendar
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
 exports: active,persist startWorkout,renderSession
 
-## js/views/today.js (187 l.)
+## js/views/today.js (180 l.)
 Onglet Journal : en-tête (Coach, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 

@@ -28,10 +28,10 @@ const daysSince = (iso) => (iso ? (Date.now() - new Date(iso).getTime()) / 864e5
 const mark = (k) => { (state.settings.nudges ||= {})[k] = today(); save(); };
 const seen = (k, days) => daysSince(state.settings.nudges?.[k]) < days;
 
-// Sauvegarde JSON sans secrets (clé IA, jetons Strava). iPhone : feuille de partage → Fichiers / iCloud Drive.
+// Sauvegarde JSON sans secret (clé IA retirée). iPhone : feuille de partage → Fichiers / iCloud Drive.
 export async function exportBackup() {
-  const { clientSecret, token, refresh, ...strava } = state.strava || {};
-  const data = { ...state, settings: { ...state.settings, apiKey: '' }, strava: state.strava ? strava : null };
+  const { strava, ...rest } = state;
+  const data = { ...rest, settings: { ...state.settings, apiKey: '' } };
   const name = `trackme-backup-${today()}.json`;
   const file = new File([JSON.stringify(data, null, 1)], name, { type: 'application/json' });
   const done = () => { state.lastBackup = today(); save(); banner(t('Sauvegarde enregistrée'), { ms: 1800 }); };

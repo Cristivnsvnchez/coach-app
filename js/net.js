@@ -1,4 +1,4 @@
-// Réseau résilient pour toutes les API externes (Claude, Open Food Facts, Strava) :
+// Réseau résilient pour toutes les API externes (Claude, Open Food Facts) :
 // délai maximum, nouvelles tentatives espacées (backoff exponentiel + aléa) sur surcharge ou coupure,
 // respect de l'en-tête Retry-After. Pas de nouvelle tentative sur les erreurs du client (400, 401, 403, 404).
 

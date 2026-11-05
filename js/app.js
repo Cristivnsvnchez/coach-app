@@ -12,24 +12,22 @@ import * as training from './views/training.js';
 import * as coach from './views/coach.js';
 import * as profile from './views/profile.js';
 import * as cycle from './views/cycle.js';
-import * as activities from './views/activities.js';
-import * as connect from './views/connect.js';
 import * as learn from './views/learn.js';
 import { needsOnboarding, openOnboarding } from './views/onboarding.js';
 import { openAddFood } from './views/addfood.js';
 import { startupNudges } from './install.js';
 
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
-const VIEWS = { today, weight, training, coach, profile, cycle, activities, connect, learn };
-const TABS = [['today', 'Journal', 'calendar'], ['weight', 'Poids', 'weight'], ['add'], ['training', 'Sport', 'training'], ['activities', 'Activités', 'bolt']];
-const TAB_OF = { cycle: 'today', coach: 'today', profile: 'today', learn: 'training', connect: 'activities' };
+const VIEWS = { today, weight, training, coach, profile, cycle, learn };
+const TABS = [['today', 'Journal', 'calendar'], ['weight', 'Poids', 'weight'], ['add'], ['training', 'Sport', 'training'], ['coach', 'Coach', 'sparkles']];
+const TAB_OF = { cycle: 'today', profile: 'today', learn: 'training' };
 const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
 let tab = 'today';
 
 // Mobile : capsule 4 onglets + « + » central. Ordinateur (CSS ≥ 1024 px) : la même barre devient une barre latérale
 // avec le logotype, le libellé du « + » et les écrans secondaires (éléments .side-only, masqués sur mobile).
-const SIDE = () => [['coach', 'Coach', 'sparkles'], ['learn', 'Apprendre', 'flask'],
+const SIDE = () => [['learn', 'Apprendre', 'flask'],
   ...(state.profile?.sex === 'F' && state.cycle?.enabled ? [['cycle', 'Cycle', 'drop']] : [])];
 function drawTabbar() {
   const active = tab;

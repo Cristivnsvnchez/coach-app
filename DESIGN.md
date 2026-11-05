@@ -20,7 +20,7 @@ flous avec grain (SVG feGaussianBlur + feTurbulence).
 
 La couleur principale de chaque palette garde un contraste ≥ 4,5:1 avec le blanc. Elle remplace `--ink` pour
 les boutons principaux et `--brand` pour la progression. Restent fixes pour garder leur sens : cycle (rose),
-Strava (orange de marque), alerte et erreur.
+alerte et erreur.
 
 ## Couleurs (tokens)
 | Rôle | Clair | Sombre | Usage |
@@ -36,7 +36,7 @@ Strava (orange de marque), alerte et erreur.
 Couleurs de données (jamais sur un bouton d'action) :
 - nutrition `--d-food` #1F8A4C · hydratation `--d-water` #1C8FA0 · sommeil `--d-sleep` #5F7F4A
 - cycle `--d-cycle` #C2255C (règles), #7A4BD1 (fertile), #B35A1F (SPM)
-- effort `--d-effort` #D9480F · marque Strava #FC4C02 (logo et lien Strava uniquement)
+- effort `--d-effort` #D9480F
 - alerte `--warn` #A15C00 · erreur `--danger` #C92A2A
 
 Dégradés : uniquement sur la carte héros d'un domaine (nutrition vert→turquoise, cycle rose→violet) ; texte blanc ≥ 4,5:1.

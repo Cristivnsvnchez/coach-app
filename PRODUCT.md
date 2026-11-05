@@ -3,7 +3,7 @@
 ## Ce que c'est
 TrackMe est une app personnelle iPhone (PWA installée depuis Safari) qui réunit coach sportif et diététicien :
 calories et macros, poids et tendance, séances de musculation, apprentissage des mouvements, suivi du cycle
-(utilisatrices), activités Strava / Garmin, coach IA sourcé. Les données restent sur le téléphone.
+(utilisatrices), coach IA sourcé. Les données restent sur le téléphone.
 
 ## Pour qui
 Une personne qui s'entraîne seule, veut des chiffres justes et des conseils fondés sur la science, sans bruit.
@@ -23,6 +23,6 @@ Operate : l'interface sert la tâche. Lisibilité, constance et gestes natifs iO
 - Sécurité : planchers caloriques, garde-fous santé (mineurs, grossesse, TCA, cycle), le cycle n'est pas une contraception.
 
 ## Intégrations
-- Strava : OAuth personnel (app API créée par l'utilisateur), activités et calories dépensées.
-- Montres (Garmin, Coros, Suunto…) : pas d'intégration dédiée ; leurs activités arrivent via leur synchronisation vers Strava.
-- Apple Santé : plus tard (raccourci iPhone), hors périmètre actuel.
+- Strava : retiré (v17). L'ouverture à d'autres comptes dépend d'une validation Strava incertaine (quota d'un athlète, règles IA).
+- Montres et Apple Santé : plus tard, via un raccourci iPhone (export des séances), sans serveur.
+- Nourriture : base embarquée de 215 aliments (hors ligne) + Open Food Facts + estimation IA.
