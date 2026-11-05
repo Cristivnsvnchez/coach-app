@@ -36,6 +36,14 @@ TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 ## models/anim/ (25 fichiers .glb, 4 Mo)
 Une animation Mixamo par exercice (squelette seul, commun homme/femme), chargée par js/viewer3d.js.
 
+## js/motion-fix.js
+Corrections des clips Mixamo (dérive, raccord de boucle) + box du box jump, partagées visionneuse / banc d'essai.
+exports: loopGap,prepareClip landingBox
+
+## tools/motion-audit.mjs
+Banc d'essai du réalisme des mouvements (Node) : sol, glissade, dérive, boucle, prise des accessoires.
+exports: auditOne,auditAll
+
 ## js/app.js (120 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go

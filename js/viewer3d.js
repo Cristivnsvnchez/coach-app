@@ -8,12 +8,13 @@ const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
 // sans interaction (la carte reste cliquable), cadrage un peu plus serré.
-export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equipment, mistake, name }, outfit = null, { showcase = false } = {}) {
-  let THREE, GLTFLoader, OrbitControls;
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equipment, mistake, name, prop }, outfit = null, { showcase = false } = {}) {
+  let THREE, GLTFLoader, OrbitControls, fix;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
     ({ OrbitControls } = await import('../vendor/three/OrbitControls.js'));
+    fix = await import('./motion-fix.js'); // corrections partagées avec le banc d'essai (tests/motion.test.mjs)
   } catch { return noop3D; }
 
   const canvas = document.createElement('canvas');
@@ -189,9 +190,10 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     stack(g, mMetal.clone(), [0.42, 0.9, -0.2], 6);
     addDecor(g);
   }
-  if (equipment === 'barre') {
-    // Barre tenue à deux mains : posée au milieu des mains, dans l'axe main gauche → main droite (suit le vrai mouvement :
-    // squat avant, overhead, arraché, épaulé-jeté, curl…). Repli sur le buste si les os des mains sont introuvables.
+  // Accessoires : seulement ceux que le clip tient vraiment (`prop` de model3D, vérifié par tests/motion.test.mjs).
+  if (prop === 'barHands' || prop === 'barBack') {
+    // Barre tenue à deux mains : au milieu des mains, dans l'axe main gauche → main droite (squat avant, overhead ; au
+    // back squat les mains la tiennent sur les épaules, derrière la nuque). Repli sur le buste sans os des mains.
     const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
     const L = findBone(/LeftHand$/), R = findBone(/RightHand$/);
     const parts = [
@@ -199,12 +201,12 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
       { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [-0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
       { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
     ];
-    if (L && R && name !== 'Squat') { // Squat (back squat) : barre sur le dos, pas dans les mains tendues du clip
+    if (L && R) {
       const group = new THREE.Group();
       for (const { geo, pos, rot } of parts) { const mesh = new THREE.Mesh(geo, mat); if (pos) mesh.position.set(...pos); if (rot) mesh.rotation.set(...rot); group.add(mesh); }
       scene.add(group); rigs.push({ hands: [L, R], group });
     } else attach(findBone(/Spine2$/) || findBone(/Spine1$/), mat, parts, [0, 0.04, 0.09]);
-  } else if (name === 'Kettlebell swing') {
+  } else if (prop === 'kettlebell') {
     // Un kettlebell tenu à deux mains (pas deux haltères) : poignée entre les mains, boule dessous.
     const mat = new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.45, metalness: 0.4 });
     const L = findBone(/LeftHand$/), R = findBone(/RightHand$/);
@@ -214,7 +216,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
       const bell = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 14), mat); bell.position.set(0, -0.15, 0);
       group.add(handle, bell); scene.add(group); rigs.push({ hands: [L, R], group, hang: true });
     }
-  } else if (equipment === 'haltères') {
+  } else if (prop === 'dumbbells') {
     const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
     for (const side of ['Left', 'Right']) {
       attach(findBone(new RegExp(side + 'Hand$')), mat, [
@@ -253,7 +255,8 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   };
 
   const mixer = new THREE.AnimationMixer(obj);
-  const anim = animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0];
+  // Clip corrigé (dérive retirée, retour vers la pose de départ si la répétition ne boucle pas) : voir motion-fix.js.
+  const anim = fix.prepareClip(animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0]);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
   if (anim) { act = mixer.clipAction(anim); act.play(); }
@@ -264,19 +267,51 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   const MARGIN = 0.15; // tête, mains, pieds : l'os est au centre du membre
   const pts = []; // [ρ, y, marge]
   const wp = new THREE.Vector3(), sL = new THREE.Vector3(), sR = new THREE.Vector3(), sD = new THREE.Vector3();
-  const barL = equipment === 'barre' ? findBone(/LeftHand$/) : null, barR = barL ? findBone(/RightHand$/) : null;
+  const barL = prop === 'barHands' || prop === 'barBack' ? findBone(/LeftHand$/) : null, barR = barL ? findBone(/RightHand$/) : null;
+  // Sol réel : point de peau le plus bas (sommets skinnés, 1 sur 15) + pieds, à chaque instant échantillonné.
+  const skins = []; obj.traverse((o) => { if (o.isSkinnedMesh) skins.push(o); });
+  const feetB = [/LeftToe_?End/, /RightToe_?End/, /LeftFoot$/, /RightFoot$/].map(findBone).filter(Boolean);
+  const gframes = [], tv = new THREE.Vector3();
+  const skinMin = () => { let y = Infinity; for (const sk of skins) { const n = sk.geometry.attributes.position.count;
+    for (let k = 0; k < n; k += 15) { sk.getVertexPosition(k, tv); tv.applyMatrix4(sk.matrixWorld); if (tv.y < y) y = tv.y; } } return y; };
   const addPt = (v, m) => pts.push([Math.hypot(v.x, v.z), v.y, m]);
   const samplePose = () => {
     obj.updateMatrixWorld(true);
     obj.traverse((o) => { if (o.isBone) addPt(o.getWorldPosition(wp), MARGIN); });
+    gframes.push({ skin: skinMin(), feet: feetB.map((b) => b.getWorldPosition(new THREE.Vector3())) });
     if (barL && barR) { // disques à ~0,65 m de chaque côté du milieu des mains (rayon 0,16 m)
       barL.getWorldPosition(sL); barR.getWorldPosition(sR);
       const mid = wp.copy(sL).add(sR).multiplyScalar(0.5); sD.subVectors(sR, sL).normalize().multiplyScalar(0.65);
       addPt(sL.copy(mid).add(sD), 0.2); addPt(sR.copy(mid).sub(sD), 0.2);
     }
   };
-  if (anim) { const N = 24; for (let i = 0; i < N; i++) { mixer.setTime(anim.duration * i / N); samplePose(); } mixer.setTime(0); }
+  const NS = 24;
+  if (anim) { for (let i = 0; i < NS; i++) { mixer.setTime(anim.duration * i / NS); samplePose(); } mixer.setTime(0); }
   else samplePose();
+  // Pieds au sol : le point de peau le plus bas sur tout le mouvement est posé à y = 0 (ni dans le sol, ni en l'air).
+  const ground = Math.min(...gframes.map((f) => f.skin));
+  if (Number.isFinite(ground)) {
+    obj.position.y -= ground; obj.updateMatrixWorld(true);
+    for (const q of pts) q[1] -= ground;
+    for (const f of gframes) { f.skin -= ground; f.feet.forEach((q) => { q.y -= ground; }); }
+  }
+  // Box jump : une vraie box sous les pieds à l'endroit et à la hauteur où le clip atterrit.
+  if (prop === 'box') {
+    const lb = fix.landingBox(gframes);
+    if (lb) {
+      const g = new THREE.Group(), mBox = new THREE.MeshStandardMaterial({ color: 0x3a3f4b, roughness: 0.7, metalness: 0.05 });
+      g.add(boxMesh(0.6, lb.top, 0.5, mBox, [lb.x, lb.top / 2, lb.z])); addDecor(g);
+    }
+  }
+  // Course sur place : le sol défile à la vitesse des pieds posés (comme un tapis), sinon ils glisseraient.
+  const beltV = new THREE.Vector3();
+  if (anim && gframes.length > 2) {
+    let n = 0; const dtS = anim.duration / NS;
+    for (let i = 1; i < gframes.length; i++) gframes[i].feet.forEach((q, k) => { const a = gframes[i - 1].feet[k];
+      if (a.y < 0.04 && q.y < 0.04) { beltV.x += (q.x - a.x) / dtS; beltV.z += (q.z - a.z) / dtS; n++; } });
+    if (n) beltV.multiplyScalar(1 / n);
+    if (beltV.length() < 0.6) beltV.set(0, 0, 0);
+  }
   if (reduce && act) { act.paused = true; act.time = anim.duration * 0.5; }
   let yMin = 0, yMax = 0;
   for (const [, y, m] of pts) { yMin = Math.min(yMin, y - m); yMax = Math.max(yMax, y + m); }
@@ -355,6 +390,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     raf = requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05);
     mixer.update(dt); uTime.value += dt;
+    if (beltV.lengthSq()) { grid.position.addScaledVector(beltV, dt); grid.position.x %= 0.25; grid.position.z %= 0.25; } // cases de 25 cm
     if (mistakeMode) for (const { bone, off } of mistakeBones) {
       if (off.x) bone.rotation.x += off.x; if (off.y) bone.rotation.y += off.y; if (off.z) bone.rotation.z += off.z;
     }

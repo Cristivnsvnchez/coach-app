@@ -76,7 +76,7 @@ const BODY = { M: 'models/trackme-human.glb', F: 'models/trackme-human-f.glb' };
 // Clip Mixamo par exercice (nom du LIBRARY → fichier models/anim/<clip>.glb, sauf « squat » qui est dans le corps).
 // Pas encore de clip = figure 2D. Ajouter un clip : exporter l'animation depuis Blender (squelette seul), puis une ligne ici.
 const CLIPS = {
-  Squat: 'squat', 'Squat avant': 'front_squat', 'Squat pistol': 'pistol', 'Squat overhead': 'overhead_squat',
+  Squat: 'back_squat', 'Squat avant': 'front_squat', 'Squat pistol': 'pistol', 'Squat overhead': 'overhead_squat',
   Burpee: 'burpee', Arraché: 'snatch', 'Épaulé-jeté': 'clean_jerk', 'Tirage sumo': 'sumo_pull',
   'Élévations frontales': 'front_raise', 'Curl haltères': 'bicep_curl', 'Curl barre': 'bicep_curl',
   Pompes: 'push_up', Planche: 'plank', 'Gainage / crunch': 'situps',
@@ -96,6 +96,11 @@ const CLIPS = {
   "Étirement des bras": "arm_stretch",
 };
 const BUILTIN = new Set(['squat']); // clips déjà contenus dans le glb du corps
+// Accessoire montré par la visionneuse : seulement quand le clip le tient vraiment (vérifié par tests/motion.test.mjs).
+// Les clips Mixamo d'arraché, d'épaulé-jeté, de tirage sumo et le curl (clip haltères) écartent les mains de 25 à 45 cm
+// en cours de mouvement : une barre rigide y glisserait entre les doigts → mouvement montré sans barre.
+const PROPS = { 'Squat avant': 'barHands', 'Squat overhead': 'barHands', Squat: 'barBack', 'Kettlebell swing': 'kettlebell', 'Box jump': 'box' };
+const propFor = (e) => PROPS[e?.name] || (e?.equipment === 'haltères' ? 'dumbbells' : null);
 // Muscle (nom FR de exercises.js) → os du squelette Mixamo, intensité de la lueur.
 // Valeur > 0 : tout le segment ; valeur < 0 : face arrière seulement (ex. fessiers = os Hips, côté dos).
 const MUSCLE_BONES = {
@@ -145,7 +150,7 @@ function mistakeFor(e) {
 export function model3D(name, sex = 'M') {
   const clip = CLIPS[name]; if (!clip) return null;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: mistakeFor(e), name };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, clip, prop: propFor(e), muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: mistakeFor(e), name };
 }
 // Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).

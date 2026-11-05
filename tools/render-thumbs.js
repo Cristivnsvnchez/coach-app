@@ -7,6 +7,7 @@ import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 import { clone } from '../vendor/three/SkeletonUtils.js';
 import { model3D, outfitsFor } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
+import { prepareClip } from '../js/motion-fix.js';
 
 const SIZE = 640;
 const loader = new GLTFLoader();
@@ -47,12 +48,19 @@ const bones = (obj) => { const b = []; obj.traverse((o) => { if (o.isBone) b.pus
 export async function renderOne(ctx, name, sex) {
   const m = model3D(name, sex); if (!m) return null;
   const body = await load(m.url), anim = m.anim ? await load(m.anim) : null;
-  const clip = anim?.animations[0] || body.animations[0];
+  const clip = prepareClip(anim?.animations[0] || body.animations[0]); // mêmes corrections que la visionneuse
   const obj = clone(body.scene); dress(obj, outfitsFor(sex)[0]);
   ctx.scene.add(obj);
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
   const bs = bones(obj);
   const sample = (t) => { mixer.setTime(t); obj.updateMatrixWorld(true); return bs.map((b) => b.getWorldPosition(new THREE.Vector3())); };
+  // Sol comme la visionneuse : point de peau le plus bas sur tout le clip à y = 0.
+  const skins = []; obj.traverse((o) => { if (o.isSkinnedMesh) skins.push(o); });
+  const tv = new THREE.Vector3();
+  let ground = Infinity;
+  for (let i = 0; i < 24; i++) { mixer.setTime((clip.duration * i) / 24); obj.updateMatrixWorld(true);
+    for (const sk of skins) for (let k = 0; k < sk.geometry.attributes.position.count; k += 15) { sk.getVertexPosition(k, tv); tv.applyMatrix4(sk.matrixWorld); ground = Math.min(ground, tv.y); } }
+  if (Number.isFinite(ground)) obj.position.y -= ground;
   // Échelle 1,75 m d'après le corps au repos (comme la visionneuse), pieds au sol.
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3(), N = 24, frames = [];
