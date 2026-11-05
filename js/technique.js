@@ -105,7 +105,7 @@ const MISTAKES = {
 export function model3D(name, sex = 'M') {
   const clip = CLIPS[name]; if (!clip) return null;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: MISTAKES[name] };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: MISTAKES[name], name };
 }
 // Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).

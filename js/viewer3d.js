@@ -6,7 +6,7 @@ const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par
 
 const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
-export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake }, outfit = null) {
+export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake, name }, outfit = null) {
   let THREE, GLTFLoader, OrbitControls;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
@@ -124,6 +124,33 @@ export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake
     scene.add(group);
     rigs.push({ bone, group, offset: new THREE.Vector3(...offset) });
   };
+  // Décor de machine : posé au sol, fixe (ne suit pas l'animation — aucun clip « machine » n'existe encore).
+  const decor = [];
+  const addDecor = (group) => { scene.add(group); decor.push(group); };
+  const boxMesh = (w, h, d, mat, pos, rot) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); if (pos) m.position.set(...pos); if (rot) m.rotation.set(...rot); return m; };
+  const metal = () => new THREE.MeshStandardMaterial({ color: 0x33363c, roughness: 0.35, metalness: 0.7 });
+  const pad = () => new THREE.MeshStandardMaterial({ color: 0x1c1d22, roughness: 0.75, metalness: 0.05 });
+  if (equipment === 'poulie') {
+    const g = new THREE.Group(), mMetal = metal(), mPad = new THREE.MeshStandardMaterial({ color: 0x4a4d54, roughness: 0.4, metalness: 0.5 });
+    g.add(boxMesh(0.26, 2.0, 0.22, mMetal, [0, 1.0, 0]));
+    for (let i = 0; i < 7; i++) g.add(boxMesh(0.2, 0.022, 0.16, mPad, [0, 0.32 + i * 0.03, 0.03]));
+    const arm = boxMesh(0.5, 0.03, 0.03, mMetal, [0.25, 1.78, 0.12], null); g.add(arm);
+    const pulley = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 16), mMetal); pulley.position.set(0.5, 1.78, 0.12); pulley.rotation.x = Math.PI / 2; g.add(pulley);
+    const cable = boxMesh(0.012, 0.7, 0.012, mMetal, [0.5, 1.4, 0.12]); g.add(cable);
+    g.add(boxMesh(0.26, 0.03, 0.03, mMetal, [0.5, 1.03, 0.12]));
+    g.position.set(0.55, 0, 0.1);
+    addDecor(g);
+  } else if (name === 'Presse à cuisses') {
+    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
+    const rail = boxMesh(0.1, 0.1, 1.05, mMetal, [-0.18, 0.4, -0.75], [0.6, 0, 0]);
+    const rail2 = boxMesh(0.1, 0.1, 1.05, mMetal, [0.18, 0.4, -0.75], [0.6, 0, 0]);
+    g.add(rail, rail2);
+    g.add(boxMesh(0.46, 0.5, 0.05, mPad, [0, 0.82, -1.18], [0.6, 0, 0])); // chariot / cale-pieds
+    g.add(boxMesh(0.44, 0.1, 0.42, mPad, [0, 0.26, -0.28])); // assise
+    g.add(boxMesh(0.44, 0.55, 0.1, mPad, [0, 0.52, -0.02], [-0.25, 0, 0])); // dossier
+    g.add(boxMesh(0.5, 0.08, 0.5, mMetal, [0, 0.04, -0.6])); // socle au sol
+    addDecor(g);
+  }
   if (equipment === 'barre') {
     const spine = findBone(/Spine2$/) || findBone(/Spine1$/);
     const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
@@ -216,6 +243,7 @@ export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake
     controls.dispose(); mixer.stopAllAction();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
     rigs.forEach(({ group }) => { scene.remove(group); group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); });
+    decor.forEach((group) => { scene.remove(group); group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); });
     grid.geometry.dispose(); grid.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
     renderer.dispose(); canvas.remove();

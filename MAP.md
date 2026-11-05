@@ -137,7 +137,7 @@ exports: pickExercise,openExercise platesSheet
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick
 
-## js/viewer3d.js (224 l.)
+## js/viewer3d.js (252 l.)
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
 

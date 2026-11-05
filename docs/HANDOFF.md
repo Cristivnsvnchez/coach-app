@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v23** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v24** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -71,12 +71,17 @@ Onboarding par choix (12 étapes, palette, kcal Mifflin modifiables, « Protège
 - **Onglet Conseils** : pose figée (`act.paused = true`) + lueur musculaire renforcée (`uHighlight` ×1.7) façon planche anatomique, au lieu du texte seul.
 - `mount3D()` renvoie maintenant `{ dispose, setOutfit, setMode }` ; `model3D()` renvoie en plus `equipment` et `mistake`.
 
+**Fait (v24) — décors de machines (en attente de clip réel) :**
+- `js/viewer3d.js` : décor statique (posé au sol, ne suit aucun os) pour `equipment === 'poulie'` (tour à poulie générique : montant, pile de poids, bras + câble — sert pour Tirage vertical/horizontal, Écarté poulie, Face pull, Extensions triceps, Crunch poulie) et pour `name === 'Presse à cuisses'` (rails inclinés, assise, dossier, cale-pieds). `model3D()` renvoie maintenant aussi `name`, utile pour cibler un décor par exercice précis (pas seulement par type d'équipement).
+- ⚠️ **Pas encore visible dans l'app** : aucun de ces exercices n'a de clip 3D (Mixamo toujours en panne, voir plus haut), donc `model3D()` renvoie `null` pour eux et la fiche 2D s'affiche. Vérifié uniquement via un harnais de test dans la console (mount3D appelé à la main avec le clip squat + `equipment`/`name` forcés) — le décor s'affiche et a l'air correct, mais jamais testé avec une vraie pose assise/allongée puisqu'elle n'existe pas encore.
+- Mollets debout/assis, Dips assistés, Tractions assistées (aussi `equipment: 'machine'`) : pas encore de décor dédié — à faire quand on y arrive, chacun a une forme très différente.
+
 **Reste à faire pour ce chantier :**
-1. Dès que Mixamo refonctionne : télécharger les 9 motions notées ci-dessus, les assigner aux deux squelettes (le corps homme est déjà réimporté, voir ⚠️ au-dessus), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js`.
-2. Puis continuer avec les ~20 autres mouvements repérés et les ~36 exercices de `LIBRARY` qui n'ont toujours pas de clip — chacun aura alors aussi ses erreurs/objets en main une fois son `MISTAKES`/`equipment` renseigné (déjà générique).
-3. Machines (presse à cuisses, poulie, banc) : pas d'objet en main suffisant, il faudra un décor 3D dédié par machine — pas commencé.
+1. Dès que Mixamo refonctionne : télécharger les 9 motions notées plus haut, les assigner aux deux squelettes (le corps homme est déjà réimporté), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js`. Une fois Presse à cuisses/les exercices à poulie animés, vérifier que le décor s'aligne avec la vraie pose (assis/allongé) — pour l'instant il n'a été vérifié que posé à côté d'un Squat debout, la position devra sans doute être réajustée.
+2. Puis continuer avec les ~20 autres mouvements repérés et les ~36 exercices de `LIBRARY` qui n'ont toujours pas de clip.
+3. Décor pour les machines mollets/dips assistés/tractions assistées.
 4. Vignettes des tenues dans la feuille « Habiller » : pour l'instant juste 2 pastilles de couleur (haut/bas) + libellé, pas de rendu Blender comme prévu initialement.
-5. Régler plus finement l'angle du défaut « genoux qui rentrent » et la position de la barre (actuellement réglés à l'œil, une seule passe de vérif visuelle).
+5. Régler plus finement l'angle du défaut « genoux qui rentrent » et la position de la barre/des décors (tout réglé à l'œil, une seule passe de vérif visuelle à chaque fois).
 
 Références photo : 6 images gardées en local chez l’utilisateur (`~/trackme-3d/refs/`, non publiées : photos de personnes réelles). Description :
 - **Homme** : survêtement gris chiné zippé + t-shirt blanc + baskets blanches · hoodie marine + jogging gris large + baskets argent · hoodie + jogging gris « cosy » + chaussettes blanches.
