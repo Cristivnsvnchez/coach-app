@@ -47,7 +47,7 @@ const tr = (obj) => obj[getLang()] || obj.fr;
 function card(e) {
   const f = getTechnique(e.name), n = sessionsWith(e.name), pct = Math.min(100, (n / 8) * 100);
   return `<li class="lrn-card" data-open="${esc(e.name)}" tabindex="0" role="button" aria-label="${esc(t(e.name))}">
-    <span class="lrn-pic-box">${pictogram(e.name)}</span>
+    <span class="lrn-pic-box">${pictogram(e.name, '', state.profile?.sex)}</span>
     <span class="lrn-info"><span class="lrn-name">${esc(t(e.name))}</span>
       <span class="lrn-muscles">${esc([e.muscle, ...e.secondary].map((m) => t(m)).join(' · '))}</span>
       <span class="lrn-mastery" role="img" aria-label="${esc(t('Maîtrise'))} ${esc(t('{n}/8 séances', { n: Math.min(n, 8) }))}"><span class="lrn-track"><span class="lrn-fill" style="width:${pct}%"></span></span>
@@ -74,7 +74,7 @@ export function render(root, go) {
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
     <section class="lrn-day"><small>${t('Geste du jour')}</small><h2>${esc(t(day.name))}</h2>
       <p>${esc([day.muscle, ...day.secondary].map((m) => t(m)).join(' · '))}</p>
-      <span class="lrn-day-pic">${pictogram(day.name)}</span>
+      <span class="lrn-day-pic">${pictogram(day.name, '', state.profile?.sex)}</span>
       <button class="btn lrn-day-btn" data-open="${esc(day.name)}">${t('Voir la technique')} ${icon('chevronRight')}</button></section>
     <div class="chips lrn-cats" role="group" aria-label="${t('Catégorie')}">
       <button class="chip ${cat ? '' : 'on'}" data-cat="">${t('Toutes les catégories')}</button>
@@ -109,7 +109,7 @@ export function openTechnique(name, go) {
   const m3d = model3D(name, sex);
   let dispose = () => {}, setOutfit = () => {}, setMode = () => {};
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
-    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big')}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
+    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big', state.profile?.sex)}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
       <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
   if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); });
   const openDress = () => {

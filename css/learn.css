@@ -85,3 +85,7 @@
 .v3d-swatch + .v3d-swatch { margin-left: -14px; }
 .v3d-outfit-label { flex: 1; font-weight: 600; }
 .v3d-outfit svg.ic { width: 18px; height: 18px; color: var(--p-deep); }
+/* Vignettes « avatar » (exercices animés) : fond studio sombre comme la visionneuse, sinon l'avatar blanc disparaît. */
+.lrn-pic-box:has(.lrn-3d) { background: radial-gradient(120% 90% at 50% 30%, #2b3754, #12151c 75%); overflow: hidden; }
+.lrn-pic-box .lrn-3d img { inset: -4%; width: 108%; height: 108%; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); }
+.lrn-pic-box .lrn-3d::after { display: none; }

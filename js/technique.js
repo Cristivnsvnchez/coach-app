@@ -68,8 +68,8 @@ const POSES = {
 const SVG_ATTR = 'viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
 // Figures 3D (mannequin argile rendu dans Blender, design/mannequin.blend) : 2 poses par exercice, enchaînées en boucle.
 // Les exercices sans rendu gardent le pictogramme au trait.
-const FIGURES = { Squat: 'squat' };
-export const hasFigure = (name) => !!FIGURES[name];
+// Vignettes « avatar » (img/ex/<m|f>/<clip>-1|2.webp, rendues par tools/render-thumbs.js) : tout exercice animé en a.
+export const hasFigure = (name) => !!CLIPS[name];
 // Modèles 3D animés (humain Mixamo converti dans Blender) : un fichier glb par sexe, plusieurs animations dedans
 // (une par exercice, ajoutées au fur et à mesure des imports Mixamo).
 const BODY = { M: 'models/trackme-human.glb', F: 'models/trackme-human-f.glb' };
@@ -162,9 +162,9 @@ export const OUTFITS = {
   ],
 };
 export const outfitsFor = (sex) => OUTFITS[sex === 'F' ? 'F' : 'M'];
-export const pictogram = (name, cls = '') => {
-  const f = FIGURES[name];
-  if (f) return `<span class="lrn-pic lrn-3d ${cls}" aria-hidden="true"><img src="img/ex/${f}-1.webp" alt="" decoding="async"><img src="img/ex/${f}-2.webp" alt="" decoding="async"></span>`;
+export const pictogram = (name, cls = '', sex = 'M') => {
+  const f = CLIPS[name], d = sex === 'F' ? 'f' : 'm';
+  if (f) return `<span class="lrn-pic lrn-3d ${cls}" aria-hidden="true"><img src="img/ex/${d}/${f}-1.webp" alt="" decoding="async" loading="lazy"><img src="img/ex/${d}/${f}-2.webp" alt="" decoding="async" loading="lazy"></span>`;
   const k = (TECH[name] || {}).pose;
   return `<svg class="lrn-pic ${cls}" ${SVG_ATTR}>${POSES[k] || POSES.plank}</svg>`;
 };

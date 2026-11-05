@@ -33,5 +33,6 @@ test('model3D : chaque exercice avec un clip 3D pointe vers un fichier d\'animat
   for (const m of withClip) {
     assert.ok(existsSync(m.url), m.url);
     if (m.anim) assert.ok(existsSync(m.anim), `${m.name} → ${m.anim}`);
+    for (const d of ['m', 'f']) for (const k of [1, 2]) assert.ok(existsSync(`img/ex/${d}/${m.clip}-${k}.webp`), `${m.name} : vignette ${d}/${m.clip}-${k}`);
   }
 });
