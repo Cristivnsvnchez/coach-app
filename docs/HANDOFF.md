@@ -157,3 +157,10 @@ Demande : « si je rajoute une course pour aujourd'hui et j'achète aujourd'hui,
 - **« Courses faites »** : ferme une liste (`state.shoppingDone`, nouveau champ backfillé par `sanitize()`), figée et masquée, avec Annuler. Un repas ajouté ensuite le même jour part dans `YYYY-MM-DD~2` (onglet « Aujourd'hui (2) »).
 - **Onglets** (`visibleTrips`) : liste du jour, prochaine sortie régulière, listes à venir qui ont du contenu, et listes passées pas marquées faites qui ont encore des articles non cochés (rien ne se perd).
 - Changement du jour des courses : `remapShopDay` déplace seulement les sorties régulières à venir. `aggregatePlan`/`upcomingTrips` supprimées (remplacées par `aggregateTrip`/`visibleTrips`). 73 tests verts.
+
+## 12. Mixamo : PAS une panne Adobe — corriger le format de `params` (2026-11-05)
+Retesté depuis la session Mixamo de l'utilisateur (navigateur intégré, Air Squat sur X Bot) :
+- `gms_hash[0].params` envoyé **en tableau** `[["Overdrive", 0]]` (tel que renvoyé par `GET /api/v1/products/…`) → POST 202 puis monitor `failed` (c'est l'erreur « no implicit conversion of String into Integer » de la section 6).
+- `params` envoyé **en texte** : valeurs jointes par des virgules, `g.params.map((x) => x[1]).join(',')` → `"0"` → monitor `completed` + `job_result` (URL de téléchargement).
+- Corps qui marche : `{ character_id, product_name, type: 'Motion', preferences: { format: 'fbx7_2019', skin: 'true', fps: '30', reducekf: '0' }, gms_hash: [{ 'model-id', mirror, trim, overdrive: 0, params: "<valeurs,jointes>", 'arm-space', inplace: true }] }`.
+- Rien n'a été téléchargé ni modifié côté 3D (réservé à la session Blender) : la section 6 « Reste à faire » est débloquée.
