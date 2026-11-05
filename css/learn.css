@@ -51,3 +51,17 @@
 .lrn-hero .lrn-3d.big { width: 220px; height: 220px; margin: 0 auto; }
 @media (prefers-reduced-motion: reduce) { .lrn-3d img { animation: none !important; } .lrn-3d img + img { opacity: 0; } }
 .lrn-pic-box .lrn-3d { width: 56px; height: 56px; } .lrn-day-pic .lrn-3d img { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .3)) brightness(1.25); }
+
+/* Visionneuse 3D 360° : carte arrondie à dégradé doux de la palette, canevas plein cadre, figure 2D en repli */
+.lrn-hero.v3d { position: relative; height: min(62vw, 340px); border-radius: 28px; overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(90% 70% at 50% 85%, color-mix(in srgb, var(--p-mid) 22%, transparent), transparent 70%),
+              radial-gradient(70% 60% at 85% 10%, color-mix(in srgb, var(--p-warm) 14%, transparent), transparent 70%), var(--cell); }
+.lrn-hero.v3d .v3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.lrn-hero.v3d .v3d-canvas:active { cursor: grabbing; }
+.lrn-hero.v3d.ready > .lrn-pic { display: none; }
+.v3d-hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--cell) 80%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: .78rem; font-weight: 600; color: var(--label-2);
+  opacity: 0; transition: opacity .4s; pointer-events: none; }
+.v3d-hint svg.ic { width: 14px; height: 14px; }
+.lrn-hero.v3d.ready .v3d-hint { opacity: 1; }
+.lrn-hero.v3d.touched .v3d-hint { opacity: 0; }

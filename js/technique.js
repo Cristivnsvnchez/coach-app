@@ -62,6 +62,9 @@ const SVG_ATTR = 'viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-w
 // Les exercices sans rendu gardent le pictogramme au trait.
 const FIGURES = { Squat: 'squat' };
 export const hasFigure = (name) => !!FIGURES[name];
+// Modèles 3D animés (humain Mixamo converti dans Blender) : un fichier glb, une animation par exercice.
+const MODELS = { Squat: { url: 'models/trackme-human.glb', clip: 'squat' } };
+export const model3D = (name) => MODELS[name] || null;
 export const pictogram = (name, cls = '') => {
   const f = FIGURES[name];
   if (f) return `<span class="lrn-pic lrn-3d ${cls}" aria-hidden="true"><img src="img/ex/${f}-1.webp" alt="" decoding="async"><img src="img/ex/${f}-2.webp" alt="" decoding="async"></span>`;
