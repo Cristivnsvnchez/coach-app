@@ -172,6 +172,7 @@ register({ nl: {
   "Développé couché haltères": "Dumbbell bankdrukken", "Écarté poulie": "Kabel fly", "Pompes": "Push-ups", "Dips assistés": "Ondersteunde dips", "Tractions": "Optrekken",
   "Tractions assistées": "Ondersteund optrekken", "Tirage vertical": "Lat pulldown", "Tirage horizontal": "Zittend roeien aan kabel", "Développé épaules haltères": "Dumbbell schouderpress",
   "Curl barre": "Barbell curl", "Curl marteau": "Hammer curl", "Barre au front": "Skull crushers", "Planche": "Plank", "Relevés de jambes": "Beenheffen", "Crunch poulie": "Kabel crunch",
+  "Squat pistol": "Pistolsquat", "Squat overhead": "Overhead squat", "Burpee": "Burpee", "Arraché": "Snatch", "Épaulé-jeté": "Clean-and-jerk", "Tirage sumo": "Sumo high pull", "Élévations frontales": "Voorwaartse heffingen",
   "Lampe": "Zaklamp", "Place le code-barres dans le cadre, à 10–20 cm": "Plaats de barcode in het kader, op 10–20 cm afstand",
   "Caméra non disponible dans ce navigateur": "Camera niet beschikbaar in deze browser",
   "Budget mensuel (€)": "Maandbudget (€)", "Dépensé ce mois-ci": "Deze maand uitgegeven", "requêtes": "verzoeken", "Tester la connexion": "Verbinding testen",

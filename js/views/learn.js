@@ -3,7 +3,7 @@ import { nav, esc, sheet, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, register, getLang } from '../i18n.js';
 import { state, save } from '../store.js';
-import { LIBRARY, findExercise } from '../exercises.js';
+import { LIBRARY, findExercise, CATEGORIES, CATEGORY_LABEL } from '../exercises.js';
 import { getTechnique, pictogram, model3D, outfitsFor, LEVELS, LEVEL_LABEL } from '../technique.js';
 import { mount3D } from '../viewer3d.js';
 import { active, persist } from './session.js';
@@ -19,7 +19,8 @@ register({
     'Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.': 'General guidance: if you feel pain, stop and ask a professional.',
     'barre': 'barbell', 'haltères': 'dumbbells', 'machine': 'machine', 'poulie': 'cable', 'aucun': 'bodyweight', 'Fiche à venir pour cet exercice.': 'No guide yet for this exercise.',
     'Habiller': 'Outfit', 'Choisir une tenue': 'Choose an outfit', 'Survêtement gris': 'Grey tracksuit', 'Hoodie marine': 'Navy hoodie', 'Hoodie cosy': 'Cosy hoodie',
-    'Col zippé blanc': 'White zip top', 'Crop gris': 'Grey crop top', 'Demi-zip gris': 'Grey half-zip' },
+    'Col zippé blanc': 'White zip top', 'Crop gris': 'Grey crop top', 'Demi-zip gris': 'Grey half-zip',
+    'Toutes les catégories': 'All categories', 'Catégorie': 'Category', 'Jambes': 'Legs', 'Abdos': 'Abs', 'Cardio': 'Cardio', 'Haltéro': 'Weightlifting', 'Mobilité': 'Mobility' },
   nl: { 'Apprends les bons mouvements': 'Leer de juiste bewegingen', 'Glisse pour tourner': 'Veeg om te draaien', 'Apprendre les mouvements': 'Bewegingen leren', 'Rechercher un mouvement': 'Zoek een beweging',
     'Geste du jour': 'Beweging van de dag', 'Voir la technique': 'Bekijk de techniek', 'Débutant': 'Beginner', 'Intermédiaire': 'Gevorderd', 'Avancé': 'Expert',
     'Étapes': 'Stappen', 'Erreurs': 'Fouten', 'Conseils': 'Tips', 'Voir mes records': 'Mijn records bekijken', 'Ajouter à ma séance': 'Toevoegen aan mijn training',
@@ -28,10 +29,11 @@ register({
     'Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.': 'Algemene richtlijnen: stop bij pijn en vraag advies aan een professional.',
     'barre': 'stang', 'haltères': 'dumbbells', 'machine': 'apparaat', 'poulie': 'kabel', 'aucun': 'lichaamsgewicht', 'Fiche à venir pour cet exercice.': 'Nog geen uitleg voor deze oefening.',
     'Habiller': 'Kleding', 'Choisir une tenue': 'Kies een outfit', 'Survêtement gris': 'Grijs trainingspak', 'Hoodie marine': 'Marineblauwe hoodie', 'Hoodie cosy': 'Knusse hoodie',
-    'Col zippé blanc': 'Witte rits-top', 'Crop gris': 'Grijze crop top', 'Demi-zip gris': 'Grijze halve rits' },
+    'Col zippé blanc': 'Witte rits-top', 'Crop gris': 'Grijze crop top', 'Demi-zip gris': 'Grijze halve rits',
+    'Toutes les catégories': 'Alle categorieën', 'Catégorie': 'Categorie', 'Jambes': 'Benen', 'Abdos': 'Buik', 'Cardio': 'Cardio', 'Haltéro': 'Gewichtheffen', 'Mobilité': 'Mobiliteit' },
 });
 
-let q = '', level = ''; // filtres de la liste (conservés pendant la session)
+let q = '', level = '', cat = ''; // filtres de la liste (conservés pendant la session)
 
 // Nombre de séances réalisées avec l'exercice (maîtrise = n / 8, plafonnée à 1).
 export const sessionsWith = (name) => state.workouts.filter((w) => w.exercises.some((e) => e.name === name)).length;
@@ -57,9 +59,16 @@ export function render(root, go) {
   const day = dayExercise();
   const draw = () => {
     const ql = q.trim().toLowerCase();
-    const items = LIBRARY.filter((e) => (!level || getTechnique(e.name)?.level === level)
+    const items = LIBRARY.filter((e) => (!level || getTechnique(e.name)?.level === level) && (!cat || e.category === cat)
       && (!ql || e.name.toLowerCase().includes(ql) || t(e.name).toLowerCase().includes(ql) || t(e.muscle).toLowerCase().includes(ql)));
-    root.querySelector('.lrn-list').innerHTML = items.map(card).join('') || `<li class="empty">${t('Aucun mouvement trouvé.')}</li>`;
+    const list = root.querySelector('.lrn-list');
+    if (!items.length) { list.innerHTML = `<li class="empty">${t('Aucun mouvement trouvé.')}</li>`; return; }
+    if (cat || ql || level) { list.innerHTML = items.map(card).join(''); return; }
+    // Aucun filtre : vue d'ensemble groupée par catégorie (Jambes, Haut du corps, Abdos…).
+    list.innerHTML = CATEGORIES.map((c) => {
+      const g = items.filter((e) => e.category === c);
+      return g.length ? `<li class="lrn-group-head">${esc(t(CATEGORY_LABEL[c]))}</li>${g.map(card).join('')}` : '';
+    }).join('');
   };
   root.innerHTML = `${nav(t('Apprends les bons mouvements'), { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Sport')}</button>` })}
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
@@ -67,6 +76,9 @@ export function render(root, go) {
       <p>${esc([day.muscle, ...day.secondary].map((m) => t(m)).join(' · '))}</p>
       <span class="lrn-day-pic">${pictogram(day.name)}</span>
       <button class="btn lrn-day-btn" data-open="${esc(day.name)}">${t('Voir la technique')} ${icon('chevronRight')}</button></section>
+    <div class="chips lrn-cats" role="group" aria-label="${t('Catégorie')}">
+      <button class="chip ${cat ? '' : 'on'}" data-cat="">${t('Toutes les catégories')}</button>
+      ${CATEGORIES.map((c) => `<button class="chip ${cat === c ? 'on' : ''}" data-cat="${c}">${t(CATEGORY_LABEL[c])}</button>`).join('')}</div>
     <div class="chips lrn-levels" role="group" aria-label="${t('Niveau')}">
       <button class="chip ${level ? '' : 'on'}" data-lvl="">${t('Tous les niveaux')}</button>
       ${LEVELS.map((l) => `<button class="chip ${level === l ? 'on' : ''}" data-lvl="${l}">${t(LEVEL_LABEL[l])}</button>`).join('')}</div>
@@ -78,6 +90,8 @@ export function render(root, go) {
     if (e.target.closest('[data-back]')) return go('training');
     const l = e.target.closest('[data-lvl]');
     if (l) { level = l.dataset.lvl; root.querySelectorAll('[data-lvl]').forEach((b) => b.classList.toggle('on', b === l)); return draw(); }
+    const c = e.target.closest('[data-cat]');
+    if (c) { cat = c.dataset.cat; root.querySelectorAll('[data-cat]').forEach((b) => b.classList.toggle('on', b === c)); return draw(); }
     const o = e.target.closest('[data-open]');
     if (o) openTechnique(o.dataset.open, go);
   };
@@ -111,7 +125,7 @@ export function openTechnique(name, go) {
     });
   };
   const draw = () => {
-    const tags = [info.equipment && t(info.equipment), f && t(LEVEL_LABEL[f.level]), info.upper != null && t(info.upper ? 'Haut du corps' : 'Bas du corps')].filter(Boolean);
+    const tags = [info.equipment && t(info.equipment), f && t(LEVEL_LABEL[f.level]), info.category && t(CATEGORY_LABEL[info.category])].filter(Boolean);
     s.querySelector('.body').innerHTML = `<div class="lrn-tags">${tags.map((x) => `<span class="lrn-tag">${esc(x)}</span>`).join('')}</div>
       ${f ? `<div class="seg lrn-tabs" role="tablist">${[['steps', 'Étapes'], ['mistakes', 'Erreurs'], ['tips', 'Conseils']].map(([k, l]) =>
         `<button role="tab" aria-selected="${k === tab}" data-tab="${k}" class="${k === tab ? 'on' : ''}">${t(l)}</button>`).join('')}</div>

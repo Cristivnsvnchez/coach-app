@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v21** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v22** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -47,10 +47,27 @@ Onboarding par choix (12 étapes, palette, kcal Mifflin modifiables, « Protège
 - Bouton « Habiller » (icône `shirt` ajoutée dans `js/icons.js`) posé en haut à droite de la visionneuse dans `js/views/learn.js` → feuille de choix (vignettes couleur + libellé), i18n FR/EN/NL.
 - Testé en local sur les deux sexes (profil M et F), 53 tests verts, i18n-scan sans nouvelle lacune.
 
+**Fait (suite, même session) — catégorisation + 7 nouveaux mouvements :**
+- `js/exercises.js` : chaque exercice a désormais une `category` (`jambes`/`haut`/`abdos`/`cardio`/`haltero`/`mobilite`), exportée via `CATEGORIES` (ordre d'affichage) et `CATEGORY_LABEL`. 7 mouvements ajoutés à `LIBRARY` + fiche complète FR/EN/NL dans `js/technique.js` (pictogramme 2D dédié, pas encore de clip 3D — voir blocage Mixamo ci-dessous) : **Squat pistol**, **Squat overhead**, **Burpee**, **Arraché** (Snatch), **Épaulé-jeté** (Clean and jerk), **Tirage sumo** (Sumo high pull), **Élévations frontales** (Front raises).
+- `js/views/learn.js` : nouvelle rangée de puces Catégorie (en plus de Niveau) ; sans filtre actif, la liste se regroupe par catégorie (`.lrn-group-head`) au lieu d'être plate ; le tag de la fiche détail affiche la catégorie au lieu du générique Haut/Bas du corps.
+
+**⚠️ Bloqué : export Mixamo cassé côté serveur (2026-11-05).** L'API `/api/v1/animations/export` renvoie systématiquement `ERROR occured on export: no implicit conversion of String into Integer`, reproduit même en rejouant exactement l'appel qui avait généré le clip squat existant (motion Air Squat, X Bot) — donc pas un problème d'identifiants ni de format de requête, un bug/une panne côté Mixamo. À retester plus tard ; si ça remarche, voici les IDs déjà repérés pour la recherche « workout » (character X Bot = `2dee24f8-3b49-48af-b735-c6377509eaac`) :
+  - Pistol `c9cad647-b96c-11e4-a802-0aaa78deedf9` → **Squat pistol**
+  - Overhead Squat `c9cb21a5-b96c-11e4-a802-0aaa78deedf9` → **Squat overhead**
+  - Burpee `c9cad103-b96c-11e4-a802-0aaa78deedf9` → **Burpee**
+  - Snatch `c9cb2022-b96c-11e4-a802-0aaa78deedf9` → **Arraché**
+  - Clean And Jerk `c9cb20e3-b96c-11e4-a802-0aaa78deedf9` → **Épaulé-jeté**
+  - Sumo High Pull `c9cb2a1a-b96c-11e4-a802-0aaa78deedf9` → **Tirage sumo**
+  - Front Raises `c9cb36c6-b96c-11e4-a802-0aaa78deedf9` → **Élévations frontales**
+  - Bicep Curl `c9cb3360-b96c-11e4-a802-0aaa78deedf9` → clip pour **Curl haltères** / **Curl barre** (déjà dans LIBRARY, juste besoin du clip)
+  - Air Squat Bent Arms `c9cb991f-b96c-11e4-a802-0aaa78deedf9` → clip pour **Squat avant** (déjà dans LIBRARY, juste besoin du clip)
+  - Raccourci trouvé : une seule animation téléchargée (avec `skin:true` sur X Bot) suffit pour les deux sexes — dans Blender, l'Action est réutilisable telle quelle sur l'armature Y Bot (mêmes noms d'os `mixamorig:…`), pas besoin de la télécharger deux fois.
+  - ⚠️ Le `.blend` actuel (`design/trackme-human.blend`) ne contient plus que le corps **féminin** (Armature + Beta_Joints + Beta_Surface) — le corps masculin habillé a été remplacé en cours de route par une session précédente. Pour ajouter des clips au glb homme, réimporter d'abord `models/trackme-human.glb` dans Blender pour récupérer son armature + mesh avant d'assigner les nouvelles actions.
+
 **Reste à faire pour ce chantier :**
-1. Étendre `CLIPS` : importer dans Blender les mouvements Mixamo pour les ~36 autres exercices de `LIBRARY` (homme + femme), les ajouter comme actions supplémentaires dans les mêmes glb (un seul fichier par sexe, plusieurs clips dedans — pas un glb par exercice).
-2. Mouvements du point 7.1 ci-dessous (cardio, haltéro, mobilité…) : à importer aussi et ranger par catégorie dans Apprendre (actuellement la vue n'a que le filtre niveau + Haut/Bas du corps, pas de vraie catégorie Jambes/Haut/Abdos/Cardio/Haltéro/Mobilité — à ajouter).
-3. Coupes de vêtements manches longues / pantalon large / legging / chaussettes (actuellement toutes les tenues réutilisent la même coupe débardeur+short, seules les couleurs changent) — décidé pour l'instant de livrer vite avec les couleurs seules ; les vraies coupes sont un chantier Blender à part, plus long.
+1. Dès que Mixamo refonctionne : télécharger les 9 motions ci-dessus, les assigner aux deux squelettes (réimporter le corps homme d'abord, voir note ⚠️ ci-dessus), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js`.
+2. Puis continuer avec les ~20 autres mouvements repérés (mobilité notamment — rien trouvé encore sur ce point) et les ~36 exercices de `LIBRARY` qui n'ont toujours pas de clip.
+3. Coupes de vêtements manches longues / pantalon large / legging / chaussettes (actuellement toutes les tenues réutilisent la même coupe débardeur+short, seules les couleurs changent) — décidé de livrer vite avec les couleurs seules ; les vraies coupes sont un chantier Blender à part, plus long.
 4. Vignettes des tenues dans la feuille « Habiller » : pour l'instant juste 2 pastilles de couleur (haut/bas) + libellé, pas de rendu Blender comme prévu initialement.
 
 Références photo : 6 images gardées en local chez l’utilisateur (`~/trackme-3d/refs/`, non publiées : photos de personnes réelles). Description :

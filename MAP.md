@@ -12,7 +12,7 @@ Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 ## css/cycle.css (58 l.)
 TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 
-## css/learn.css (84 l.)
+## css/learn.css (87 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 
 ## css/motion.css (51 l.)
@@ -39,9 +39,9 @@ exports: go
 Suivi du cycle menstruel (pur, testé sous Node) : durées moyennes, prédictions, phase d'un jour,
 exports: SYMPTOMS,FLOWS avgCycleLen,cycleSd avgPeriodLen,cycleStartFor phaseOn,nextStarts nextOvulation,weightNote trainingNote,alerts
 
-## js/exercises.js (81 l.)
+## js/exercises.js (91 l.)
 Bibliothèque d'exercices (noms français = clés de l'historique ; traduits à l'affichage).
-exports: LIBRARY,EQUIPMENT findExercise,DEFAULT_PROGRAM
+exports: LIBRARY,EQUIPMENT CATEGORIES,CATEGORY_LABEL findExercise,DEFAULT_PROGRAM
 
 ## js/food.js (187 l.)
 Aliments : Open Food Facts (code-barres + recherche), cache local dans state.foods.
@@ -59,7 +59,7 @@ exports: BASE_FOODS
 Checklist quotidienne : habitudes auto-cochées d'après les données du jour + habitudes manuelles, et série de jours.
 exports: AUTO,DEFAULT_HABITS habitName,dayStatus completion,streak
 
-## js/i18n.js (264 l.)
+## js/i18n.js (265 l.)
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
 exports: register,LANGS getLang,locale setLang,t
 
@@ -95,7 +95,7 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog uid,sum intakesByDay,latestWeight recentFoods
 
-## js/technique.js (523 l.)
+## js/technique.js (601 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
 exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure model3D,OUTFITS outfitsFor,pictogram getTechnique,allTechniques missingTechniques,TECH
 
@@ -114,7 +114,7 @@ exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume wor
 ## js/i18n/extra.js (60 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
 
-## js/i18n/nl-base.js (234 l.)
+## js/i18n/nl-base.js (235 l.)
 NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 
 ## js/views/addfood.js (194 l.)
@@ -141,7 +141,7 @@ exports: toggleHabits,habitsCells handleHabitClick
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
 
-## js/views/learn.js (135 l.)
+## js/views/learn.js (149 l.)
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise render,openTechnique
 

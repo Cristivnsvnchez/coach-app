@@ -173,6 +173,7 @@ const EN = {
   'Développé couché haltères': 'Dumbbell bench press', 'Écarté poulie': 'Cable fly', 'Pompes': 'Push-ups', 'Dips assistés': 'Assisted dips', 'Tractions': 'Pull-ups',
   'Tractions assistées': 'Assisted pull-ups', 'Tirage vertical': 'Lat pulldown', 'Tirage horizontal': 'Seated cable row', 'Développé épaules haltères': 'Dumbbell shoulder press',
   'Curl barre': 'Barbell curl', 'Curl marteau': 'Hammer curl', 'Barre au front': 'Skull crushers', 'Planche': 'Plank', 'Relevés de jambes': 'Leg raises', 'Crunch poulie': 'Cable crunch',
+  'Squat pistol': 'Pistol squat', 'Squat overhead': 'Overhead squat', 'Burpee': 'Burpee', 'Arraché': 'Snatch', 'Épaulé-jeté': 'Clean and jerk', 'Tirage sumo': 'Sumo high pull', 'Élévations frontales': 'Front raises',
   'Lampe': 'Flashlight', 'Place le code-barres dans le cadre, à 10–20 cm': 'Place the barcode inside the frame, 10–20 cm away',
   'Caméra non disponible dans ce navigateur': 'Camera not available in this browser',
   'Budget mensuel (€)': 'Monthly budget (€)', 'Dépensé ce mois-ci': 'Spent this month', 'requêtes': 'requests', 'Tester la connexion': 'Test connection',
