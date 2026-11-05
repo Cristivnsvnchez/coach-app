@@ -1,5 +1,5 @@
 // Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
-const VERSION = 'trackme-v19';
+const VERSION = 'trackme-v20';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
   'css/app.css', 'css/trackme.css', 'css/motion.css', 'css/onboarding.css', 'css/today.css', 'css/cycle.css', 'css/learn.css',
@@ -8,7 +8,7 @@ const SHELL = [
   'js/views/today.js', 'js/views/addfood.js', 'js/views/weight.js', 'js/views/training.js', 'js/views/coach.js', 'js/views/profile.js', 'js/views/habits.js',
   'js/views/session.js', 'js/views/exsheets.js', 'js/views/program.js', 'js/views/onboarding.js', 'js/views/palette.js', 'js/views/cycle.js',
   'js/views/learn.js',
-  'vendor/fonts/Geist-Variable.woff2', 'vendor/fonts/FunnelDisplay-Variable.woff2', 'vendor/three/three.module.min.js', 'vendor/three/GLTFLoader.js', 'vendor/three/OrbitControls.js', 'vendor/three/BufferGeometryUtils.js', 'vendor/three/SkeletonUtils.js', 'img/ex/squat-1.webp', 'img/ex/squat-2.webp', 'icons/icon-180.png', 'icons/icon-192.png',
+  'vendor/fonts/Geist-Variable.woff2', 'vendor/fonts/FunnelDisplay-Variable.woff2', 'vendor/three/three.module.min.js', 'vendor/three/GLTFLoader.js', 'vendor/three/OrbitControls.js', 'vendor/three/BufferGeometryUtils.js', 'vendor/three/SkeletonUtils.js', 'models/trackme-human.glb', 'img/ex/squat-1.webp', 'img/ex/squat-2.webp', 'icons/icon-180.png', 'icons/icon-192.png',
 ];
 
 self.addEventListener('install', (e) => {

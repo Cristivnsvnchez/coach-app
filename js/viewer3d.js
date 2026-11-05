@@ -4,7 +4,7 @@
 
 const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par session
 
-export async function mount3D(box, { url, clip }) {
+export async function mount3D(box, { url, clip, muscles = {} }) {
   let THREE, GLTFLoader, OrbitControls;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
@@ -20,9 +20,13 @@ export async function mount3D(box, { url, clip }) {
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.setClearColor(0x12151c, 1); // décor de studio sombre, comme les fiches de référence
 
   const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x12151c, 3.2, 7.5); // la grille se fond dans le noir
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+  const grid = new THREE.GridHelper(12, 48, 0x3d7bff, 0x22355e);
+  grid.material.transparent = true; grid.material.opacity = 0.55; grid.material.fog = true; scene.add(grid);
   scene.add(new THREE.HemisphereLight(0xeef2ff, 0x8a8f9c, 1.6));
   const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 4, 3); scene.add(key);
   const rim = new THREE.DirectionalLight(0x9db4ff, 1.4); rim.position.set(-3, 2.5, -2.5); scene.add(rim);
@@ -45,8 +49,56 @@ export async function mount3D(box, { url, clip }) {
   const { clone } = await import('../vendor/three/SkeletonUtils.js');
   const obj = clone(model);
   scene.add(obj);
-  const bb = new THREE.Box3().setFromObject(obj), size = bb.getSize(new THREE.Vector3()), center = bb.getCenter(new THREE.Vector3());
-  obj.position.sub(new THREE.Vector3(center.x, bb.min.y, center.z)); // pieds au sol, centré
+  // Taille et position mesurées sur le squelette (la boîte englobante d'un maillage skinné est peu fiable),
+  // puis normalisées à 1,75 m, pieds au sol, centré.
+  const bonePos = (re) => { let p = null; obj.traverse((o) => { if (!p && o.isBone && re.test(o.name)) p = o.getWorldPosition(new THREE.Vector3()); }); return p; };
+  obj.updateMatrixWorld(true);
+  let top = bonePos(/HeadTop_End/), foot = bonePos(/LeftToe_?End|LeftFoot/), hips = bonePos(/Hips/);
+  if (top && foot) {
+    obj.scale.multiplyScalar(1.75 / Math.max(0.01, top.y - foot.y)); obj.updateMatrixWorld(true);
+    foot = bonePos(/LeftToe_?End|LeftFoot/); hips = bonePos(/Hips/);
+    obj.position.x -= hips.x; obj.position.z -= hips.z; obj.position.y -= foot.y - 0.02;
+  }
+  const size = new THREE.Vector3(0.6, 1.75, 0.6);
+
+  // Matière « mannequin anatomique » : blanc mat + liseré bleu (effet rayons X) + muscles travaillés lumineux.
+  // Le masque musculaire vient des poids de peau : chaque sommet sait à quels os il est lié (cuisses, dos, bras…).
+  const uTime = { value: 0 };
+  obj.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const names = o.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ''));
+    // Valeur > 0 : tout le segment ; valeur < 0 : face arrière seulement (ex. fessiers = os Hips, côté dos).
+    const W = new Array(64).fill(0);
+    names.forEach((n, i) => { if (i < 64 && muscles[n]) W[i] = muscles[n]; });
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    o.material = mats.map((m) => {
+      // Peau : blanc mat + lueur. Haut : tissu sombre, la lueur passe à travers (pectoraux, dos). Short et chaussures : sans lueur.
+      const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : 'skin';
+      const skin = kind === 'skin', glows = kind === 'skin' || kind === 'top';
+      const mm = new THREE.MeshStandardMaterial({ color: skin ? 0xeceef2 : m.color, roughness: skin ? 0.5 : 0.78, metalness: 0 });
+      mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
+      mm.onBeforeCompile = (sh) => {
+        sh.uniforms.uW = { value: W }; sh.uniforms.uTime = uTime;
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uW[64];\nvarying float vMask;')
+          .replace('#include <skinning_vertex>', `#include <skinning_vertex>
+            float back = smoothstep(-0.15, 0.35, objectNormal.z); // le modèle exporté regarde vers -Z : dos = +Z
+            vMask = 0.0;
+            for (int k = 0; k < 4; k++) { float wv = uW[int(skinIndex[k])]; vMask += (wv < 0.0 ? -wv * back : wv) * skinWeight[k]; }`);
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vMask;')
+          .replace('#include <dithering_fragment>', `
+            float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.4);
+            gl_FragColor.rgb += vec3(0.32, 0.56, 1.0) * fres * ${skin ? '0.85' : '0.4'};
+            float m = smoothstep(0.12, 0.75, vMask) * ${glows ? '1.0' : '0.0'};
+            float pulse = 0.85 + 0.15 * sin(uTime * 2.6);
+            // Lueur : cœur jaune chaud, bords orange plus lumineux (comme un muscle qui « chauffe »).
+            vec3 glow = mix(vec3(1.0, 0.88, 0.42), vec3(1.0, 0.38, 0.06), clamp(fres * 1.6, 0.0, 1.0));
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, glow * (1.05 + 0.5 * fres), m * (0.62 + 0.3 * fres) * pulse);
+            #include <dithering_fragment>`);
+      };
+      return mm;
+    });
+    if (o.material.length === 1) o.material = o.material[0];
+  });
 
   const mixer = new THREE.AnimationMixer(obj);
   const anim = gltf.animations.find((a) => a.name.toLowerCase().includes((clip || '').toLowerCase())) || gltf.animations[0];
@@ -55,11 +107,11 @@ export async function mount3D(box, { url, clip }) {
 
   // Caméra 3/4, orbite au doigt (pas de translation), légère rotation automatique tant qu'on ne touche pas.
   const h = size.y || 1.7;
-  camera.position.set(h * 1.35, h * 0.75, h * 1.9);
+  camera.position.set(h * 1.05, h * 0.62, h * 1.5);
   const controls = new OrbitControls(camera, canvas);
   controls.target.set(0, h * 0.48, 0);
   controls.enableDamping = true; controls.enablePan = false;
-  controls.minDistance = h * 1.2; controls.maxDistance = h * 3.4;
+  controls.minDistance = h * 0.9; controls.maxDistance = h * 3;
   controls.minPolarAngle = 0.25; controls.maxPolarAngle = Math.PI / 2 - 0.05; // jamais sous le sol
   controls.autoRotate = !reduce; controls.autoRotateSpeed = 1.2;
   controls.addEventListener('start', () => { controls.autoRotate = false; box.classList.add('touched'); });
@@ -78,7 +130,8 @@ export async function mount3D(box, { url, clip }) {
   function loop() {
     if (!visible || document.hidden) { raf = 0; return; }
     raf = requestAnimationFrame(loop);
-    mixer.update(Math.min(clock.getDelta(), 0.05));
+    const dt = Math.min(clock.getDelta(), 0.05);
+    mixer.update(dt); uTime.value += dt;
     controls.update();
     renderer.render(scene, camera);
   }
@@ -91,7 +144,8 @@ export async function mount3D(box, { url, clip }) {
     cancelAnimationFrame(raf); raf = 0; visible = false;
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
     controls.dispose(); mixer.stopAllAction();
-    obj.traverse((o) => { o.geometry?.dispose?.(); });
+    obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
+    grid.geometry.dispose(); grid.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
     renderer.dispose(); canvas.remove();
   };

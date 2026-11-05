@@ -63,7 +63,8 @@ const SVG_ATTR = 'viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-w
 const FIGURES = { Squat: 'squat' };
 export const hasFigure = (name) => !!FIGURES[name];
 // Modèles 3D animés (humain Mixamo converti dans Blender) : un fichier glb, une animation par exercice.
-const MODELS = { Squat: { url: 'models/trackme-human.glb', clip: 'squat' } };
+// muscles : os du squelette Mixamo → intensité de la lueur (1 = muscle principal, ~0,5 = secondaire).
+const MODELS = { Squat: { url: 'models/trackme-human.glb', clip: 'squat', muscles: { LeftUpLeg: 1, RightUpLeg: 1, Hips: -0.9, LeftLeg: 0.15, RightLeg: 0.15 } } };
 export const model3D = (name) => MODELS[name] || null;
 export const pictogram = (name, cls = '') => {
   const f = FIGURES[name];
