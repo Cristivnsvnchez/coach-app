@@ -118,3 +118,14 @@
 .onb-brand i { background: #fff; }
 .pal-chip .tm-wordmark i { background: #fff; }
 .pal-scheme { margin-bottom: 4px; } .pal-scheme button { flex: 1; }
+
+/* Forme décorative des étapes : bords fondus en rond (pas de découpe droite ni de carré de grain visible) */
+.onb-orb { right: -90px; top: -90px; width: 260px; height: 260px; opacity: .9;
+  -webkit-mask-image: radial-gradient(closest-side, #000 35%, rgba(0, 0, 0, .55) 62%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 35%, rgba(0, 0, 0, .55) 62%, transparent 100%); }
+@media (min-width: 700px) { .onb-orb { width: 340px; height: 340px; right: -110px; top: -110px; } }
+/* Fond des étapes : halo doux de la palette plutôt qu'un aplat */
+.onb { background:
+  radial-gradient(110% 55% at 100% 0%, color-mix(in srgb, var(--p-mid) 16%, transparent), transparent 62%),
+  radial-gradient(90% 45% at 0% 100%, color-mix(in srgb, var(--p-warm) 12%, transparent), transparent 62%),
+  var(--bg); background-attachment: fixed; }

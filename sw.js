@@ -1,5 +1,5 @@
 // Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
-const VERSION = 'trackme-v14';
+const VERSION = 'trackme-v15';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
   'css/app.css', 'css/trackme.css', 'css/onboarding.css', 'css/today.css', 'css/cycle.css', 'css/activities.css', 'css/learn.css',
