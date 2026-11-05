@@ -166,18 +166,3 @@ function editRoutine(r, back) {
   draw();
 }
 
-// Import d'un programme généré par l'IA → routines dans un dossier.
-export function importProgram(p) {
-  if (!p?.days?.length) throw new Error(t('Programme invalide'));
-  const folder = String(p.name || 'Programme IA');
-  state.routines = state.routines.filter((r) => r.folder !== folder).concat(p.days.map((d) => ({
-    id: uid(), name: String(d.name), folder,
-    exercises: (d.exercises || []).map((e) => {
-      const info = findExercise(String(e.name), state.customExercises) || {};
-      const upper = e.upper !== false;
-      return { name: String(e.name), muscle: S.MUSCLES.includes(e.muscle) ? e.muscle : info.muscle || 'Abdos', secondary: info.secondary || [], type: info.type || 'weight_reps',
-        sets: Math.max(1, Math.min(8, +e.sets || 3)), repMin: +e.repMin || 8, repMax: +e.repMax || 12, upper, rest: upper ? 90 : 150 };
-    }),
-  })));
-  save();
-}

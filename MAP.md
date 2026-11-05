@@ -27,9 +27,6 @@ TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.
 ## css/session.css (37 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
-## css/coach.css (25 l.)
-TrackMe — écran Coach (voir DESIGN.md, css/trackme.css). En-tête du Journal, héros palette, tuiles d'action, bulles palette.
-
 ## css/today.css (72 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
@@ -39,9 +36,9 @@ TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 ## models/anim/ (25 fichiers .glb, 4 Mo)
 Une animation Mixamo par exercice (squelette seul, commun homme/femme), chargée par js/viewer3d.js.
 
-## js/ai.js (230 l.)
-Appels à l'API Claude directement depuis le téléphone (clé perso, usage strictement personnel).
-exports: MODELS,ALLOWED_DOMAINS SYSTEM,hasKey PRICES,USD_TO_EUR usage,costUsd userContext,ask testConnection,extractJson stripJson,imageToBase64 estimateMeal,programQuestions programGenerate
+## js/backdrops.js
+Décors illustrés (SVG) de la carte « Geste du jour » : Miami Beach, San Francisco.
+exports: BACKDROPS
 
 ## js/app.js (120 l.)
 Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
@@ -136,10 +133,6 @@ NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 ## js/views/addfood.js (152 l.)
 Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, saisie manuelle.
 exports: MEALS,openAddFood
-
-## js/views/coach.js (142 l.)
-Onglet Coach IA : chat sourcé + actions (recette, programme, bilan hebdo).
-exports: ACTIONS,render
 
 ## js/views/cycle.js (297 l.)
 Vue « cycle » : héros (phase du jour, prochaines ovulation / règles), calendrier mensuel filtrable, statistiques,

@@ -9,7 +9,6 @@ import './i18n/extra.js'; // compléments EN + NL (tests/i18n-scan.mjs)
 import * as today from './views/today.js';
 import * as weight from './views/weight.js';
 import * as training from './views/training.js';
-import * as coach from './views/coach.js';
 import * as profile from './views/profile.js';
 import * as cycle from './views/cycle.js';
 import * as learn from './views/learn.js';
@@ -19,9 +18,9 @@ import { openAddFood } from './views/addfood.js';
 import { startupNudges } from './install.js';
 
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
-const VIEWS = { today, weight, training, coach, profile, cycle, learn, planning };
-const TABS = [['today', 'Journal', 'calendar'], ['weight', 'Poids', 'weight'], ['add'], ['training', 'Sport', 'training'], ['coach', 'Coach', 'sparkles']];
-const TAB_OF = { cycle: 'today', profile: 'today', learn: 'training', planning: 'today' };
+const VIEWS = { today, weight, training, profile, cycle, learn, planning };
+const TABS = [['today', 'Journal', 'calendar'], ['weight', 'Poids', 'weight'], ['add'], ['training', 'Sport', 'training'], ['learn', 'Apprendre', 'flask']];
+const TAB_OF = { cycle: 'today', profile: 'today', planning: 'today' };
 const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
 let tab = 'today';
@@ -29,8 +28,7 @@ let enterTimer = 0; // retire .tm-enter après la cascade : les re-rendus suivan
 
 // Mobile : capsule 4 onglets + « + » central. Ordinateur (CSS ≥ 1024 px) : la même barre devient une barre latérale
 // avec le logotype, le libellé du « + » et les écrans secondaires (éléments .side-only, masqués sur mobile).
-const SIDE = () => [['learn', 'Apprendre', 'flask'],
-  ...(state.profile?.sex === 'F' && state.cycle?.enabled ? [['cycle', 'Cycle', 'drop']] : [])];
+const SIDE = () => [...(state.profile?.sex === 'F' && state.cycle?.enabled ? [['cycle', 'Cycle', 'drop']] : [])];
 function drawTabbar(pop = false) {
   const active = tab;
   // .on = écran affiché ; .parent = onglet du menu mobile qui contient l'écran (Coach, Cycle… → Journal).
@@ -94,7 +92,7 @@ let day = todayIso();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || day === todayIso()) return;
   day = todayIso();
-  if (tab !== 'coach' && !document.querySelector('.sheet-wrap')) VIEWS[tab].render(main, go);
+  if (!document.querySelector('.sheet-wrap')) VIEWS[tab].render(main, go);
 });
 
 navigator.storage?.persist?.().catch(() => {});

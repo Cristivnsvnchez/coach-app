@@ -4,7 +4,6 @@ import * as P from '../planner.js';
 import { MUSCLES, isoDate, parseDate } from '../science.js';
 import { state, save, today } from '../store.js';
 import { LIBRARY, findExercise } from '../exercises.js';
-import { hasKey, programQuestions, programGenerate } from '../ai.js';
 import { esc, fmtDate, sheet, group, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, locale } from '../i18n.js';
@@ -59,7 +58,6 @@ export function openWizard(done) {
     const ids = [rec, ...Object.keys(P.TEMPLATES).filter((k) => k !== rec && P.TEMPLATES[k].equipment.includes(b.equipment))];
     const weeks = Math.ceil(((parseDate(b.end) - parseDate(b.start)) / 86400000 + 1) / 7);
     body.innerHTML = `<p class="footnote secondary" style="margin:-.25rem .25rem 1rem">${t(P.PLAN_GOALS[b.goal])} · ${weeks} ${t('semaines')} · ${b.weekdays.map(dayLabel).join(', ')} · ${b.minutes} min</p>
-      ${hasKey() ? `<button class="btn large" data-a="ai" style="margin-bottom:1.25rem">${icon('sparkles')} ${t('Programme sur mesure avec le coach IA')}</button>` : ''}
       ${ids.map((id) => { const tp = P.TEMPLATES[id];
         return group(`${t(tp.name)}${id === rec ? `<b class="tint">${t('Conseillé')}</b>` : ''}`, `<div class="cells">
           <div class="cell"><span class="grow subhead">${t(tp.why)}</span></div>
@@ -69,48 +67,9 @@ export function openWizard(done) {
       <button class="btn plain wide" data-a="back">${t('Modifier mes réponses')}</button>`;
     body.onclick = (e) => {
       if (e.target.closest('[data-a=back]')) return step1();
-      if (e.target.closest('[data-a=ai]')) return stepAiQuestions();
       const tp = e.target.closest('[data-tpl]');
       if (tp) { const { plan, routines } = P.buildPlan({ templateId: tp.dataset.tpl, goal: b.goal, start: b.start, end: b.end, weekdays: b.weekdays, level: b.level }); install(plan, routines); }
     };
-  };
-
-  // Étape IA : le coach pose ses questions, puis génère
-  const stepAiQuestions = async () => {
-    body.innerHTML = `<p class="empty footnote"><span class="typing-dots"><i></i><i></i><i></i></span><br>${t('Le coach lit ton brief…')}</p>`;
-    try {
-      const qs = await programQuestions(b);
-      if (!qs.length) return stepAiGenerate([]);
-      body.innerHTML = `${group(t('Le coach a quelques questions'), `<div class="cells">${qs.map((q, i) => `<div class="cell" style="display:block">
-          <p class="t" style="white-space:normal;margin:.25rem 0 .5rem">${esc(q.q)}</p>
-          ${q.options?.length ? `<div class="chips wrap" style="margin:0;padding:0">${q.options.map((o) => `<button type="button" class="chip" data-q="${i}" data-opt="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : ''}
-          <input class="input" data-ans="${i}" placeholder="${t('Ta réponse')}" style="margin-top:.5rem"></div>`).join('')}</div>`)}
-        <button class="btn filled large" data-a="gen">${icon('sparkles')} ${t('Générer mon programme')}</button>`;
-      body.onclick = (e) => {
-        const o = e.target.closest('[data-opt]');
-        if (o) { body.querySelector(`[data-ans="${o.dataset.q}"]`).value = o.dataset.opt; body.querySelectorAll(`[data-q="${o.dataset.q}"]`).forEach((x) => x.classList.toggle('on', x === o)); return; }
-        if (e.target.closest('[data-a=gen]')) stepAiGenerate(qs.map((q, i) => ({ question: q.q, reponse: body.querySelector(`[data-ans="${i}"]`).value.trim() || '—' })));
-      };
-    } catch (err) { body.innerHTML = `<p class="error">${esc(t(err.message, err.vars))}</p>`; }
-  };
-
-  const stepAiGenerate = async (answers) => {
-    body.innerHTML = `<p class="empty footnote"><span class="typing-dots"><i></i><i></i><i></i></span><br>${t('Le coach construit ton programme… (20–60 s)')}</p>`;
-    try {
-      const g = await programGenerate(b, answers, MUSCLES, LIBRARY.map((x) => x.name));
-      const { plan } = P.buildPlan({ templateId: 'fullbody3', goal: b.goal, start: b.start, end: b.end, weekdays: b.weekdays, level: b.level });
-      const folder = g.name;
-      const routines = g.days.slice(0, 7).map((d, i) => ({ id: `${plan.id}-${i}`, name: d.name, folder, exercises: d.exercises.map((x) => {
-        const info = findExercise(x.name, state.customExercises) || {};
-        return { name: x.name, muscle: MUSCLES.includes(x.muscle) ? x.muscle : info.muscle || 'Abdos', secondary: info.secondary || [], type: info.type || 'weight_reps',
-          upper: info.upper ?? !['Quadriceps', 'Ischios', 'Fessiers', 'Mollets'].includes(x.muscle), sets: Math.max(1, Math.min(8, x.sets)), repMin: x.repMin, repMax: Math.max(x.repMin, x.repMax), rest: x.rest };
-      }) }));
-      Object.assign(plan, { name: folder, templateId: 'ia', routineIds: routines.map((r) => r.id), rationale: g.rationale });
-      body.innerHTML = `${group(esc(folder), `<div class="cells"><div class="cell"><span class="grow subhead" style="white-space:normal">${esc(g.rationale)}</span></div>
-        ${routines.map((r) => `<div class="cell"><div class="grow"><span class="t headline">${esc(r.name)}</span><span class="s" style="white-space:normal">${r.exercises.map((x) => `${esc(t(x.name))} ${x.sets}×${x.repMin}–${x.repMax}`).join(' · ')}</span></div></div>`).join('')}</div>`)}
-        <button class="btn filled large" data-a="ok">${t('Utiliser ce programme')}</button>`;
-      body.querySelector('[data-a=ok]').onclick = () => install(plan, routines);
-    } catch (err) { body.innerHTML = `<p class="error">${esc(t(err.message, err.vars))}</p>`; }
   };
 
   const install = (plan, routines) => {

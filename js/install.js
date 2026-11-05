@@ -31,7 +31,7 @@ const seen = (k, days) => daysSince(state.settings.nudges?.[k]) < days;
 // Sauvegarde JSON sans secret (clé IA retirée). iPhone : feuille de partage → Fichiers / iCloud Drive.
 export async function exportBackup() {
   const { strava, ...rest } = state;
-  const data = { ...rest, settings: { ...state.settings, apiKey: '' } };
+  const data = { ...rest, settings: { ...state.settings } };
   const name = `trackme-backup-${today()}.json`;
   const file = new File([JSON.stringify(data, null, 1)], name, { type: 'application/json' });
   const done = () => { state.lastBackup = today(); save(); banner(t('Sauvegarde enregistrée'), { ms: 1800 }); };

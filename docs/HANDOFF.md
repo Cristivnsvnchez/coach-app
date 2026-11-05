@@ -175,3 +175,9 @@ Retesté depuis la session Mixamo de l'utilisateur (navigateur intégré, Air Sq
 - **Vignettes avatar** (Apprendre) : `img/ex/<m|f>/<clip>-1|2.webp` rendues par `tools/render-thumbs.js` (outil de dev, pas chargé par l'app : à lancer dans la page servie en local + un récepteur local qui écrit les fichiers). Pose 1 = départ, pose 2 = la plus éloignée ; fond studio sombre dans `.lrn-pic-box`. Corps homme : `Beta_Joints.001` ajouté à l'export (trous aux articulations avant).
 - **Geste du jour** : exercice animé au hasard à chaque retour (jamais le même deux fois de suite, `sessionStorage`), décor SVG `js/backdrops.js` (Miami / San Francisco, au hasard), visionneuse en mode `showcase` (fond transparent, sans grille ni interaction). Une seule visionneuse de carte à la fois (libérée à chaque rendu).
 - **Barre à deux mains** : `equipment === 'barre'` → barre de 1,3 m posée au milieu de LeftHand/RightHand, orientée main gauche → main droite, à chaque frame.
+
+## 14. Coach IA retiré (2026-11-05, demande de l'utilisateur : « il ne va pas être implémenté »)
+- Supprimés : `js/ai.js`, `js/views/coach.js`, `css/coach.css`, section « Intelligence artificielle » du Profil (clé API, modèle, budget), bouton « Programme sur mesure avec le coach IA » de l'assistant de programme (les modèles de programme restent), `importProgram`, historique `state.chat`, test du coût IA.
+- `store.js` : `sanitize()` supprime `settings.apiKey/model/budgetEur` et `chat` ; `load()` réécrit tout de suite le stockage s'il en trouve (la clé ne reste pas sur le téléphone).
+- Menu mobile : l'onglet Coach est remplacé par **Apprendre** (Journal · Poids · + · Sport · Apprendre). Plus aucune dépendance réseau vers api.anthropic.com.
+- Il reste des clés i18n orphelines liées au coach (inoffensives).

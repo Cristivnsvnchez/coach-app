@@ -17,7 +17,7 @@ const MIGRATIONS = {
 const empty = () => ({
   _v: SCHEMA,
   profile: { goal: 'perte', rate: 0.5, activity: 'leger' },
-  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7, outfit: 0, shopDay: 6 },
+  settings: { look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7, outfit: 0, shopDay: 6 },
   usage: null,    // { month: 'YYYY-MM', usd, calls } : dépense IA estimée du mois
   foods: {},      // id -> { name, per100: {kcal,p,c,f,fib}, source, serving }
   favorites: [],  // ids d'aliments
@@ -25,7 +25,6 @@ const empty = () => ({
   weights: [],    // [{ date, kg }]
   program: null,  // { name, days: [{ name, exercises: [{ name, muscle, sets, repMin, repMax, upper }] }] }
   workouts: [],   // [{ id, date, dayName, exercises: [{ name, muscle, upper, repMin, repMax, sets: [{ kg, reps, rir, done }] }] }]
-  chat: [],       // [{ role, text, sources }]
   habits: DEFAULT_HABITS.map((h) => ({ ...h })), // [{ id, auto?, name? }]
   habitLog: {},   // 'YYYY-MM-DD' -> { habitId: true } (cases cochées à la main)
   routines: [],   // [{ id, name, folder, exercises: [{ name, muscle, secondary, type, sets, repMin, repMax, rest, upper }] }]
@@ -46,6 +45,8 @@ export function load() {
   try {
     raw = localStorage.getItem(KEY);
     state = sanitize(raw ? JSON.parse(raw) : {}); // aussi au premier lancement : crée les routines par défaut
+    // Ancienne clé API / historique du Coach IA (retiré) : on réécrit tout de suite pour ne pas les laisser sur le téléphone.
+    if (raw && /"apiKey"|"chat"/.test(raw)) localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
     // Données illisibles : on garde une copie brute avant de repartir de zéro.
     try { if (raw) localStorage.setItem(KEY + '.corrupt', raw); } catch {}
@@ -67,7 +68,6 @@ export function flush() {
   const json = JSON.stringify(state);
   try { localStorage.setItem(KEY, json); return; } catch {}
   // Stockage plein : on libère d'abord ce qui se régénère (ancien historique du coach), puis on réessaie.
-  if (state.chat.length > 40) state.chat = state.chat.slice(-40);
   try { localStorage.removeItem(KEY + '.corrupt'); localStorage.setItem(KEY, JSON.stringify(state)); }
   catch { alert('Stockage plein : exporte tes données depuis Profil.'); }
 }
@@ -80,9 +80,10 @@ if (typeof document !== 'undefined') {
 function sanitize(data) {
   for (let v = (Number(data._v) || 1) + 1; v <= SCHEMA; v++) data = MIGRATIONS[v]?.(data) ?? data;
   const base = empty(), out = { ...base, ...data, _v: SCHEMA };
-  for (const k of ['weights', 'workouts', 'chat', 'favorites', 'habits', 'routines', 'customExercises', 'milestones']) if (!Array.isArray(out[k])) out[k] = base[k];
+  for (const k of ['weights', 'workouts', 'favorites', 'habits', 'routines', 'customExercises', 'milestones']) if (!Array.isArray(out[k])) out[k] = base[k];
   for (const k of ['profile', 'settings', 'foods', 'logs', 'habitLog']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   out.settings = { ...base.settings, ...out.settings };
+  delete out.chat; delete out.settings.apiKey; delete out.settings.model; delete out.settings.budgetEur; // Coach IA retiré : on n'en garde aucune trace
   for (const k of ['foodGroups', 'mealPlan']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   if (!Array.isArray(out.shoppingList)) out.shoppingList = base.shoppingList;
   if (!Array.isArray(out.shoppingDone)) out.shoppingDone = base.shoppingDone;

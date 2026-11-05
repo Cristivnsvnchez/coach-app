@@ -2,7 +2,6 @@
 import * as S from '../science.js';
 import { state, save, replace, today } from '../store.js';
 import { current } from '../metrics.js';
-import { MODELS, usage, testConnection } from '../ai.js';
 import { esc, fmt, fmtDate, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, getLang, setLang, LANGS } from '../i18n.js';
@@ -51,16 +50,6 @@ export function render(root, go) {
           <label class="switch"><input type="checkbox" name="medical" ${p.medical ? 'checked' : ''} aria-label="${t('Grossesse/allaitement, trouble du comportement alimentaire ou pathologie chronique')}"><span></span></label></div></div>`)}
       <button class="btn filled large" style="margin-bottom:1.75rem">${t('Enregistrer')}</button>
     </form>
-    <form data-f="ai">${group(t('Intelligence artificielle'), `<div class="cells">
-      <label class="cell field"><span>${t('Clé API Claude')}</span><input name="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(st.apiKey)}"></label>
-      ${sel('model', t('Modèle'), opt(MODELS, st.model))}
-      <label class="cell field"><span>${t('Budget mensuel (€)')}</span><input name="budgetEur" type="number" inputmode="decimal" min="0" step="1" value="${st.budgetEur ?? 10}"></label>
-      <div class="cell" style="display:block">${(() => { const u = usage(); const pct = u.budget ? Math.min(100, (u.eur / u.budget) * 100) : 0;
-        return `<div class="bar-head"><span>${t('Dépensé ce mois-ci')}</span><span>${fmt(u.eur, 2)} € / ${fmt(u.budget)} € · ${u.calls} ${t('requêtes')}</span></div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;${pct >= 80 ? 'background:var(--orange)' : ''}"></div></div>`; })()}</div>
-      <button type="button" class="cell action" data-a="test" style="border:0;width:100%;background:none;font:inherit">${t('Tester la connexion')}</button>
-      <button class="cell action" style="border:0;width:100%;background:none;font:inherit">${t('Enregistrer')}</button></div>`,
-      t("La clé reste sur ce téléphone et n'est envoyée qu'à api.anthropic.com. Crée-la sur console.anthropic.com → API Keys, et fixe une limite de dépense mensuelle.") + ' ' + t("L'app bloque toute requête qui pourrait dépasser ton budget (estimation : tarifs publics, 1 $ ≈ 0,92 €). Pour une garantie absolue, fixe aussi la même limite dans console.anthropic.com → Billing → Limits."))}</form>
     ${group(t('Sauvegarde'), `<div class="cells">
       <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow"><span class="t">${t('Sauvegarder mes données')}</span><span class="s">${state.lastBackup ? t('Dernière sauvegarde : {d}', { d: fmtDate(state.lastBackup, { day: 'numeric', month: 'long' }) }) : t('Jamais sauvegardé · vers Fichiers ou iCloud Drive')}</span></span>${icon('chevronRight', { cls: 'chev' })}</div>
       <label class="cell field"><span>${t('Me le rappeler')}</span><select name="backupEvery" data-backup-every>${[[7, t('Chaque semaine')], [30, t('Chaque mois')], [0, t('Jamais')]].map(([v, l]) => `<option value="${v}" ${v === (state.settings.backupEvery ?? 7) ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -89,13 +78,6 @@ export function render(root, go) {
     const rs = S.GOALS[e.target.value].rates;
     root.querySelector('[data-f=profile] [name=rate]').innerHTML = rateOpts(e.target.value, rs[Math.min(1, rs.length - 1)]);
   };
-  root.querySelector('[data-f=ai]').onsubmit = (e) => {
-    e.preventDefault();
-    state.settings.apiKey = e.target.apiKey.value.trim();
-    state.settings.model = e.target.model.value;
-    state.settings.budgetEur = Math.max(0, parseFloat(String(e.target.budgetEur.value).replace(',', '.')) || 0);
-    save(); toast(t('Réglages IA enregistrés'));
-  };
   root.querySelector('[data-backup-every]')?.addEventListener('change', (e) => { state.settings.backupEvery = +e.target.value; save(); });
   root.onclick = (e) => {
     if (handlePaletteClick(e, () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; })) return;
@@ -103,14 +85,6 @@ export function render(root, go) {
     if (lg) { setLang(lg.dataset.lang); return go('profile'); }
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'edit-needs') return editNeeds(auto, () => render(root, go));
-    if (a === 'test') {
-      const f = root.querySelector('[data-f=ai]');
-      state.settings.apiKey = f.apiKey.value.trim(); save();
-      toast(t('Test en cours…'));
-      testConnection().then(() => { toast(t('Connexion OK ✓')); const y = root.scrollTop; render(root, go); root.scrollTop = y; })
-        .catch((err) => toast(t(err.message, err.vars)));
-      return;
-    }
     if (a === 'export') return exportBackup();
     if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { replace({}); render(root, go); }
   };
@@ -121,7 +95,7 @@ export function render(root, go) {
       if (!data.profile || !data.logs) throw new Error(t('Fichier non reconnu'));
       if (!confirm(t('Remplacer les données actuelles par cette sauvegarde ?'))) return;
       // On garde la clé IA de cet appareil (absente des sauvegardes).
-      replace({ ...data, settings: { ...data.settings, apiKey: state.settings.apiKey } });
+      replace(data);
       toast(t('Sauvegarde restaurée')); render(root, go);
     } catch (err) { toast(t('Import impossible : {e}', { e: err.message })); }
   };

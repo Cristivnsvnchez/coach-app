@@ -2,10 +2,10 @@
 const VERSION = 'trackme-v30';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
-  'css/app.css', 'css/trackme.css', 'css/motion.css', 'css/onboarding.css', 'css/today.css', 'css/cycle.css', 'css/learn.css', 'css/planning.css', 'css/session.css', 'css/coach.css',
+  'css/app.css', 'css/trackme.css', 'css/motion.css', 'css/onboarding.css', 'css/today.css', 'css/cycle.css', 'css/learn.css', 'css/planning.css', 'css/session.css',
   'js/app.js', 'js/store.js', 'js/net.js', 'js/theme.js', 'js/science.js', 'js/metrics.js', 'js/ui.js', 'js/motion.js', 'js/i18n.js', 'js/i18n/nl-base.js', 'js/i18n/extra.js', 'js/icons.js',
-  'js/habits.js', 'js/workout.js', 'js/exercises.js', 'js/technique.js', 'js/planner.js', 'js/food.js', 'js/foods-base.js', 'js/foodgroups.js', 'js/shopping.js', 'js/install.js', 'js/viewer3d.js', 'js/backdrops.js', 'js/ai.js', 'js/cycle.js',
-  'js/views/today.js', 'js/views/addfood.js', 'js/views/weight.js', 'js/views/training.js', 'js/views/coach.js', 'js/views/profile.js', 'js/views/habits.js',
+  'js/habits.js', 'js/workout.js', 'js/exercises.js', 'js/technique.js', 'js/planner.js', 'js/food.js', 'js/foods-base.js', 'js/foodgroups.js', 'js/shopping.js', 'js/install.js', 'js/viewer3d.js', 'js/backdrops.js', 'js/cycle.js',
+  'js/views/today.js', 'js/views/addfood.js', 'js/views/weight.js', 'js/views/training.js', 'js/views/profile.js', 'js/views/habits.js',
   'js/views/session.js', 'js/views/exsheets.js', 'js/views/program.js', 'js/views/onboarding.js', 'js/views/palette.js', 'js/views/cycle.js',
   'js/views/learn.js', 'js/views/planning.js',
   'vendor/fonts/Geist-Variable.woff2', 'vendor/fonts/FunnelDisplay-Variable.woff2', 'vendor/three/three.module.min.js', 'vendor/three/GLTFLoader.js', 'vendor/three/OrbitControls.js', 'vendor/three/BufferGeometryUtils.js', 'vendor/three/SkeletonUtils.js', 'models/trackme-human.glb', 'models/trackme-human-f.glb', 'icons/icon-180.png', 'icons/icon-192.png',

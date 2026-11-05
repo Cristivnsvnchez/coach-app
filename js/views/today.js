@@ -1,4 +1,4 @@
-// Onglet Journal : en-tête (Coach, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
+// Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 // checklist + eau, une carte par repas, repères ANSES (fruits & légumes, poisson).
 import { state, save, dayLog, sum, today, uid } from '../store.js';
 import { current } from '../metrics.js';
@@ -157,7 +157,6 @@ export function render(root, go) {
     if (a === 'next') return shift(1);
     if (a === 'profile') return go('profile');
     if (a === 'planning') return go('planning');
-    if (a === 'coach') return go('coach');
     if (a === 'cycle') return go('cycle');
     if (a === 'water+' || a === 'water-') { log.water = Math.max(0, log.water + (a === 'water+' ? 250 : -250)); save(); return keep(); }
     if (a === 'copy') {
