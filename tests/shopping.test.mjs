@@ -1,21 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateRange, aggregatePlan, regenerate, knownStores, byStore, listToText, tripFor, tripDates, upcomingTrips } from '../js/shopping.js';
+import { dateRange, regenerate, knownStores, byStore, listToText, tripFor, tripDates, assignTrips, aggregateTrip, visibleTrips, tripDay, remapShopDay } from '../js/shopping.js';
 
 test('dateRange : n jours consécutifs à partir du départ', () => {
   const d = dateRange('2026-11-04', 3);
   assert.deepEqual(d, ['2026-11-04', '2026-11-05', '2026-11-06']);
-});
-
-test('aggregatePlan : somme les grammes par aliment sur plusieurs jours et repas', () => {
-  const plan = {
-    '2026-11-04': { dej: [{ foodId: 'banane', name: 'Banane', grams: 120 }], midi: [], diner: [{ foodId: 'riz', name: 'Riz', grams: 200 }], snack: [] },
-    '2026-11-05': { dej: [{ foodId: 'banane', name: 'Banane', grams: 100 }], midi: [], diner: [], snack: [] },
-  };
-  const agg = aggregatePlan(plan, ['2026-11-04', '2026-11-05']);
-  const banane = agg.find((a) => a.foodId === 'banane');
-  assert.equal(banane.grams, 220);
-  assert.equal(agg.find((a) => a.foodId === 'riz').grams, 200);
 });
 
 test('regenerate : garde les articles manuels et leur coche, régénère les articles auto', () => {
@@ -79,11 +68,6 @@ test('tripDates : les 7 jours (lun → dim) couverts par une sortie courses', ()
   assert.deepEqual(tripDates('2026-11-07', 6), ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15']);
 });
 
-test('upcomingTrips : sortie en cours + prochaine + celles qui ont des repas prévus', () => {
-  const plan = { '2026-11-20': { dej: [], midi: [{ foodId: 'picanha', name: 'Picanha', grams: 400 }], diner: [], snack: [] }, '2026-12-01': { dej: [], midi: [], diner: [], snack: [] } };
-  assert.deepEqual(upcomingTrips('2026-11-05', plan, 6, []), ['2026-10-31', '2026-11-07', '2026-11-14']);
-});
-
 test('regenerate par sortie : ne touche pas aux autres sorties, garde les articles auto supprimés masqués', () => {
   const prev = [
     { id: 'riz', foodId: 'riz', name: 'Riz', grams: 100, store: '', checked: false, auto: true, trip: '2026-10-31' },
@@ -99,4 +83,75 @@ test('regenerate par sortie : ne touche pas aux autres sorties, garde les articl
 
 test('listToText ignore les articles supprimés', () => {
   assert.equal(listToText([{ id: '1', name: 'Riz', grams: 0, store: '', checked: false, removed: true }], {}), '');
+});
+
+// ---- Rattachement des repas aux listes (tous les cas d'usage) — aujourd'hui = jeu. 5 nov., courses le samedi ----
+const day = (items = {}) => ({ dej: [], midi: [], diner: [], snack: [], ...items });
+
+test('assignTrips : repas du jour → liste du jour (le samedi d\'avant est déjà passé)', () => {
+  const plan = { '2026-11-05': day({ midi: [{ id: 'a', foodId: 'riz', name: 'Riz', grams: 100 }] }) };
+  assignTrips(plan, '2026-11-05', 6, []);
+  assert.equal(plan['2026-11-05'].midi[0].trip, '2026-11-05');
+});
+
+test('assignTrips : repas de la semaine prochaine → courses du samedi d\'avant', () => {
+  const plan = { '2026-11-10': day({ diner: [{ id: 'b', foodId: 'picanha', name: 'Picanha', grams: 400 }] }) };
+  assignTrips(plan, '2026-11-05', 6, []);
+  assert.equal(plan['2026-11-10'].diner[0].trip, '2026-11-07');
+});
+
+test('assignTrips : rattachement figé (le samedi passé, le repas reste sur la liste où il a été acheté)', () => {
+  const plan = { '2026-11-10': day({ diner: [{ id: 'b', name: 'Picanha', grams: 400, trip: '2026-11-07' }] }) };
+  assignTrips(plan, '2026-11-08', 6, []);
+  assert.equal(plan['2026-11-10'].diner[0].trip, '2026-11-07');
+});
+
+test('assignTrips : courses du samedi faites → un repas ajouté ensuite va dans la liste du jour', () => {
+  const plan = { '2026-11-10': day({ midi: [{ id: 'c', name: 'Saumon', grams: 200 }] }) };
+  assignTrips(plan, '2026-11-07', 6, ['2026-11-07']); // on est samedi, liste déjà faite
+  assert.equal(plan['2026-11-10'].midi[0].trip, '2026-11-07~2');
+  const plan2 = { '2026-11-10': day({ midi: [{ id: 'd', name: 'Saumon', grams: 200 }] }) };
+  assignTrips(plan2, '2026-11-06', 6, ['2026-11-07']); // vendredi, samedi marqué fait en avance
+  assert.equal(plan2['2026-11-10'].midi[0].trip, '2026-11-06');
+});
+
+test('assignTrips : un repas passé n\'entre dans aucune liste', () => {
+  const plan = { '2026-11-03': day({ midi: [{ id: 'e', name: 'Riz', grams: 100 }] }) };
+  assignTrips(plan, '2026-11-05', 6, []);
+  assert.equal(plan['2026-11-03'].midi[0].trip, undefined);
+});
+
+test('aggregateTrip : somme seulement les repas rattachés à cette liste', () => {
+  const plan = {
+    '2026-11-05': day({ midi: [{ foodId: 'riz', name: 'Riz', grams: 100, trip: '2026-11-05' }] }),
+    '2026-11-10': day({ midi: [{ foodId: 'riz', name: 'Riz', grams: 150, trip: '2026-11-07' }], diner: [{ foodId: 'riz', name: 'Riz', grams: 50, trip: '2026-11-07' }] }),
+  };
+  assert.deepEqual(aggregateTrip(plan, '2026-11-07'), [{ foodId: 'riz', name: 'Riz', grams: 200 }]);
+  assert.deepEqual(aggregateTrip(plan, '2026-11-05'), [{ foodId: 'riz', name: 'Riz', grams: 100 }]);
+});
+
+test('visibleTrips : liste du jour + prochain samedi + ancienne liste avec des articles pas cochés ; listes faites masquées', () => {
+  const list = [
+    { trip: '2026-10-31', name: 'Lait', checked: false },
+    { trip: '2026-10-24', name: 'Pain', checked: true },
+    { trip: '2026-10-17', name: 'Œufs', checked: false },
+  ];
+  assert.deepEqual(visibleTrips('2026-11-05', 6, list, {}, ['2026-10-17']), ['2026-10-31', '2026-11-05', '2026-11-07']);
+  // Le samedi même : une seule liste (celle du jour est la liste du samedi).
+  assert.deepEqual(visibleTrips('2026-11-07', 6, [], {}, []), ['2026-11-07']);
+  // Samedi après « courses faites » : nouvelle liste du jour + samedi suivant.
+  assert.deepEqual(visibleTrips('2026-11-07', 6, [], {}, ['2026-11-07']), ['2026-11-07~2', '2026-11-14']);
+});
+
+test('tripDay : date d\'une liste, même pour une 2e liste le même jour', () => {
+  assert.equal(tripDay('2026-11-07~2'), '2026-11-07');
+  assert.equal(tripDay('2026-11-07'), '2026-11-07');
+});
+
+test('remapShopDay : samedi → dimanche, les listes futures suivent ; liste du jour et listes passées ne bougent pas', () => {
+  const plan = { '2026-11-10': day({ midi: [{ name: 'Riz', grams: 100, trip: '2026-11-07' }] }), '2026-11-05': day({ midi: [{ name: 'Pâtes', grams: 100, trip: '2026-11-05' }] }) };
+  const list = [{ name: 'Riz', trip: '2026-11-07' }, { name: 'Pâtes', trip: '2026-11-05' }, { name: 'Lait', trip: '2026-10-31' }];
+  remapShopDay(plan, list, 6, 0, '2026-11-05', []);
+  assert.equal(plan['2026-11-10'].midi[0].trip, '2026-11-08');
+  assert.deepEqual(list.map((x) => x.trip), ['2026-11-08', '2026-11-05', '2026-10-31']);
 });

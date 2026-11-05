@@ -35,6 +35,7 @@ const empty = () => ({
   foodGroups: {}, // 'YYYY-MM-DD' -> { fruitVeg: n, fish: n } (repères ANSES)
   plan: null,     // programme daté : { id, name, goal, start, end, weeks, weekdays, deloadEvery, phases, routineIds }
   mealPlan: {},   // 'YYYY-MM-DD' -> { dej: [entry], midi: [entry], diner: [entry], snack: [entry] } (repas prévus, distinct de logs = repas mangés)
+  shoppingDone: [], // ids des listes de courses marquées « Courses faites » (figées, masquées)
   shoppingList: [], // [{ id, foodId, name, grams, store, checked, auto, trip, removed }] (auto = regénéré depuis mealPlan, sinon ajouté à la main ; trip = date de la sortie courses ; removed = article auto masqué)
 });
 
@@ -84,6 +85,7 @@ function sanitize(data) {
   out.settings = { ...base.settings, ...out.settings };
   for (const k of ['foodGroups', 'mealPlan']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
   if (!Array.isArray(out.shoppingList)) out.shoppingList = base.shoppingList;
+  if (!Array.isArray(out.shoppingDone)) out.shoppingDone = base.shoppingDone;
   for (const d in out.mealPlan) {
     const p = out.mealPlan[d];
     if (!p || typeof p !== 'object') { out.mealPlan[d] = { dej: [], midi: [], diner: [], snack: [] }; continue; }

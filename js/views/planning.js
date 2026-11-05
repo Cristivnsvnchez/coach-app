@@ -7,7 +7,7 @@ import { esc, fmt, fmtDate, nav, group, sheet, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, register } from '../i18n.js';
 import { MEALS, openAddFood } from './addfood.js';
-import { aggregatePlan, regenerate, knownStores, byStore, listToText, tripFor, tripDates, upcomingTrips } from '../shopping.js';
+import { regenerate, knownStores, byStore, listToText, tripFor, tripDates, assignTrips, aggregateTrip, visibleTrips, tripDay, tripMealDates, remapShopDay } from '../shopping.js';
 
 register({
   en: {
@@ -17,6 +17,8 @@ register({
     'Rien à acheter pour cette semaine. Planifie des repas ou ajoute un article.': 'Nothing to buy for this week. Plan meals or add an item.',
     'Jour des courses': 'Shopping day', 'Courses du {d}': 'Shopping on {d}', 'pour les repas du {a} au {b}': 'for meals from {a} to {b}',
     'Article libre': 'Other item', 'Quantité (g, facultatif)': 'Quantity (g, optional)',
+    "Courses d'aujourd'hui": "Today's shopping", 'pour les repas du {a}': 'for meals on {a}', "Ajoute ce que tu achètes aujourd'hui, ou planifie des repas.": "Add what you're buying today, or plan meals.",
+    'pas encore marquée faite': 'not marked as done yet', 'Courses faites': 'Shopping done', 'Courses faites ✓': 'Shopping done ✓',
     'Article ajouté': 'Item added', 'Supprimer': 'Delete', 'Enregistrer': 'Save',
     'Partager la liste': 'Share the list', 'Liste copiée': 'List copied', 'Tout est acheté.': 'Everything is bought.',
     'Article supprimé': 'Item removed', 'Retiré du planning': 'Removed from plan',
@@ -28,6 +30,8 @@ register({
     'Rien à acheter pour cette semaine. Planifie des repas ou ajoute un article.': 'Niets te kopen voor deze week. Plan maaltijden of voeg een artikel toe.',
     'Jour des courses': 'Boodschappendag', 'Courses du {d}': 'Boodschappen op {d}', 'pour les repas du {a} au {b}': 'voor maaltijden van {a} tot {b}',
     'Article libre': 'Ander artikel', 'Quantité (g, facultatif)': 'Hoeveelheid (g, optioneel)',
+    "Courses d'aujourd'hui": 'Boodschappen van vandaag', 'pour les repas du {a}': 'voor maaltijden op {a}', "Ajoute ce que tu achètes aujourd'hui, ou planifie des repas.": 'Voeg toe wat je vandaag koopt, of plan maaltijden.',
+    'pas encore marquée faite': 'nog niet als gedaan gemarkeerd', 'Courses faites': 'Boodschappen gedaan', 'Courses faites ✓': 'Boodschappen gedaan ✓',
     'Article ajouté': 'Artikel toegevoegd', 'Supprimer': 'Verwijderen', 'Enregistrer': 'Opslaan',
     'Partager la liste': 'Lijst delen', 'Liste copiée': 'Lijst gekopieerd', 'Tout est acheté.': 'Alles is gekocht.',
     'Article supprimé': 'Artikel verwijderd', 'Retiré du planning': 'Uit planning verwijderd',
@@ -97,14 +101,17 @@ function openShoppingList() {
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Liste de courses')}</h3></div><div class="pl-shop"></div>`);
   const box = s.querySelector('.pl-shop');
   const shopDay = () => state.settings.shopDay ?? 6;
+  const done = () => state.shoppingDone;
   const now = todayIso();
-  // Anciennes listes (avant les sorties courses) : rattachées à la prochaine sortie (aujourd'hui compris).
-  const cur = tripFor(now, shopDay()), nextTrip = cur >= now ? cur : tripFor(isoDate(new Date(parseDate(now).getTime() + 7 * 864e5)), shopDay());
-  for (const it of state.shoppingList) if (!it.trip) it.trip = nextTrip;
+  // Anciens articles sans liste : rattachés à la liste du jour.
+  for (const it of state.shoppingList) if (!it.trip) it.trip = now;
 
+  // Rattache les nouveaux repas prévus (liste du jour ou sortie régulière), puis met à jour les listes ouvertes.
+  // Les listes faites sont figées : on n'y touche plus.
   const sync = () => {
-    for (const tr of upcomingTrips(now, state.mealPlan, shopDay(), state.shoppingList)) {
-      state.shoppingList = regenerate(state.shoppingList, aggregatePlan(state.mealPlan, tripDates(tr, shopDay())), state.foods, tr);
+    assignTrips(state.mealPlan, now, shopDay(), done());
+    for (const tr of visibleTrips(now, shopDay(), state.shoppingList, state.mealPlan, done())) {
+      state.shoppingList = regenerate(state.shoppingList, aggregateTrip(state.mealPlan, tr), state.foods, tr);
     }
     save();
   };
@@ -114,32 +121,43 @@ function openShoppingList() {
       <button class="btn plain" data-store="${esc(it.id)}">${esc(it.store || t('Magasin'))}</button></li>`;
   const storeGroup = ([store, items]) => group(esc(store || t('Non classé')), `<ul class="cells">${items.map(itemRow).join('')}</ul>`);
   const dayNames = Array.from({ length: 7 }, (_, i) => fmtDate(isoDate(new Date(2026, 10, 1 + i, 12)), { weekday: 'long' })); // 1er nov. 2026 = dimanche
+  const nth = (id) => (id.includes('~') ? ` (${id.split('~')[1]})` : '');
+  const tabLabel = (id) => (tripDay(id) === now ? t("Aujourd'hui") : fmtDate(tripDay(id), { weekday: 'short', day: 'numeric', month: 'short' })) + nth(id);
+  const short = (d) => fmtDate(d, { day: 'numeric', month: 'short' });
+
+  const info = (id) => {
+    const d = tripDay(id), meals = tripMealDates(state.mealPlan, id);
+    const title = d === now ? t("Courses d'aujourd'hui") + nth(id) : t('Courses du {d}', { d: fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' }) }) + nth(id);
+    let sub;
+    if (meals.length) sub = meals.length > 1 ? t('pour les repas du {a} au {b}', { a: short(meals[0]), b: short(meals[meals.length - 1]) }) : t('pour les repas du {a}', { a: short(meals[0]) });
+    else if (d > now && !id.includes('~')) { const w = tripDates(id, shopDay()); sub = t('pour les repas du {a} au {b}', { a: short(w[0]), b: short(w[6]) }); }
+    else sub = t("Ajoute ce que tu achètes aujourd'hui, ou planifie des repas.");
+    if (d < now) sub += ' · ' + t('pas encore marquée faite');
+    return `<b>${esc(title)}</b><br>${esc(sub)}`;
+  };
 
   const draw = () => {
     sync();
-    const trips = upcomingTrips(now, state.mealPlan, shopDay(), state.shoppingList);
-    if (!trips.includes(trip)) trip = trips.find((x) => x >= now) || trips[0];
+    const trips = visibleTrips(now, shopDay(), state.shoppingList, state.mealPlan, done());
+    if (!trips.includes(trip)) trip = trips.find((x) => tripDay(x) >= now) || trips[0];
     const items = state.shoppingList.filter((x) => x.trip === trip && !x.removed);
-    const week = tripDates(trip, shopDay());
     box.innerHTML = `<label class="pl-shopday">${t('Jour des courses')}
         <select name="shopDay">${dayNames.map((n, i) => `<option value="${i}" ${i === shopDay() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
-      <div class="chips pl-trips">${trips.map((tr) => `<button class="chip ${tr === trip ? 'on' : ''}" data-trip="${tr}" aria-pressed="${tr === trip}">${esc(fmtDate(tr, { weekday: 'short', day: 'numeric', month: 'short' }))}</button>`).join('')}</div>
-      <p class="footnote pl-trip-info"><b>${esc(t('Courses du {d}', { d: fmtDate(trip, { weekday: 'long', day: 'numeric', month: 'long' }) }))}</b><br>
-        ${esc(t('pour les repas du {a} au {b}', { a: fmtDate(week[0], { day: 'numeric', month: 'short' }), b: fmtDate(week[6], { day: 'numeric', month: 'short' }) }))}</p>
+      <div class="chips pl-trips">${trips.map((tr) => `<button class="chip ${tr === trip ? 'on' : ''}" data-trip="${tr}" aria-pressed="${tr === trip}">${esc(tabLabel(tr))}</button>`).join('')}</div>
+      <p class="footnote pl-trip-info">${info(trip)}</p>
       ${items.length ? byStore(items).map(storeGroup).join('') : `<p class="empty footnote">${t('Rien à acheter pour cette semaine. Planifie des repas ou ajoute un article.')}</p>`}
       <div class="pl-shop-actions">
         <button class="btn large" data-a="add">${icon('plus')} ${t('Ajouter un article')}</button>
-        ${items.length ? `<button class="btn large" data-a="share">${icon('share')} ${t('Partager la liste')}</button>` : ''}</div>`;
+        ${items.length ? `<button class="btn large" data-a="share">${icon('share')} ${t('Partager la liste')}</button>
+        <button class="btn filled large" data-a="done">${icon('check')} ${t('Courses faites')}</button>` : ''}</div>`;
   };
   draw();
 
   box.onchange = (e) => {
     if (e.target.name !== 'shopDay') return;
     const from = shopDay(), to = +e.target.value;
-    // Même semaine de repas, nouvelle date de sortie : coches, magasins et suppressions suivent.
-    for (const it of state.shoppingList) it.trip = tripFor(tripDates(it.trip, from)[0], to);
-    trip = trip && tripFor(tripDates(trip, from)[0], to);
-    state.settings.shopDay = to; save(); draw();
+    remapShopDay(state.mealPlan, state.shoppingList, from, to, now, done());
+    trip = null; state.settings.shopDay = to; save(); draw();
   };
   box.onclick = (e) => {
     const tb = e.target.closest('[data-trip]'); if (tb) { trip = tb.dataset.trip; return draw(); }
@@ -149,6 +167,11 @@ function openShoppingList() {
     if (st) return editItem(state.shoppingList.find((x) => x.id === st.dataset.store), draw);
     if (e.target.closest('[data-a=share]')) return shareList(state.shoppingList.filter((x) => x.trip === trip));
     if (e.target.closest('[data-a=add]')) return addItem(trip, draw);
+    if (e.target.closest('[data-a=done]')) {
+      // Liste figée et masquée ; ce qui est planifié ensuite part dans une nouvelle liste.
+      const id = trip; state.shoppingDone.push(id); trip = null; save(); draw();
+      toast(t('Courses faites ✓'), { undo: () => { state.shoppingDone = state.shoppingDone.filter((x) => x !== id); trip = id; save(); draw(); } });
+    }
   };
 }
 

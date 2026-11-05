@@ -10,22 +10,6 @@ export function dateRange(start, days = 7) {
   return out;
 }
 
-// Somme les grammes par aliment (clé = foodId, ou le nom si jamais absent) sur les jours donnés.
-export function aggregatePlan(mealPlan, dates) {
-  const byFood = {};
-  for (const d of dates) {
-    const day = mealPlan[d]; if (!day) continue;
-    for (const items of Object.values(day)) {
-      for (const it of items) {
-        const key = it.foodId || it.name;
-        if (!byFood[key]) byFood[key] = { foodId: it.foodId || null, name: it.name, grams: 0 };
-        byFood[key].grams += Number(it.grams) || 0;
-      }
-    }
-  }
-  return Object.values(byFood);
-}
-
 // Reconstruit la liste d'une sortie courses (`trip`, date 'YYYY-MM-DD' ; sans trip = toute la liste) :
 // garde les articles manuels et leur coche, régénère les articles auto depuis l'agrégation (coche et
 // suppression conservées si l'article existait déjà, magasin repris de l'aliment sinon de l'article précédent).
@@ -63,19 +47,6 @@ export function tripDates(trip, shopDay = 6) {
   return dateRange(isoDate(d), 7);
 }
 
-// Sorties à afficher : celle de la semaine en cours, la prochaine, et toute sortie future qui a des repas
-// prévus ou des articles ajoutés à la main. Triées.
-export function upcomingTrips(today, mealPlan, shopDay = 6, list = []) {
-  const cur = tripFor(today, shopDay);
-  const next = isoDate(new Date(parseDate(cur).getTime() + 7 * 864e5));
-  const set = new Set([cur, next]);
-  for (const [d, day] of Object.entries(mealPlan)) {
-    if (d >= today && Object.values(day).some((items) => items.length)) set.add(tripFor(d, shopDay));
-  }
-  for (const it of list) if (it.trip && it.trip >= cur && !it.removed) set.add(it.trip);
-  return [...set].sort();
-}
-
 // Magasins déjà utilisés sur des aliments, pour proposer une saisie cohérente (pas de vraie source externe).
 export function knownStores(foods) {
   return [...new Set(Object.values(foods).map((f) => f.store).filter(Boolean))].sort();
@@ -96,4 +67,90 @@ export function listToText(list, { title = '', unsorted = '' } = {}) {
   const blocks = groups.map(([store, items]) =>
     [store || unsorted, ...items.map((it) => `- ${it.name}${it.grams ? ` (${it.grams} g)` : ''}`)].filter(Boolean).join('\n'));
   return [title, ...blocks].filter(Boolean).join('\n\n');
+}
+
+// ---- Listes de courses réelles : tous les cas d'usage ----
+// Une liste = une sortie courses, identifiée par sa date ('YYYY-MM-DD'), ou 'YYYY-MM-DD~2' pour une 2e liste le même
+// jour (courses déjà faites ce jour-là). Chaque repas prévu est rattaché UNE fois à une liste (entry.trip), puis n'en
+// bouge plus : un repas acheté samedi reste sur la liste du samedi même quand samedi est passé.
+
+// Date d'une liste (sans le suffixe ~2).
+export const tripDay = (id) => String(id).slice(0, 10);
+
+// Liste du jour : aujourd'hui, ou une 2e/3e liste si celle du jour est déjà faite.
+export function todayTrip(today, closed = []) {
+  let id = today, n = 2;
+  while (closed.includes(id)) id = `${today}~${n++}`;
+  return id;
+}
+
+// Prochaine sortie courses régulière (jour choisi) encore ouverte, à partir d'aujourd'hui.
+export function nextScheduled(today, shopDay = 6, closed = []) {
+  let d = parseDate(tripFor(today, shopDay));
+  while (isoDate(d) < today || closed.includes(isoDate(d))) d.setDate(d.getDate() + 7);
+  return isoDate(d);
+}
+
+// Rattache chaque repas prévu (aujourd'hui ou plus tard) pas encore rattaché :
+// - à la sortie régulière d'avant sa semaine si elle est encore à venir et pas faite (ex. repas de mardi prochain → samedi) ;
+// - sinon à la liste du jour (repas d'aujourd'hui, de cette semaine après le samedi, ou ajouté après les courses).
+// Les repas passés ne vont sur aucune liste. Modifie mealPlan en place.
+export function assignTrips(mealPlan, today, shopDay = 6, closed = []) {
+  for (const [d, dayPlan] of Object.entries(mealPlan)) {
+    if (d < today) continue;
+    for (const items of Object.values(dayPlan)) {
+      for (const it of items) {
+        if (it.trip) continue;
+        const sched = tripFor(d, shopDay);
+        it.trip = sched >= today && !closed.includes(sched) ? sched : todayTrip(today, closed);
+      }
+    }
+  }
+}
+
+// Grammes par aliment des repas rattachés à une liste.
+export function aggregateTrip(mealPlan, trip) {
+  const byFood = {};
+  for (const dayPlan of Object.values(mealPlan)) {
+    for (const items of Object.values(dayPlan)) {
+      for (const it of items) {
+        if (it.trip !== trip) continue;
+        const key = it.foodId || it.name;
+        if (!byFood[key]) byFood[key] = { foodId: it.foodId || null, name: it.name, grams: 0 };
+        byFood[key].grams += Number(it.grams) || 0;
+      }
+    }
+  }
+  return Object.values(byFood);
+}
+
+// Dates des repas rattachés à une liste (pour « pour les repas du … au … »).
+export function tripMealDates(mealPlan, trip) {
+  return Object.entries(mealPlan).filter(([, p]) => Object.values(p).some((items) => items.some((it) => it.trip === trip))).map(([d]) => d).sort();
+}
+
+// Listes à afficher : liste du jour, prochaine sortie régulière, toute liste à venir qui a des repas ou des articles,
+// et les listes passées pas marquées faites qui ont encore des articles à acheter (rien ne se perd). Listes faites masquées.
+export function visibleTrips(today, shopDay = 6, list = [], mealPlan = {}, closed = []) {
+  const set = new Set([todayTrip(today, closed), nextScheduled(today, shopDay, closed)]);
+  for (const p of Object.values(mealPlan)) for (const items of Object.values(p)) for (const it of items) {
+    if (it.trip && tripDay(it.trip) >= today && !closed.includes(it.trip)) set.add(it.trip);
+  }
+  for (const it of list) {
+    if (!it.trip || closed.includes(it.trip) || it.removed) continue;
+    if (tripDay(it.trip) >= today || !it.checked) set.add(it.trip);
+  }
+  return [...set].sort();
+}
+
+// Changement du jour des courses : les sorties régulières à venir (pas faites) passent au nouveau jour, pour la même
+// semaine de repas (ou à la liste du jour si le nouveau jour est déjà passé). Liste du jour et listes passées : inchangées.
+export function remapShopDay(mealPlan, list, from, to, today, closed = []) {
+  const map = (id) => {
+    if (!id || id.includes('~') || id <= today || closed.includes(id) || parseDate(id).getDay() !== from) return id;
+    const n = tripFor(tripDates(id, from)[0], to);
+    return n >= today && !closed.includes(n) ? n : todayTrip(today, closed);
+  };
+  for (const p of Object.values(mealPlan)) for (const items of Object.values(p)) for (const it of items) it.trip = map(it.trip);
+  for (const it of list) it.trip = map(it.trip);
 }

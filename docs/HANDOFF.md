@@ -15,7 +15,7 @@ Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v29** · htt
 
 ## 3. Publier une version (checklist)
 1. Incrémenter `VERSION` dans `sw.js` et ajouter tout nouveau fichier au tableau `SHELL`.
-2. `node --test tests/*.test.mjs` (66 tests verts, dont `tests/i18n.test.mjs` qui échoue s'il manque une traduction EN ou NL) · `node --check` sur les JS · `node tests/i18n-scan.mjs` pour voir la liste.
+2. `node --test tests/*.test.mjs` (73 tests verts, dont `tests/i18n.test.mjs` qui échoue s'il manque une traduction EN ou NL) · `node --check` sur les JS · `node tests/i18n-scan.mjs` pour voir la liste.
 3. Régénérer `MAP.md` (boucle bash : 1re ligne de chaque fichier + `grep -oE '^export …'`).
 4. `git commit` + `git push origin main` ; attendre que `https://cristivnsvnchez.github.io/coach-app/sw.js` affiche la nouvelle VERSION.
 - Test local : `python3 -m http.server 5173` dans le dossier ; vider service worker + caches avant de vérifier (`fetch(f,{cache:'reload'})`).
@@ -147,3 +147,13 @@ Complète les points 1 et 3 du « Reste à faire » de la section 8 :
 - **Annuler** : `toast(msg, { undo })` (`js/ui.js`, bouton 5 s). Branché sur : retirer un exercice / supprimer la dernière série (Séance), effacer la conversation (remplace le `confirm`), supprimer un aliment (Journal), supprimer une pesée (remplace le `confirm`), retirer du planning, supprimer un article de courses. Restent en `confirm` : abandonner la séance, supprimer une séance de l'historique ou une routine, tout effacer.
 - Corrigé au passage : l'erreur d'import de programme du Coach s'affichait sans traduction (`toast(err.message, err.vars)`).
 - Vérifié dans le navigateur (mobile clair/sombre, PC) ; pas sur un vrai iPhone. `sw.js` : `css/session.css` et `css/coach.css` ajoutés à `SHELL`. Publié en **trackme-v29**.
+
+## 11. Listes de courses : tous les cas d'usage (2026-11-05, non publié)
+Demande : « si je rajoute une course pour aujourd'hui et j'achète aujourd'hui, je n'ai pas de liste » + préparer la semaine prochaine sans tout remettre sur le samedi déjà fait.
+- **Rattachement figé** : chaque repas prévu reçoit une fois `entry.trip` (`assignTrips`, `js/shopping.js`) et n'en bouge plus — un repas acheté samedi reste sur la liste du samedi.
+  - Sortie régulière d'avant sa semaine si elle est à venir et pas faite (repas de mardi prochain → samedi 7).
+  - Sinon **liste du jour** (`todayTrip`) : repas d'aujourd'hui, de cette semaine après le samedi, ou ajouté après les courses.
+  - Repas passés : aucune liste.
+- **« Courses faites »** : ferme une liste (`state.shoppingDone`, nouveau champ backfillé par `sanitize()`), figée et masquée, avec Annuler. Un repas ajouté ensuite le même jour part dans `YYYY-MM-DD~2` (onglet « Aujourd'hui (2) »).
+- **Onglets** (`visibleTrips`) : liste du jour, prochaine sortie régulière, listes à venir qui ont du contenu, et listes passées pas marquées faites qui ont encore des articles non cochés (rien ne se perd).
+- Changement du jour des courses : `remapShopDay` déplace seulement les sorties régulières à venir. `aggregatePlan`/`upcomingTrips` supprimées (remplacées par `aggregateTrip`/`visibleTrips`). 73 tests verts.
