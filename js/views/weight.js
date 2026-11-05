@@ -129,7 +129,10 @@ export function render(root, go) {
     const r = e.target.closest('[data-r]');
     if (r) { range = +r.dataset.r; return keep(); }
     const d = e.target.closest('[data-del]');
-    if (d && confirm(t('Supprimer cette pesée ?'))) { state.weights = state.weights.filter((w) => w.date !== d.dataset.del); save(); return keep(); }
+    if (d) {
+      const before = state.weights; state.weights = state.weights.filter((w) => w.date !== d.dataset.del); save(); keep();
+      return toast(t('Pesée supprimée'), { undo: () => { state.weights = before; save(); keep(); } });
+    }
     if (e.target.closest('[data-a=profile]')) return go('profile');
     if (e.target.closest('[data-a=add-ms]')) return editMilestone(null, { last, target, keep });
     const tg = e.target.closest('[data-toggle]');

@@ -4,7 +4,8 @@ import * as S from '../science.js';
 import * as W from '../workout.js';
 import { state, save, today, uid, latestWeight } from '../store.js';
 import { findExercise } from '../exercises.js';
-import { esc, fmt, toast, sheet, nav, group } from '../ui.js';
+import { esc, fmt, toast, sheet, group } from '../ui.js';
+import { shape } from '../theme.js';
 import { icon } from '../icons.js';
 import { t, register } from '../i18n.js';
 import { trainingNote } from '../cycle.js';
@@ -13,10 +14,12 @@ import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 register({
   en: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cycle: an easier session is advised. You can drop one set per exercise.',
     'Retirer une série par exercice': 'Remove one set per exercise', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cycle: listen to your body today and adjust if needed.',
-    'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed' },
+    'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed',
+    'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
-    'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt' },
+    'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
+    'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -88,21 +91,30 @@ export function renderSession(root, go, back) {
   const ssIndex = {}; let ssN = 0;
   for (const ex of active.exercises) if (ex.supersetId && !(ex.supersetId in ssIndex)) ssIndex[ex.supersetId] = ssN++;
 
+  const total = active.exercises.reduce((n, ex) => n + ex.sets.length, 0);
+  const pct = total ? Math.round((sets / total) * 100) : 0;
   root.innerHTML = `
-    ${nav(t(active.name), {
-      left: `<button class="btn plain" data-a="discard">${t('Annuler')}</button>`,
-      right: `<button class="btn filled" style="min-height:34px;border-radius:17px" data-a="finish">${t('Terminer')}</button>`,
-    })}
-    ${active.deload ? `<p class="footnote tint" style="margin:-.5rem 0 .75rem">${t('Semaine de décharge : volume réduit (~60 %).')}</p>` : ''}
+    <header class="se-top"><button class="btn plain" data-a="discard">${t('Annuler')}</button>
+      <button class="btn filled se-finish" data-a="finish">${t('Terminer')}</button></header>
+    <section class="tm-hero se-hero">${shape({ cls: 'se-shape' })}
+      <p class="se-kicker">${t('Séance en cours')}</p>
+      <h1 class="se-title">${esc(t(active.name))}</h1>
+      <div class="se-big num" data-live="dur">${hms(Date.now() - active.start)}</div>
+      <div class="se-stats">
+        <div><b class="num">${fmt(vol)}</b><small>${t('kg soulevés')}</small></div>
+        <div><b class="num">${sets}<span>/${total}</span></b><small>${t('séries faites')}</small></div>
+        <div><b class="num">${active.exercises.length}</b><small>${t('Exercices')}</small></div></div>
+      <div class="se-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${t('séries faites')}"><i style="width:${pct}%"></i></div>
+    </section>
+    ${active.deload ? `<p class="footnote tint se-note">${t('Semaine de décharge : volume réduit (~60 %).')}</p>` : ''}
     ${cycleBanner()}
-    <p class="live-line"><b data-live="dur">${hms(Date.now() - active.start)}</b> · ${fmt(vol)} kg · ${sets} ${t(sets > 1 ? 'séries' : 'série')}</p>
     <div class="rest" hidden role="timer"><div class="rest-bar"></div>
       <button class="icon-btn" data-a="rest-" aria-label="−15 s">−15</button>
       <span>${icon('timer')}<span class="rest-t num"></span></span>
       <button class="icon-btn" data-a="rest+" aria-label="+15 s">+15</button>
       <button class="btn plain" data-a="skip">${t('Passer')}</button></div>
     ${active.exercises.map((ex, i) => exerciseCard(ex, i, ssIndex)).join('')}
-    <button class="btn large" data-a="add-ex" style="margin-bottom:1rem">${icon('plus')} ${t('Ajouter un exercice')}</button>
+    <button class="btn large wide se-add" data-a="add-ex">${icon('plus')} ${t('Ajouter un exercice')}</button>
     <p class="group-foot center">${t('Touche le numéro d\'une série pour changer son type (É = échauffement, D = drop set, F = échec). Touche « Précédent » pour recopier.')}</p>`;
 
   if (!ticker) ticker = setInterval(tick, 1000);
@@ -147,11 +159,14 @@ function exerciseCard(ex, i, ssIndex) {
   const rir = !!state.settings.showRir;
   let normalN = 0;
   const color = ex.supersetId ? SS_COLORS[ssIndex[ex.supersetId] % SS_COLORS.length] : null;
-  return `<section class="group ex-card" ${color ? `style="--ss:${color}"` : ''}>
+  const nDone = ex.sets.filter((x) => x.done).length, complete = ex.sets.length > 0 && nDone === ex.sets.length;
+  return `<section class="group ex-card se-ex ${complete ? 'complete' : ''}" ${color ? `style="--ss:${color}"` : ''}>
     <div class="cells ${color ? 'superset' : ''}">
       <div class="ex-head">
+        <span class="se-num" aria-hidden="true">${complete ? icon('check') : i + 1}</span>
         <button class="ex-name" data-a="info" data-i="${i}"><span class="headline">${esc(t(ex.name))}</span>
           <span class="footnote secondary">${ex.repMin}–${ex.repMax} ${t('reps')} · ${esc(t(ex.muscle))}${color ? ` · <span style="color:${color}">${t('Superset')}</span>` : ''}</span></button>
+        <span class="se-count num">${nDone}/${ex.sets.length}</span>
         <button class="icon-btn" data-a="menu" data-i="${i}" aria-label="${t('Options')}">${icon('more')}</button>
       </div>
       ${ex.why ? `<p class="ex-why">${icon('chart')} ${esc(t(ex.why, ex.whyVars))}</p>` : ''}
@@ -263,8 +278,13 @@ function exerciseMenu(i, keep) {
     }
     if (m === 'up' && i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
     if (m === 'down' && i < list.length - 1) [list[i + 1], list[i]] = [list[i], list[i + 1]];
-    if (m === 'delset') ex.sets.pop();
-    if (m === 'remove') list.splice(i, 1);
+    if (m === 'delset' || m === 'remove') {
+      // Suppression réversible : on garde une copie de la liste d'exercices pour « Annuler ».
+      const before = JSON.parse(JSON.stringify(list));
+      if (m === 'delset') ex.sets.pop(); else list.splice(i, 1);
+      s.close(); keep();
+      return toast(t(m === 'remove' ? 'Exercice retiré' : 'Série supprimée'), { undo: () => { if (!active) return; active.exercises = before; keep(); } });
+    }
     if (m === 'replace') {
       s.close();
       return pickExercise((name) => {

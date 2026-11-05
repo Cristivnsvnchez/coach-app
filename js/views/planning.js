@@ -19,7 +19,7 @@ register({
     'Article libre': 'Other item', 'Quantité (g, facultatif)': 'Quantity (g, optional)',
     'Article ajouté': 'Item added', 'Supprimer': 'Delete', 'Enregistrer': 'Save',
     'Partager la liste': 'Share the list', 'Liste copiée': 'List copied', 'Tout est acheté.': 'Everything is bought.',
-    'Article supprimé': 'Item removed',
+    'Article supprimé': 'Item removed', 'Retiré du planning': 'Removed from plan',
   },
   nl: {
     'Planifier mes repas': 'Maaltijden plannen', 'Aucun repas prévu.': 'Nog geen maaltijd gepland.',
@@ -30,7 +30,7 @@ register({
     'Article libre': 'Ander artikel', 'Quantité (g, facultatif)': 'Hoeveelheid (g, optioneel)',
     'Article ajouté': 'Artikel toegevoegd', 'Supprimer': 'Verwijderen', 'Enregistrer': 'Opslaan',
     'Partager la liste': 'Lijst delen', 'Liste copiée': 'Lijst gekopieerd', 'Tout est acheté.': 'Alles is gekocht.',
-    'Article supprimé': 'Artikel verwijderd',
+    'Article supprimé': 'Artikel verwijderd', 'Retiré du planning': 'Uit planning verwijderd',
   },
 });
 
@@ -79,7 +79,10 @@ function editPlanItem(items, id, done) {
   s.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'save') { const g = s.querySelector('[name=g]'); const k = (+g.value || 0) / m.grams; Object.assign(m, { grams: +g.value || m.grams, kcal: Math.round(m.kcal * k), p: +(m.p * k).toFixed(1), c: +(m.c * k).toFixed(1), f: +(m.f * k).toFixed(1), fib: +(m.fib * k).toFixed(1) }); save(); s.close(); }
-    if (a === 'del') { items.splice(items.indexOf(m), 1); save(); s.close(); }
+    if (a === 'del') {
+      const k = items.indexOf(m); items.splice(k, 1); save(); s.close();
+      toast(t('Retiré du planning'), { undo: () => { items.splice(k, 0, m); save(); done(); } });
+    }
   });
 }
 
@@ -194,9 +197,11 @@ function editItem(item, redraw) {
     save(); s.close();
   };
   s.querySelector('[data-a=del]').onclick = () => {
+    const k = state.shoppingList.indexOf(item);
     if (item.auto) item.removed = true; // sinon il reviendrait à la prochaine synchro avec le planning
-    else state.shoppingList.splice(state.shoppingList.indexOf(item), 1);
-    save(); toast(t('Article supprimé')); s.close();
+    else state.shoppingList.splice(k, 1);
+    save(); s.close();
+    toast(t('Article supprimé'), { undo: () => { if (item.auto) delete item.removed; else state.shoppingList.splice(k, 0, item); save(); redraw(); } });
   };
 }
 

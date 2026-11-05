@@ -24,6 +24,12 @@ TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 ## css/planning.css (13 l.)
 TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.md, css/trackme.css).
 
+## css/session.css (37 l.)
+TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
+
+## css/coach.css (25 l.)
+TrackMe — écran Coach (voir DESIGN.md, css/trackme.css). En-tête du Journal, héros palette, tuiles d'action, bulles palette.
+
 ## css/today.css (72 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 

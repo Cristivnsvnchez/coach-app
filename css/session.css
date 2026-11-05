@@ -1,0 +1,37 @@
+/* TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24. */
+.se-top { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 12px; }
+.se-finish { min-height: 40px; border-radius: 20px; padding: 0 18px; }
+
+.se-hero { padding: 18px 20px 20px; margin-bottom: 14px; }
+.se-hero p { margin: 0; }
+.se-kicker { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.se-title { margin: 4px 0 0; font-family: var(--display, inherit); font-size: 1.6rem; font-weight: 650; letter-spacing: -.035em; line-height: 1.15; }
+.se-big { font-family: var(--display, inherit); font-size: 64px; line-height: 1; font-weight: 600; letter-spacing: -.05em; margin-top: 10px; font-variant-numeric: tabular-nums; }
+.se-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.se-stats > div { background: rgba(255,255,255,.14); border-radius: 18px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.se-stats b { font-size: 1.15rem; font-weight: 650; letter-spacing: -.02em; white-space: nowrap; }
+.se-stats b span { opacity: .7; font-weight: 500; }
+.se-stats small { font-size: .7rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.se-prog { margin-top: 14px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+.se-prog i { display: block; height: 100%; border-radius: 4px; background: #fff; transition: width .5s cubic-bezier(.2,.9,.25,1); }
+.se-note { margin: 0 4px 12px; }
+
+/* Cartes d'exercice : même matière que les cartes du Journal, nom en couleur texte (pas en bleu lien). */
+.se-ex .cells { border-radius: 24px; }
+.se-ex .ex-head { padding: .75rem .4rem .35rem .85rem; gap: .6rem; }
+.se-ex .ex-name { flex: 1; min-width: 0; text-align: left; }
+.se-ex .ex-name .headline { color: var(--label); }
+.se-num { flex: none; width: 32px; height: 32px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; background: var(--p-tint); color: var(--p-deep); font-weight: 650; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.se-num .ic { width: 1rem; height: 1rem; }
+.se-count { flex: none; font-size: .8rem; font-weight: 600; color: var(--label-2); padding: 3px 9px; border-radius: 999px; background: var(--fill); }
+.se-ex.complete .se-num { background: var(--p-deep); color: #fff; }
+.se-ex.complete .se-count { background: var(--p-tint); color: var(--p-deep); }
+.se-ex .ex-why { color: var(--label-2); padding: 0 1rem .25rem; }
+.se-ex .ex-why .ic { color: var(--p-deep); }
+.se-ex .set.done .check .ring-o { background: var(--p-deep); border-color: var(--p-deep); }
+.se-ex .set.done input { background: color-mix(in srgb, var(--p-deep) 16%, transparent); }
+.se-add { margin: 4px 0 1rem; }
+@media (prefers-color-scheme: dark) {
+  .se-num, .se-ex.complete .se-count { background: color-mix(in srgb, var(--p-mid) 24%, transparent); color: var(--label); }
+  .se-count { background: var(--fill-2, var(--fill)); }
+}

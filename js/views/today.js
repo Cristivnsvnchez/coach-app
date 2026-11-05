@@ -194,6 +194,9 @@ function editItem(log, id, done) {
       Object.assign(m, { grams: +g.value || m.grams, kcal: v.kcal, p: +v.p.toFixed(1), c: +v.c.toFixed(1), f: +v.f.toFixed(1), fib: +v.fib.toFixed(1) });
       save(); s.close();
     }
-    if (a === 'del') { log.meals = log.meals.filter((x) => x.id !== id); save(); s.close(); }
+    if (a === 'del') {
+      const before = log.meals; log.meals = log.meals.filter((x) => x.id !== id); save(); s.close();
+      toast(t('Aliment supprimé'), { undo: () => { log.meals = before; save(); done(); } });
+    }
   });
 }

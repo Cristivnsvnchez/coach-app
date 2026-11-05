@@ -85,12 +85,20 @@ export function md(text) {
   return html + (list ? '</ul>' : '');
 }
 
-export function toast(msg) {
+export function toast(msg, { undo = null, ms = undo ? 5000 : 2200 } = {}) {
   document.querySelectorAll('.toast').forEach((x) => x.remove());
   const el = document.createElement('div');
-  el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
+  el.className = 'toast' + (undo ? ' with-undo' : ''); el.setAttribute('role', 'status');
+  const span = document.createElement('span'); span.textContent = msg; el.appendChild(span);
+  // « Annuler » après une suppression : le bouton rejoue l'état d'avant (fourni par l'appelant), une seule fois.
+  if (undo) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-undo'; b.textContent = t('Annuler');
+    b.onclick = () => { el.remove(); undo(); };
+    el.appendChild(b);
+  }
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2200);
+  setTimeout(() => el.remove(), ms);
 }
 
 // Feuille modale du bas (style iOS). Renvoie l'élément pour brancher les événements.

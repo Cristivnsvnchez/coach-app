@@ -5,9 +5,17 @@ import { ask, hasKey, userContext, extractJson, stripJson } from '../ai.js';
 import { importProgram } from './training.js';
 import { openWizard } from './program.js';
 import { MEALS } from './addfood.js';
-import { esc, md, toast, fmt, nav } from '../ui.js';
+import { esc, md, toast, fmt } from '../ui.js';
+import { shape } from '../theme.js';
 import { icon } from '../icons.js';
-import { t } from '../i18n.js';
+import { t, register } from '../i18n.js';
+
+register({
+  en: { 'Ton coach sport et nutrition': 'Your training and nutrition coach', 'Réponses sourcées : PubMed, ANSES, EFSA, OMS.': 'Sourced answers: PubMed, ANSES, EFSA, WHO.',
+    'Conversation effacée': 'Conversation cleared', 'Effacer la conversation': 'Clear conversation' },
+  nl: { 'Ton coach sport et nutrition': 'Je coach voor sport en voeding', 'Réponses sourcées : PubMed, ANSES, EFSA, OMS.': 'Antwoorden met bronnen: PubMed, ANSES, EFSA, WHO.',
+    'Conversation effacée': 'Gesprek gewist', 'Effacer la conversation': 'Gesprek wissen' },
+});
 import { MUSCLES, isoDate } from '../science.js';
 
 let busy = false;
@@ -86,17 +94,24 @@ async function send(root, go, text, { search = true, label = null } = {}) {
 }
 
 export function render(root, go, autoAction) {
+  const empty = !state.chat.length;
+  const actions = empty
+    ? `<div class="co-acts">${Object.entries(ACTIONS).map(([k, a]) => `<button class="co-act" data-act="${k}"><span class="co-ico">${icon(a.icon)}</span><span>${t(a.label)}</span></button>`).join('')}</div>`
+    : `<div class="chips co-chips">${Object.entries(ACTIONS).map(([k, a]) => `<button class="chip" data-act="${k}">${icon(a.icon)} ${t(a.label)}</button>`).join('')}</div>`;
   root.innerHTML = `
-    ${nav(t('Coach'), { right: state.chat.length ? `<button class="btn plain" data-a="clear">${t('Effacer')}</button>` : '' })}
-    ${!hasKey() ? `<div class="cta"><b class="headline">${t("Active l'IA")}</b><p>${t('Colle ta clé API Claude dans Profil (console.anthropic.com → API Keys). Coût : quelques centimes par demande.')}</p><button class="btn filled" data-a="profile">${t('Ajouter ma clé')}</button></div>` : ''}
-    <div class="chips">${Object.entries(ACTIONS).map(([k, a]) => `<button class="chip" data-act="${k}">${icon(a.icon)} ${t(a.label)}</button>`).join('')}</div>
+    <header class="td-head"><h1 class="td-title">${t('Coach')}</h1>
+      <div class="td-btns">${empty ? '' : `<button class="td-round" data-a="clear" aria-label="${t('Effacer la conversation')}">${icon('trash')}</button>`}</div></header>
+    ${!hasKey() ? `<div class="cta co-key"><b class="headline">${t("Active l'IA")}</b><p>${t('Colle ta clé API Claude dans Profil (console.anthropic.com → API Keys). Coût : quelques centimes par demande.')}</p><button class="btn filled" data-a="profile">${t('Ajouter ma clé')}</button></div>` : ''}
+    ${empty ? `<section class="tm-hero co-hero">${shape({ cls: 'co-shape' })}<span class="co-badge">${icon('sparkles')}</span>
+      <h2 class="co-title">${t('Ton coach sport et nutrition')}</h2><p>${t('Réponses sourcées : PubMed, ANSES, EFSA, OMS.')}</p></section>` : ''}
+    ${actions}
     <div class="chat" aria-live="polite">${state.chat.map((m) => `<div class="msg ${m.role} ${m.error ? 'err' : ''}">
       ${m.pending ? `<span class="typing-dots" aria-label="${t('Recherche dans la littérature…')}"><i></i><i></i><i></i></span>`
         : m.role === 'user' ? `<span class="ut">${esc(m.label ? t(m.label) : m.text.length > 280 ? m.text.slice(0, 280) + '…' : m.text)}</span>` : md(m.text)}
       ${m.sources?.length ? `<details class="sources"><summary>${icon('flask')} ${m.sources.length} ${t('source(s)')}</summary><ol>${m.sources.filter((s) => /^https?:/i.test(s.url)).map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ol></details>` : ''}
       ${m.action?.type === 'recipe' ? `<div class="row"><select class="input" data-meal="${m.id}" aria-label="${t('Ajouter')}">${Object.entries(MEALS).map(([k, l]) => `<option value="${k}">${t(l)}</option>`).join('')}</select><button class="btn filled" data-addrecipe="${m.id}">${icon('plus')} ${t('1 portion ({k} kcal)', { k: fmt(m.action.data.per_portion.kcal) })}</button></div>` : ''}
       ${m.action?.type === 'program' ? `<div class="row"><button class="btn filled" data-useprog="${m.id}">${t('Utiliser ce programme')}</button></div>` : ''}
-    </div>`).join('') || `<p class="empty footnote">${t("Pose une question (nutrition, entraînement, récupération…) ou choisis une action ci-dessus. Les réponses s'appuient sur PubMed, ANSES, EFSA, OMS et sont sourcées.")}</p>`}</div>
+    </div>`).join('')}</div>
     <form class="composer" data-f="chat">
       <label class="sci" title="${t('Recherche scientifique')}">${icon('flask')}<input type="checkbox" name="s" checked aria-label="${t('Recherche scientifique')}"></label>
       <textarea name="q" rows="1" placeholder="${t('Ta question au coach…')}" ${busy ? 'disabled' : ''} aria-label="${t('Ta question au coach…')}"></textarea>
@@ -119,7 +134,11 @@ export function render(root, go, autoAction) {
     const el = e.target.closest('[data-a],[data-act],[data-addrecipe],[data-useprog]');
     if (!el) return;
     if (el.dataset.a === 'profile') return go('profile');
-    if (el.dataset.a === 'clear') { if (confirm(t('Effacer la conversation ?'))) { state.chat = []; save(); render(root, go); } return; }
+    if (el.dataset.a === 'clear') {
+      const before = state.chat; state.chat = []; save(); render(root, go);
+      toast(t('Conversation effacée'), { undo: () => { state.chat = before; save(); if (root.dataset.view === 'coach') render(root, go); } });
+      return;
+    }
     if (el.dataset.act) return runAction(el.dataset.act);
     const m = state.chat.find((x) => x.id === (el.dataset.addrecipe || el.dataset.useprog));
     if (!m) return;
@@ -129,7 +148,7 @@ export function render(root, go, autoAction) {
       save(); toast(t('Ajouté au journal ✓'));
     }
     if (el.dataset.useprog) {
-      try { importProgram(m.action.data); toast(t('Programme activé ✓')); go('training'); } catch (err) { toast(err.message, err.vars); }
+      try { importProgram(m.action.data); toast(t('Programme activé ✓')); go('training'); } catch (err) { toast(t(err.message, err.vars)); }
     }
   };
   const runAction = (k) => {

@@ -140,3 +140,10 @@ Complète les points 1 et 3 du « Reste à faire » de la section 8 :
 - Publié en **trackme-v28**.
 - Aucune donnée n'est récupérée chez Albert Heijn ni ailleurs : le magasin est un champ saisi par l'utilisateur.
 - Reste : point 2 de la section 8 (pont Journal ↔ planning).
+
+## 10. Écrans Séance et Coach au nouveau style + « Annuler » (2026-11-05, non publié)
+- **Séance** (`js/views/session.js`, `css/session.css`) : héros palette (`tm-hero` + `shape()`) avec grand chrono (`data-live="dur"`, toujours mis à jour par `tick()`), kg soulevés, séries faites/total, nombre d'exercices, barre de progression. Cartes d'exercice : pastille numéro (coche quand tout est fait), nom en couleur texte, compteur `2/3`, coches à la couleur de la palette.
+- **Coach** (`js/views/coach.js`, `css/coach.css`) : en-tête du Journal (`td-head`) + corbeille ronde ; conversation vide → héros + 3 tuiles d'action (les puces étaient coupées) ; sinon puces défilantes. Bulles utilisateur en dégradé palette.
+- **Annuler** : `toast(msg, { undo })` (`js/ui.js`, bouton 5 s). Branché sur : retirer un exercice / supprimer la dernière série (Séance), effacer la conversation (remplace le `confirm`), supprimer un aliment (Journal), supprimer une pesée (remplace le `confirm`), retirer du planning, supprimer un article de courses. Restent en `confirm` : abandonner la séance, supprimer une séance de l'historique ou une routine, tout effacer.
+- Corrigé au passage : l'erreur d'import de programme du Coach s'affichait sans traduction (`toast(err.message, err.vars)`).
+- Vérifié dans le navigateur (mobile clair/sombre, PC) ; pas sur un vrai iPhone. `sw.js` : `css/session.css` et `css/coach.css` ajoutés à `SHELL`, VERSION à incrémenter à la publication.
