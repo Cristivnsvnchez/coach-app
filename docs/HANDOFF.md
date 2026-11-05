@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v27** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v28** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -131,12 +131,12 @@ Aucune dépendance externe ni IA pour ce chantier — 100 % local, l'utilisateur
 2. Copier un repas déjà mangé (Journal) vers le planning, ou l'inverse (actuellement deux systèmes séparés, pas de pont).
 3. Export/partage de la liste de courses (texte, pour l'envoyer par message par exemple).
 
-## 9. Liste de courses — suite (2026-11-05, non publié)
+## 9. Liste de courses — suite (2026-11-05, v28)
 Complète les points 1 et 3 du « Reste à faire » de la section 8 :
 - **Modifier/supprimer un article** : le bouton magasin d'une ligne ouvre `editItem()` (`js/views/planning.js`) : magasin, nom (articles libres seulement), bouton Supprimer. Un article auto supprimé est masqué (`removed: true`), pas effacé, sinon la synchro le recréerait.
 - **Une liste par sortie courses** (demande : « la picanha de la semaine prochaine doit arriver dans la liste du samedi d'avant ») : `tripFor(date, shopDay)` = dernier jour de courses avant le lundi de la semaine du repas ; `tripDates`, `upcomingTrips` (`js/shopping.js`, testés). Jour réglable dans la feuille (`state.settings.shopDay`, défaut 6 = samedi) ; changer le jour recale tous les articles sur la même semaine de repas. Synchro automatique avec le planning à chaque ouverture (plus de bouton Régénérer). Le bandeau du planning passe à 14 jours.
 - **Ajouter un article = même recherche que pour un repas** : `openAddFood()` accepte `{ pick, title, extra }` ; la puce « Article libre » garde la saisie texte (non-alimentaire). Magasins proposés : ceux déjà saisis + grandes enseignes belges (`BE_STORES`), texte libre accepté.
 - **Partager la liste** : `listToText()` (`js/shopping.js`, pur, 2 tests) → texte des articles non cochés groupés par magasin ; `navigator.share({ text })` (feuille iOS), sinon copie dans le presse-papiers.
-- Commit local seulement, `VERSION` de `sw.js` toujours `trackme-v27` : à incrémenter au moment de publier.
+- Publié en **trackme-v28**.
 - Aucune donnée n'est récupérée chez Albert Heijn ni ailleurs : le magasin est un champ saisi par l'utilisateur.
 - Reste : point 2 de la section 8 (pont Journal ↔ planning).
