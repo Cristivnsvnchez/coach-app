@@ -7,17 +7,20 @@ import { getLang, t } from '../i18n.js';
 
 export const MEALS = { dej: 'Petit-déjeuner', midi: 'Déjeuner', diner: 'Dîner', snack: 'Collations' };
 
-export function openAddFood(meal, date, done, { target = 'log' } = {}) {
+// `pick(entries)` (optionnel) remplace l'écriture dans le Journal/planning : sert à la liste de courses, qui
+// réutilise la même recherche. `title` remplace alors le titre, `extra` ajoute une puce (ex. article libre).
+export function openAddFood(meal, date, done, { target = 'log', pick = null, title = '', extra = null } = {}) {
   let stopScan = null;
   let scanId = 0; // invalide un démarrage de caméra encore en cours si on ferme ou change d'onglet
   const s = sheet(`
-    <div class="sheet-head"><h3 class="title2">${t(target === 'plan' ? 'Planifier — {meal}' : 'Ajouter — {meal}', { meal: t(MEALS[meal]) })}</h3></div>
+    <div class="sheet-head"><h3 class="title2">${title ? esc(title) : t(target === 'plan' ? 'Planifier — {meal}' : 'Ajouter — {meal}', { meal: t(MEALS[meal]) })}</h3></div>
     <form data-f="search" class="row" style="margin-bottom:.5rem">
       <label class="searchbar" style="flex:1">${icon('search')}<input name="q" type="search" placeholder="${t('Rechercher un aliment')}" autocomplete="off" enterkeyhint="search" aria-label="${t('Rechercher un aliment')}"></label>
     </form>
     <div class="chips">
       <button class="chip" data-a="scan">${icon('barcode')} ${t('Code-barres')}</button>
       <button class="chip" data-a="manual">${icon('pencil')} ${t('Manuel')}</button>
+      ${extra ? `<button class="chip" data-a="extra">${icon('plus')} ${esc(extra.label)}</button>` : ''}
     </div>
     <div class="results"></div>`, () => { scanId++; stopScan && stopScan(); });
   const res = s.querySelector('.results');
@@ -41,6 +44,7 @@ export function openAddFood(meal, date, done, { target = 'log' } = {}) {
   };
 
   const addEntries = (entries) => {
+    if (pick) { pick(entries); s.close(); done(); return; }
     const bucket = target === 'plan' ? planDay(date)[meal] : dayLog(date).meals;
     entries.forEach((en) => bucket.push({ ...en, id: uid(), meal }));
     save(); toast(entries.length > 1 ? t('{n} aliments ajoutés', { n: entries.length }) : t('Ajouté ✓'));
@@ -146,6 +150,7 @@ export function openAddFood(meal, date, done, { target = 'log' } = {}) {
   s.querySelector('.chips').onclick = (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     scanId++; stopScan && stopScan(); stopScan = null;
+    if (a === 'extra') { s.close(); return extra.run(); }
     ({ scan: doScan, manual: doManual })[a]?.();
   };
   showHome();

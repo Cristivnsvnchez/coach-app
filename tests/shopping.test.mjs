@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateRange, aggregatePlan, regenerate, knownStores, byStore, listToText } from '../js/shopping.js';
+import { dateRange, aggregatePlan, regenerate, knownStores, byStore, listToText, tripFor, tripDates, upcomingTrips } from '../js/shopping.js';
 
 test('dateRange : n jours consécutifs à partir du départ', () => {
   const d = dateRange('2026-11-04', 3);
@@ -63,4 +63,40 @@ test('listToText : articles non cochés groupés par magasin, non classés à la
 test('listToText : liste vide ou tout coché → chaîne vide', () => {
   assert.equal(listToText([], {}), '');
   assert.equal(listToText([{ id: '1', name: 'Riz', grams: 0, store: '', checked: true }], {}), '');
+});
+
+// 2026-11-05 = jeudi. Semaine suivante = lun. 9 → dim. 15 nov. ; samedi d'avant = 7 nov.
+test('tripFor : un repas de la semaine prochaine tombe dans les courses du samedi d\'avant', () => {
+  assert.equal(tripFor('2026-11-09', 6), '2026-11-07'); // lundi
+  assert.equal(tripFor('2026-11-14', 6), '2026-11-07'); // samedi même semaine
+  assert.equal(tripFor('2026-11-15', 6), '2026-11-07'); // dimanche
+  assert.equal(tripFor('2026-11-16', 6), '2026-11-14'); // lundi suivant
+  assert.equal(tripFor('2026-11-12', 0), '2026-11-08'); // courses le dimanche d'avant
+  assert.equal(tripFor('2026-11-12', 1), '2026-11-09'); // courses le lundi : le jour même de la semaine
+});
+
+test('tripDates : les 7 jours (lun → dim) couverts par une sortie courses', () => {
+  assert.deepEqual(tripDates('2026-11-07', 6), ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15']);
+});
+
+test('upcomingTrips : sortie en cours + prochaine + celles qui ont des repas prévus', () => {
+  const plan = { '2026-11-20': { dej: [], midi: [{ foodId: 'picanha', name: 'Picanha', grams: 400 }], diner: [], snack: [] }, '2026-12-01': { dej: [], midi: [], diner: [], snack: [] } };
+  assert.deepEqual(upcomingTrips('2026-11-05', plan, 6, []), ['2026-10-31', '2026-11-07', '2026-11-14']);
+});
+
+test('regenerate par sortie : ne touche pas aux autres sorties, garde les articles auto supprimés masqués', () => {
+  const prev = [
+    { id: 'riz', foodId: 'riz', name: 'Riz', grams: 100, store: '', checked: false, auto: true, trip: '2026-10-31' },
+    { id: 'pic', foodId: 'picanha', name: 'Picanha', grams: 400, store: '', checked: false, auto: true, trip: '2026-11-07', removed: true },
+  ];
+  const out = regenerate(prev, [{ foodId: 'picanha', name: 'Picanha', grams: 500 }], {}, '2026-11-07');
+  assert.equal(out.find((x) => x.foodId === 'riz').trip, '2026-10-31');
+  const pic = out.find((x) => x.foodId === 'picanha');
+  assert.equal(pic.removed, true);
+  assert.equal(pic.trip, '2026-11-07');
+  assert.equal(out.length, 2);
+});
+
+test('listToText ignore les articles supprimés', () => {
+  assert.equal(listToText([{ id: '1', name: 'Riz', grams: 0, store: '', checked: false, removed: true }], {}), '');
 });

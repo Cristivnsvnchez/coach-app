@@ -11,3 +11,8 @@
 .pl-done .t { text-decoration: line-through; opacity: .55; }
 .pl-check { color: transparent; border: 2px solid var(--line); background: transparent; }
 .pl-check[aria-pressed="true"] { background: var(--p-deep); border-color: var(--p-deep); color: #fff; }
+.pl-shopday { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 16px; background: var(--cell); margin-bottom: 12px; }
+.pl-shopday select { font: inherit; color: var(--p-deep); background: transparent; border: 0; text-transform: capitalize; }
+.pl-trips { margin-bottom: 8px; }
+.pl-trips .chip { text-transform: capitalize; }
+.pl-trip-info { margin: 0 4px 12px; }

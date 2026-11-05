@@ -17,7 +17,7 @@ const MIGRATIONS = {
 const empty = () => ({
   _v: SCHEMA,
   profile: { goal: 'perte', rate: 0.5, activity: 'leger' },
-  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7, outfit: 0 },
+  settings: { apiKey: '', model: 'claude-opus-5-5', budgetEur: 10, look: 'glass', palette: 'ocean', shape: 'flow', surface: 'brume', scheme: 'auto', backupEvery: 7, outfit: 0, shopDay: 6 },
   usage: null,    // { month: 'YYYY-MM', usd, calls } : dépense IA estimée du mois
   foods: {},      // id -> { name, per100: {kcal,p,c,f,fib}, source, serving }
   favorites: [],  // ids d'aliments
@@ -35,7 +35,7 @@ const empty = () => ({
   foodGroups: {}, // 'YYYY-MM-DD' -> { fruitVeg: n, fish: n } (repères ANSES)
   plan: null,     // programme daté : { id, name, goal, start, end, weeks, weekdays, deloadEvery, phases, routineIds }
   mealPlan: {},   // 'YYYY-MM-DD' -> { dej: [entry], midi: [entry], diner: [entry], snack: [entry] } (repas prévus, distinct de logs = repas mangés)
-  shoppingList: [], // [{ id, foodId, name, grams, store, checked, auto }] (auto = regénéré depuis mealPlan, sinon ajouté à la main)
+  shoppingList: [], // [{ id, foodId, name, grams, store, checked, auto, trip, removed }] (auto = regénéré depuis mealPlan, sinon ajouté à la main ; trip = date de la sortie courses ; removed = article auto masqué)
 });
 
 export let state = empty();
