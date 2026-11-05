@@ -107,11 +107,11 @@ export function openTechnique(name, go) {
   let outfitIdx = Math.min(state.settings.outfit || 0, outfits.length - 1);
   // Le visuel (3D 360° si disponible, sinon figure) est posé une fois : changer d'onglet ne recharge pas le modèle.
   const m3d = model3D(name, sex);
-  let dispose = () => {}, setOutfit = () => {};
+  let dispose = () => {}, setOutfit = () => {}, setMode = () => {};
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
     <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big')}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
       <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
-  if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; });
+  if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); });
   const openDress = () => {
     const ds = sheet(`<div class="sheet-head"><h3 class="title2">${t('Choisir une tenue')}</h3></div>
       <ul class="v3d-outfits">${outfits.map((o, i) => `<li><button class="v3d-outfit ${i === outfitIdx ? 'on' : ''}" data-outfit="${i}">
@@ -135,7 +135,7 @@ export function openTechnique(name, go) {
   };
   s.addEventListener('click', (e) => {
     if (e.target.closest('[data-dress]')) return openDress();
-    const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; return draw(); }
+    const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; setMode(tab); return draw(); }
     if (e.target.closest('[data-rec]')) { s.close(); return openExercise(name); }
     if (e.target.closest('[data-add]') && active) {
       const up = info.upper ?? true, prev = W.previousSets(state.workouts, name).filter((x) => x.type !== 'warmup');

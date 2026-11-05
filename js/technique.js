@@ -97,10 +97,15 @@ function combineMuscles(primary, secondary = []) {
   add(primary, 1); secondary.forEach((m) => add(m, 0.55));
   return W;
 }
+// Déformation du mouvement correct pour illustrer l'erreur la plus fréquente (onglet Erreurs), appliquée en plus
+// de l'animation telle quelle : un décalage de rotation fixe sur certains os, visible pendant tout le mouvement.
+const MISTAKES = {
+  Squat: { LeftLeg: { z: -0.3 }, RightLeg: { z: 0.3 } }, // genoux qui rentrent vers l'intérieur
+};
 export function model3D(name, sex = 'M') {
   const clip = CLIPS[name]; if (!clip) return null;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []) };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: MISTAKES[name] };
 }
 // Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).

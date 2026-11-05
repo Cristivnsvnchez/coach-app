@@ -95,7 +95,7 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog uid,sum intakesByDay,latestWeight recentFoods
 
-## js/technique.js (601 l.)
+## js/technique.js (606 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
 exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure model3D,OUTFITS outfitsFor,pictogram getTechnique,allTechniques missingTechniques,TECH
 
@@ -137,7 +137,7 @@ exports: pickExercise,openExercise platesSheet
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick
 
-## js/viewer3d.js (162 l.)
+## js/viewer3d.js (224 l.)
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
 

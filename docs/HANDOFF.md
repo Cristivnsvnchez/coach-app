@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v22** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v23** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -64,11 +64,19 @@ Onboarding par choix (12 étapes, palette, kcal Mifflin modifiables, « Protège
   - Raccourci trouvé : une seule animation téléchargée (avec `skin:true` sur X Bot) suffit pour les deux sexes — dans Blender, l'Action est réutilisable telle quelle sur l'armature Y Bot (mêmes noms d'os `mixamorig:…`), pas besoin de la télécharger deux fois.
   - ⚠️ Le `.blend` actuel (`design/trackme-human.blend`) ne contient plus que le corps **féminin** (Armature + Beta_Joints + Beta_Surface) — le corps masculin habillé a été remplacé en cours de route par une session précédente. Pour ajouter des clips au glb homme, réimporter d'abord `models/trackme-human.glb` dans Blender pour récupérer son armature + mesh avant d'assigner les nouvelles actions.
 
+**Fait (v23) — vrais vêtements, objets en main, Erreurs/Conseils différents en 3D :**
+- **Vraies coupes** (plus seulement de la couleur) : zones `TM_Sleeve`/`TM_PantsLong` ajoutées dans Blender sur les deux corps (sélection par poids de peau sur les os bras/avant-bras et cuisse/jambe, matériau copié depuis `TM_Skin` puis réassigné). Classées comme `top`/`shorts` dans `viewer3d.js` (regex `kind`), donc recolorées avec les mêmes couleurs de tenue sans code en plus. Les 2 glb (`models/trackme-human.glb`, `models/trackme-human-f.glb`) ont été réexportés avec ces 7 zones. ⚠️ Le corps homme a dû être réimporté dans `trackme-human.blend` (il n'y était plus, voir note plus bas) — le fichier contient maintenant les deux squelettes.
+- **Objets en main** (`js/viewer3d.js`) : barre (`equipment: 'barre'`, accrochée à `Spine2`) et haltères (`equipment: 'haltères'`, accrochés à `LeftHand`/`RightHand`) — géométrie three.js simple, pas de modèle Blender. Suivent l'os chaque frame en recopiant sa position/rotation (`matrixWorld.decompose`), **pas** en enfant direct du bone : certains bones ont une échelle parasite (objet Armature à 0.01 après réimport glTF) qui déformerait un enfant non skinné.
+- **Onglet Erreurs** : `MISTAKES` dans `technique.js` (ex. Squat → genoux qui rentrent, rotation Z fixe sur `LeftLeg`/`RightLeg`) appliquée par-dessus l'animation tant que l'onglet Erreurs est ouvert (`setMode('mistakes')`), retirée sur Étapes/Conseils.
+- **Onglet Conseils** : pose figée (`act.paused = true`) + lueur musculaire renforcée (`uHighlight` ×1.7) façon planche anatomique, au lieu du texte seul.
+- `mount3D()` renvoie maintenant `{ dispose, setOutfit, setMode }` ; `model3D()` renvoie en plus `equipment` et `mistake`.
+
 **Reste à faire pour ce chantier :**
-1. Dès que Mixamo refonctionne : télécharger les 9 motions ci-dessus, les assigner aux deux squelettes (réimporter le corps homme d'abord, voir note ⚠️ ci-dessus), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js`.
-2. Puis continuer avec les ~20 autres mouvements repérés (mobilité notamment — rien trouvé encore sur ce point) et les ~36 exercices de `LIBRARY` qui n'ont toujours pas de clip.
-3. Coupes de vêtements manches longues / pantalon large / legging / chaussettes (actuellement toutes les tenues réutilisent la même coupe débardeur+short, seules les couleurs changent) — décidé de livrer vite avec les couleurs seules ; les vraies coupes sont un chantier Blender à part, plus long.
+1. Dès que Mixamo refonctionne : télécharger les 9 motions notées ci-dessus, les assigner aux deux squelettes (le corps homme est déjà réimporté, voir ⚠️ au-dessus), exporter les 2 glb multi-clips, remplir `CLIPS` dans `js/technique.js`.
+2. Puis continuer avec les ~20 autres mouvements repérés et les ~36 exercices de `LIBRARY` qui n'ont toujours pas de clip — chacun aura alors aussi ses erreurs/objets en main une fois son `MISTAKES`/`equipment` renseigné (déjà générique).
+3. Machines (presse à cuisses, poulie, banc) : pas d'objet en main suffisant, il faudra un décor 3D dédié par machine — pas commencé.
 4. Vignettes des tenues dans la feuille « Habiller » : pour l'instant juste 2 pastilles de couleur (haut/bas) + libellé, pas de rendu Blender comme prévu initialement.
+5. Régler plus finement l'angle du défaut « genoux qui rentrent » et la position de la barre (actuellement réglés à l'œil, une seule passe de vérif visuelle).
 
 Références photo : 6 images gardées en local chez l’utilisateur (`~/trackme-3d/refs/`, non publiées : photos de personnes réelles). Description :
 - **Homme** : survêtement gris chiné zippé + t-shirt blanc + baskets blanches · hoodie marine + jogging gris large + baskets argent · hoodie + jogging gris « cosy » + chaussettes blanches.

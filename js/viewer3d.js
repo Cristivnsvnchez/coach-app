@@ -4,9 +4,9 @@
 
 const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par session
 
-const noop3D = { dispose() {}, setOutfit() {} };
+const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
-export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
+export async function mount3D(box, { url, clip, muscles = {}, equipment, mistake }, outfit = null) {
   let THREE, GLTFLoader, OrbitControls;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
@@ -66,6 +66,7 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
   // Matière « mannequin anatomique » : blanc mat + liseré bleu (effet rayons X) + muscles travaillés lumineux.
   // Le masque musculaire vient des poids de peau : chaque sommet sait à quels os il est lié (cuisses, dos, bras…).
   const uTime = { value: 0 };
+  const uHighlight = { value: 1 }; // boosté à l'onglet Conseils : la lueur musculaire devient une planche anatomique
   const byKind = {}; // kind ('top'/'shorts'/'shoes') → matériaux à recolorer quand on change de tenue
   obj.traverse((o) => {
     if (!o.isSkinnedMesh) return;
@@ -76,7 +77,7 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     o.material = mats.map((m) => {
       // Peau : blanc mat + lueur. Haut : tissu sombre, la lueur passe à travers (pectoraux, dos). Short et chaussures : sans lueur.
-      const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : 'skin';
+      const kind = /short|pantslong/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top|sleeve/i.test(m.name) ? 'top' : 'skin';
       const sole = /sole/i.test(m.name); // semelle : jamais recolorée par la tenue, reste neutre
       const skin = kind === 'skin', glows = kind === 'skin' || kind === 'top';
       const tint = outfit && outfit[kind] && !sole ? outfit[kind] : m.color;
@@ -84,13 +85,13 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
       if (!skin && !sole) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
       mm.onBeforeCompile = (sh) => {
-        sh.uniforms.uW = { value: W }; sh.uniforms.uTime = uTime;
+        sh.uniforms.uW = { value: W }; sh.uniforms.uTime = uTime; sh.uniforms.uHighlight = uHighlight;
         sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uW[64];\nvarying float vMask;')
           .replace('#include <skinning_vertex>', `#include <skinning_vertex>
             float back = smoothstep(-0.15, 0.35, objectNormal.z); // le modèle exporté regarde vers -Z : dos = +Z
             vMask = 0.0;
             for (int k = 0; k < 4; k++) { float wv = uW[int(skinIndex[k])]; vMask += (wv < 0.0 ? -wv * back : wv) * skinWeight[k]; }`);
-        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vMask;')
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHighlight;\nvarying float vMask;')
           .replace('#include <dithering_fragment>', `
             float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.4);
             gl_FragColor.rgb += vec3(0.32, 0.56, 1.0) * fres * ${skin ? '0.85' : '0.4'};
@@ -98,7 +99,7 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
             float pulse = 0.85 + 0.15 * sin(uTime * 2.6);
             // Lueur : cœur jaune chaud, bords orange plus lumineux (comme un muscle qui « chauffe »).
             vec3 glow = mix(vec3(1.0, 0.88, 0.42), vec3(1.0, 0.38, 0.06), clamp(fres * 1.6, 0.0, 1.0));
-            gl_FragColor.rgb = mix(gl_FragColor.rgb, glow * (1.05 + 0.5 * fres), m * (0.62 + 0.3 * fres) * pulse);
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, glow * (1.05 + 0.5 * fres), clamp(m * (0.62 + 0.3 * fres) * pulse * uHighlight, 0.0, 1.0));
             #include <dithering_fragment>`);
       };
       return mm;
@@ -106,10 +107,65 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
     if (o.material.length === 1) o.material = o.material[0];
   });
 
+  // Charge en main : objet simple (pas de modèle Blender) qui suit un os chaque image. On ne le rend pas
+  // enfant du bone directement : certains exports glTF portent une échelle parasite sur l'armature, qui
+  // déformerait un enfant non skinné. On recopie juste position + rotation du bone à chaque frame.
+  const findBone = (re) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && re.test(o.name)) b = o; }); return b; };
+  const rigs = []; // { bone, group, offset: Vector3 (espace local du bone) }
+  const attach = (bone, mat, parts, offset) => {
+    if (!bone) return;
+    const group = new THREE.Group();
+    for (const { geo, pos, rot } of parts) {
+      const mesh = new THREE.Mesh(geo, mat);
+      if (pos) mesh.position.set(...pos);
+      if (rot) mesh.rotation.set(...rot);
+      group.add(mesh);
+    }
+    scene.add(group);
+    rigs.push({ bone, group, offset: new THREE.Vector3(...offset) });
+  };
+  if (equipment === 'barre') {
+    const spine = findBone(/Spine2$/) || findBone(/Spine1$/);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
+    attach(spine, mat, [
+      { geo: new THREE.CylinderGeometry(0.014, 0.014, 0.52, 12), rot: [0, 0, Math.PI / 2] },
+      { geo: new THREE.CylinderGeometry(0.09, 0.09, 0.02, 20), pos: [-0.27, 0, 0], rot: [0, 0, Math.PI / 2] },
+      { geo: new THREE.CylinderGeometry(0.09, 0.09, 0.02, 20), pos: [0.27, 0, 0], rot: [0, 0, Math.PI / 2] },
+    ], [0, 0.04, 0.09]);
+  } else if (equipment === 'haltères') {
+    const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
+    for (const side of ['Left', 'Right']) {
+      attach(findBone(new RegExp(side + 'Hand$')), mat, [
+        { geo: new THREE.CylinderGeometry(0.012, 0.012, 0.14, 10), rot: [0, 0, Math.PI / 2] },
+        { geo: new THREE.SphereGeometry(0.045, 12, 10), pos: [-0.075, 0, 0] },
+        { geo: new THREE.SphereGeometry(0.045, 12, 10), pos: [0.075, 0, 0] },
+      ], [0, -0.02, 0.03]);
+    }
+  }
+  // Onglet Erreurs : rotation fixe ajoutée par-dessus l'animation sur quelques os, pour montrer le défaut typique.
+  // Onglet Conseils : pose figée + lueur musculaire renforcée, façon planche anatomique.
+  let mistakeMode = false;
+  const mistakeBones = Object.entries(mistake || {}).map(([n, off]) => ({ bone: findBone(new RegExp(n + '$')), off })).filter((x) => x.bone);
+  const setMode = (tab) => {
+    mistakeMode = tab === 'mistakes' && mistakeBones.length > 0;
+    uHighlight.value = tab === 'tips' ? 1.7 : 1;
+    if (act && !reduce) act.paused = tab === 'tips';
+  };
+
+  const tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion(), tmpScale = new THREE.Vector3();
+  const updateRigs = () => {
+    for (const { bone, group, offset } of rigs) {
+      bone.matrixWorld.decompose(tmpPos, tmpQuat, tmpScale);
+      group.position.copy(offset).applyQuaternion(tmpQuat).add(tmpPos);
+      group.quaternion.copy(tmpQuat);
+    }
+  };
+
   const mixer = new THREE.AnimationMixer(obj);
   const anim = gltf.animations.find((a) => a.name.toLowerCase().includes((clip || '').toLowerCase())) || gltf.animations[0];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (anim) { const act = mixer.clipAction(anim); act.play(); if (reduce) { act.paused = true; act.time = anim.duration * 0.5; } }
+  let act = null;
+  if (anim) { act = mixer.clipAction(anim); act.play(); if (reduce) { act.paused = true; act.time = anim.duration * 0.5; } }
 
   // Caméra 3/4, orbite au doigt (pas de translation), légère rotation automatique tant qu'on ne touche pas.
   const h = size.y || 1.7;
@@ -138,6 +194,11 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
     raf = requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05);
     mixer.update(dt); uTime.value += dt;
+    if (mistakeMode) for (const { bone, off } of mistakeBones) {
+      if (off.x) bone.rotation.x += off.x; if (off.y) bone.rotation.y += off.y; if (off.z) bone.rotation.z += off.z;
+    }
+    if (rigs.length || mistakeMode) obj.updateMatrixWorld(true);
+    if (rigs.length) updateRigs();
     controls.update();
     renderer.render(scene, camera);
   }
@@ -154,9 +215,10 @@ export async function mount3D(box, { url, clip, muscles = {} }, outfit = null) {
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
     controls.dispose(); mixer.stopAllAction();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
+    rigs.forEach(({ group }) => { scene.remove(group); group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); });
     grid.geometry.dispose(); grid.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
     renderer.dispose(); canvas.remove();
   };
-  return { dispose, setOutfit };
+  return { dispose, setOutfit, setMode };
 }
