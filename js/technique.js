@@ -99,6 +99,11 @@ const CLIPS = {
   "Étirement des bras": "arm_stretch",
 };
 const BUILTIN = new Set(['squat']); // clips déjà contenus dans le glb du corps
+// Matériel tenu ou utilisé (voir js/gear3d.js) pour les clips Mixamo ; les mouvements par poses le déclarent dans
+// js/poses.js (`gear`), à côté des poses qu'il contraint (banc sous le dos, barre entre des mains à écart fixe).
+const GEAR = {
+  'Curl haltères': { hold: 'dumbbells' }, 'Élévations frontales': { hold: 'dumbbells' }, 'Kettlebell swing': { hold: 'kettlebell' },
+};
 // Muscle (nom FR de exercises.js) → os du squelette Mixamo, intensité de la lueur [face avant, face arrière] :
 // un os porte plusieurs muscles (cuisse : quadriceps devant, ischios derrière ; bras : biceps devant, triceps derrière).
 const MUSCLE_BONES = {
@@ -147,9 +152,11 @@ function mistakeFor(e) {
   return DEFORM.backRound; // cardio, haltéro
 }
 export function model3D(name, sex = 'M') {
-  const pose = POSES3D[name], clip = CLIPS[name] || (pose ? poseSlug(name) : null); if (!clip) return null;
+  const base = POSES3D[name], clip = CLIPS[name] || (base ? poseSlug(name) : null); if (!clip) return null;
+  // Variante par corps (`F: { indice de pose clé: réglages }`) quand la morphologie l'impose (bras plus courts…).
+  const pose = base?.F && sex === 'F' ? { ...base, keys: base.keys.map((k, i) => (base.F[i] ? { ...k, ...base.F[i] } : k)) } : base;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, mistake: mistakeFor(e), name };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, gear: pose?.gear || GEAR[name] || null, mistake: mistakeFor(e), name };
 }
 // Tenues de sport : 3 par sexe. Homme : short seul (torse nu) ; femme : brassière + short. Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).

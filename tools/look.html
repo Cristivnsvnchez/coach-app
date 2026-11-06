@@ -6,6 +6,11 @@
 <link rel="stylesheet" href="css/app.css"><link rel="stylesheet" href="css/trackme.css"><link rel="stylesheet" href="css/learn.css">
 <style>body{margin:0;background:#0b0b0d;padding:12px;font:12px system-ui;color:#aaa}.lrn-hero{margin-bottom:8px}</style></head>
 <body><div class="lrn-hero v3d" id="box"></div><div id="info"></div>
+<script>
+// Recharge les modules modifiés (cache HTTP du navigateur) puis ouvre un autre réglage : go('ex=Squat&sex=F&t=0.5').
+window.go = async (qs) => { for (const f of ['js/viewer3d.js', 'js/studio3d.js', 'js/gear3d.js', 'js/poses.js', 'js/technique.js', 'js/motion-fix.js', 'tools/look.html', 'models/gear.glb', 'models/trackme-human.glb', 'models/trackme-human-f.glb', 'css/learn.css'])
+  await fetch(f, { cache: 'reload' }); location.href = 'tools/look.html?' + (qs ?? location.search.slice(1)); };
+</script>
 <script type="module">
 import { mount3D } from './js/viewer3d.js';
 import { model3D, outfitsFor } from './js/technique.js';

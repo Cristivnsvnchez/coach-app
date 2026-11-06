@@ -6,7 +6,7 @@
 // - genou et coude sont de vraies charnières : cuisse et tibia (bras et avant-bras) partagent le même axe de flexion ;
 // - la rotation de l'avant-bras (`palm`) se répartit entre coude et poignet, comme le radius autour du cubitus ;
 // - clavicule et colonne participent : le bras levé emmène l'omoplate, le buste penché se répartit bassin + vertèbres.
-// Pas d'accessoire : ce qui se fait d'habitude allongé ou assis se fait au sol, rien ne flotte.
+// Matériel réel quand l'exercice en a (`gear`, voir js/gear3d.js) : banc, barre, haltères ; sinon au sol, rien ne flotte.
 //
 // Repère du personnage, en mètres pour un corps de 1,75 m : [côté (vers l'extérieur du corps), hauteur, avant], origine
 // au sol sous le bassin au repos. Les clés valent pour les deux côtés, en miroir ; `L: {…}` ou `R: {…}` pour un seul côté.
@@ -14,12 +14,14 @@
 //   twist : rotation du thorax sur le bassin (degrés) ; neck : flexion du cou (degrés, négatif = regard relevé).
 // - foot : appui au sol { x, z, heel, lift, yaw } : (x, z) = cheville quand le talon est posé, heel = talon levé en degrés
 //   (la pointe reste fixe au sol, les orteils restent à plat), lift = hauteur au-dessus du sol, yaw = pointe ouverte.
-//   Pied en l'air : { x, y, z, free: 1, plantar } (la cheville suit le tibia, plantar en degrés).
+//   Pied en l'air : { x, y, z, free: 1, plantar } (la cheville suit le tibia, plantar en degrés) ; avec `toe: 1`, (x, y, z)
+//   est la base des orteils, posée (dessus du pied sur un banc) : elle reste fixe et la cheville pivote autour.
 // - thigh + shin : directions directes de la cuisse et du tibia ; kneeHint : direction du genou si ce n'est pas celle du pied.
 // - hand : cible du poignet ; chest : cible du poignet dans le repère du thorax ; arm + fore : directions directes ;
 //   elbowHint : direction de la pointe du coude ; palm : direction de la paume ; wrist : flexion du poignet (négatif = extension) ;
-//   grip : 0 main ouverte, 1 main fermée.
+//   grip : 0 main ouverte, 1 main fermée ; gripAt : 1 → `hand` est le centre du poing (barre : écart des mains fixe).
 // `beats` : [pose clé à atteindre, secondes, enchaîner sans s'arrêter ?]. Durée = somme. Le clip part de la pose 0 et doit y revenir.
+// `F: { i: {…} }` : réglages de la pose clé i propres au corps féminin (appliqués par model3D dans technique.js).
 
 const flat = (x = 0.13, z = 0, yaw = 8, heel = 0) => ({ x, z, yaw, heel, lift: 0 });
 const STAND_H = 0.923; // bassin debout, genoux à peine déverrouillés
@@ -50,8 +52,9 @@ const dips = { beats: [[1, 1.6], [1, 0.2], [0, 1.0], [0, 0.3]], keys: [
 
 // Charnière de hanche : bras tendus à la verticale, les mains suivent les épaules (une barre reste au-dessus du milieu du pied).
 const HANGING = { arm: [0.07, -1, 0], fore: [0.03, -1, 0.015], elbowHint: [0.25, 0, -1], palm: [0, 0.1, -1], grip: 1 };
+const HANG_BAR = { gripAt: 1 }; // barre : les poings à écart fixe
 const deadlift = { beats: [[1, 0.9, true], [2, 1.0], [2, 0.5], [1, 0.9, true], [0, 1.0], [0, 0.4]], keys: [
-  pose(STAND, HANGING, { hips: [0, 0.575, -0.24], torso: [0, 0.57, 0.82], neck: -22, foot: flat(0.13, 0, 6) }),
+  pose(STAND, HANGING, { hips: [0, 0.585, -0.24], torso: [0, 0.57, 0.82], neck: -22, foot: flat(0.13, 0, 6) }),
   pose(STAND, HANGING, { hips: [0, 0.75, -0.2], torso: [0, 0.76, 0.65], neck: -16, foot: flat(0.13, 0, 6) }),
   pose(STAND, HANGING, { hips: [0, 0.922, 0], torso: [0, 1, 0], neck: -2, foot: flat(0.13, 0, 6) })] };
 const rdl = { beats: [[1, 1.8], [1, 0.25], [0, 1.2], [0, 0.45]], keys: [
@@ -60,7 +63,7 @@ const rdl = { beats: [[1, 1.8], [1, 0.25], [0, 1.2], [0, 0.45]], keys: [
 
 // Rowing : dos fixe, seuls les bras bougent (les coudes passent le long du corps).
 const ROW = { hips: [0, 0.83, -0.17], torso: [0, 0.54, 0.84], neck: -24, foot: flat(0.14, 0, 8) };
-const rowTop = { elbowHint: [0.16, 0.5, -0.85], palm: [0, -0.3, -1], grip: 1 };
+const rowTop = { elbowHint: [0.16, 0.5, -0.85], palm: [0, -0.3, -1], grip: 1, gripAt: 1 };
 // Fente : pied avant à plat, pied arrière sur la pointe (talon levé, cheville en flexion plantaire), bassin de face.
 const LUNGE_FRONT = { x: 0.13, z: 0.36, yaw: 5, heel: 0, lift: 0 };
 const LUNGE_REAR = (heel) => ({ x: 0.12, z: -0.52, yaw: 2, heel, lift: 0 });
@@ -90,19 +93,51 @@ const curlKeys = (top, elbowFront = 0.07, extra = {}) => [
 const TEMPO_CURL = [[1, 0.9], [1, 0.2], [0, 1.4], [0, 0.3]];
 const incline = pose(SUPINE, { hips: [0, 0.12, -0.02], torso: [0, 0.62, -0.78], neck: 6, foot: flat(0.17, 0.55, 6) });
 
+// ───── Avec le vrai matériel (js/gear3d.js) : banc plat (dessus à 0,44 m), banc incliné à 40°, barre, haltères ─────
+// Squat barre sur le dos : pieds largeur d'épaules, pointes ouvertes, genoux dans l'axe des pieds, talons au sol ;
+// en bas, cuisses à peine au-dessus de l'horizontale, buste penché d'environ 43° pour garder la barre au-dessus du milieu du pied.
+const SQUAT_FOOT = flat(0.165, 0, 22);
+// Mains un peu plus larges que les épaules, coudes vers le bas et l'arrière ; cibles réglées pour que la barre tenue
+// repose sur les trapèzes en haut comme en bas (contrôlé par tools/motion-audit.mjs, homme et femme).
+const BAR_ON_BACK = { elbowHint: [0.45, -1, -0.9], palm: [0, 0.15, 1], grip: 1, wrist: -12 };
+const backSquat = { gear: { hold: 'barBack' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
+  pose(BAR_ON_BACK, { chest: [0.46, 0.25, -0.08], hips: [0, 0.915, 0], torso: [0, 1, 0.05], neck: 0, foot: SQUAT_FOOT }),
+  pose(BAR_ON_BACK, { chest: [0.46, 0.22, -0.05], hips: [0, 0.525, -0.2], torso: [0, 0.73, 0.68], neck: -26, foot: SQUAT_FOOT })] };
+// Couché sur le banc plat : dos et tête sur le coussin, pieds à plat au sol de part et d'autre du banc, léger cambré.
+const BENCH_LIE = { hips: [0, 0.545, 0], torso: [0, 0.06, -1], neck: 2, foot: flat(0.3, 0.44, 14) };
+const ON_FLAT_BENCH = { type: 'flat', at: [0, 0, -0.36] };
+// Assis sur le banc incliné (dossier à 40°) : bassin au fond de l'assise, dos sur le dossier, pieds à plat devant.
+const BENCH_INCLINE = { hips: [0, 0.56, 0.07], torso: [0, 0.64, -0.77], neck: -6, foot: flat(0.22, 0.58, 12), kneeHint: [0.25, 1, 0.3] };
+// Fente bulgare : dessus du pied arrière posé sur le banc, pied avant à plat ; en bas le genou arrière frôle le sol.
+const BSS_FRONT = { x: 0.13, z: 0.27, yaw: 6, heel: 0, lift: 0 };
+const BSS_REAR = { x: 0.11, y: 0.53, z: -0.73, free: 1, toe: 1, plantar: 46 }; // base des orteils sur le coussin
+const BSS_ARMS = { arm: [0.12, -1, 0.02], fore: [0.08, -1, 0.06], elbowHint: [0.3, 0, -1], palm: [-1, 0, 0.1], grip: 1 };
+const bulgarianBench = { gear: { hold: 'dumbbells', bench: { type: 'flat', at: [-0.01, 0, -1.12] } }, beats: [[1, 1.6], [1, 0.25], [0, 1.1], [0, 0.4]], keys: [
+  pose(BSS_ARMS, { hips: [0, 0.84, 0.0], torso: [0, 1, 0.16], neck: -6, R: { foot: BSS_FRONT }, L: { foot: BSS_REAR, kneeHint: [0, -0.6, 1] } }),
+  pose(BSS_ARMS, { hips: [0, 0.535, -0.02], torso: [0, 1, 0.34], neck: -12, R: { foot: BSS_FRONT }, L: { foot: BSS_REAR, kneeHint: [0, -1, 0.15] } })] };
+// Rowing haltère : genou et main gauches sur le banc, pied droit au sol, dos à plat ; l'haltère monte vers la hanche.
+const ROW_BENCH_L = { foot: { x: 0.11, y: 0.52, z: -0.42, free: 1, plantar: 40 }, kneeHint: [0, -1, 0.2], hand: [0.15, 0.535, 0.5], elbowHint: [0.4, 0, -1], palm: [-0.5, -1, 0], wrist: -55, grip: 0.15 };
+const rowBench = (hand, elbowHint, twist = 0) => pose(STAND, { hips: [0, 0.905, -0.02], torso: [0, 0.18, 0.98], neck: -26, twist, grip: 1,
+  L: ROW_BENCH_L, R: { foot: flat(0.21, 0.02, 10), hand, elbowHint, palm: [-1, 0, 0.05] } });
+const dumbbellRow = { gear: { hold: 'dumbbellR', bench: { type: 'flat', at: [-0.13, 0, 0.02] } }, beats: [[1, 0.8], [1, 0.35], [0, 1.4], [0, 0.25]], keys: [
+  rowBench([0.21, 0.48, 0.42], [0.25, 0.2, -1]),
+  rowBench([0.22, 0.8, 0.16], [0.12, 1, -0.35], -6)] };
+
 export const POSES = {
   // Au sol, sur le dos : les pieds poussent une plateforme imaginaire ; le bassin reste au sol, seuls hanches et genoux bougent.
   'Presse à cuisses': { beats: [[1, 1.0], [1, 0.15], [0, 1.7], [0, 0.25]], keys: [
     pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.56, z: 0.24, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] }),
     pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.67, z: 0.52, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] })] },
-  'Fentes bulgares': bulgarian,
-  'Fentes marchées': walkLunge,
+  Squat: backSquat,
+  'Fentes bulgares': bulgarianBench,
+  'Fentes marchées': { ...walkLunge, gear: { hold: 'dumbbells' } },
   // Assis au sol, en appui sur les mains : seule la jambe bouge, la cuisse reste fixe.
   'Leg extension': { beats: [[1, 0.9], [1, 0.7], [0, 1.7], [0, 0.2]], keys: [
     pose(SEAT_ON_HANDS, { thigh: [0.1, 0.62, 0.78], shin: [0.03, -0.72, 0.69], plantar: 4 }),
     pose(SEAT_ON_HANDS, { thigh: [0.1, 0.62, 0.78], shin: [0.08, 0.5, 0.86], plantar: -4 })] },
-  'Soulevé de terre': deadlift,
-  'Soulevé de terre roumain': rdl,
+  // Chaque répétition repart de la barre posée. Femme : bras plus courts, bassin un peu plus bas pour atteindre la barre.
+  'Soulevé de terre': { ...deadlift, gear: { hold: 'bar', fromFloor: true }, F: { 0: { hips: [0, 0.545, -0.25], torso: [0, 0.52, 0.85] } } },
+  'Soulevé de terre roumain': { ...rdl, gear: { hold: 'bar' } },
   // À plat ventre : hanches au sol, le talon vient vers les fesses, front posé sur les mains.
   'Leg curl': { beats: [[1, 1.0], [1, 0.3], [0, 1.6], [0, 0.2]], keys: [
     { hips: [0, 0.115, 0], torso: [0, 0, 1], neck: -18, thigh: [0.05, -0.02, -1], shin: [0.03, -0.02, -1], plantar: 40, kneeHint: [0, -1, 0], hand: [0.2, 0.11, 0.64], elbowHint: [1, -0.1, -0.2], palm: [-0.2, -1, 0], grip: 0.2 },
@@ -118,11 +153,12 @@ export const POSES = {
   'Mollets assis': { beats: [[1, 0.8], [1, 0.8], [0, 1.2], [0, 0.2]], keys: [
     { hips: [0, 0.135, 0], torso: [0, 1, -0.36], neck: 12, foot: flat(0.14, 0.35, 5), kneeHint: [0.05, 1, 0.2], hand: [0.17, 0.5, 0.24], elbowHint: [0.3, -0.2, -1], palm: [0, -1, 0], grip: 0.1 },
     { hips: [0, 0.135, 0], torso: [0, 1, -0.36], neck: 12, foot: flat(0.14, 0.35, 5, 20), kneeHint: [0.05, 1, 0.2], hand: [0.17, 0.55, 0.24], elbowHint: [0.3, -0.2, -1], palm: [0, -1, 0], grip: 0.1 }] },
-  'Développé couché': press(SUPINE, [0.3, 0.31, -0.3], [0.3, 0.645, -0.36]),
+  // Barre : descend sur le bas des pectoraux, remonte au-dessus des épaules ; avant-bras verticaux, coudes à ~50° du buste.
+  'Développé couché': { ...press(pose(BENCH_LIE, { gripAt: 1 }), [0.4, 0.77, -0.31], [0.4, 1.08, -0.43]), gear: { hold: 'bar', bench: ON_FLAT_BENCH } },
   // Haltères : les mains se rapprochent en montant, paumes vers les pieds.
-  'Développé couché haltères': press(SUPINE, [0.38, 0.31, -0.3], [0.2, 0.66, -0.36]),
+  'Développé couché haltères': { ...press(BENCH_LIE, [0.42, 0.66, -0.3], [0.22, 1.03, -0.42]), gear: { hold: 'dumbbells', bench: ON_FLAT_BENCH } },
   // Sans banc : buste relevé à 40° au-dessus du bassin, à la force des abdos (moins naturel, faute d'appui).
-  'Développé incliné haltères': press(incline, [0.38, 0.72, -0.12], [0.18, 1.12, -0.05]),
+  'Développé incliné haltères': { ...press(BENCH_INCLINE, [0.42, 0.86, -0.13], [0.2, 1.31, -0.26]), gear: { hold: 'dumbbells', bench: { type: 'incline', at: [0, 0, -0.04] } } },
   'Écarté poulie': { beats: [[1, 1.0], [1, 0.4], [0, 1.5], [0, 0.2]], keys: [
     pose(STAND, { hips: [0, 0.91, -0.02], torso: [0, 0.97, 0.22], neck: -10, foot: flat(0.15, 0, 8), arm: [0.96, -0.12, -0.08], fore: [0.92, -0.1, 0.32], elbowHint: [0.2, 0.3, -1], palm: [0, 0, 1], grip: 1 }),
     pose(STAND, { hips: [0, 0.91, -0.02], torso: [0, 0.97, 0.22], neck: -10, foot: flat(0.15, 0, 8), arm: [0.12, -0.4, 0.92], fore: [-0.38, -0.2, 0.92], elbowHint: [1, 0.1, -0.2], palm: [-1, 0, 0.1], grip: 1 })] },
@@ -135,35 +171,32 @@ export const POSES = {
   'Tirage vertical': { beats: [[1, 0.9], [1, 0.3], [0, 1.4], [0, 0.2]], keys: [
     pose(KNEEL, { neck: -6, torso: [0, 1, -0.08], hand: [0.34, 1.47, 0.08], elbowHint: [0.9, 0, 0.3], palm: [0, 0.1, 1], grip: 1 }),
     pose(KNEEL, { neck: -10, torso: [0, 1, -0.2], hand: [0.32, 1.02, 0.13], elbowHint: [0.85, -0.4, -0.3], palm: [0, 0.1, 1], grip: 1 })] },
-  'Rowing barre': { beats: [[1, 0.8], [1, 0.3], [0, 1.3], [0, 0.2]], keys: [
+  'Rowing barre': { gear: { hold: 'bar' }, beats: [[1, 0.8], [1, 0.3], [0, 1.3], [0, 0.2]], keys: [
     pose(STAND, ROW, rowTop, { elbowHint: [0.28, 0, -1], hand: [0.23, 0.6, 0.22] }),
-    pose(STAND, ROW, rowTop, { hand: [0.23, 0.84, 0.1] })] },
-  // Pied gauche devant, main gauche sur le genou : l'appui remplace le banc. L'haltère monte vers la hanche.
-  'Rowing haltère': { beats: [[1, 0.8], [1, 0.3], [0, 1.3], [0, 0.2]], keys: [
-    pose(STAND, { hips: [0, 0.81, -0.12], torso: [0, 0.42, 0.91], neck: -24, grip: 1, L: { foot: flat(0.15, 0.13, 8), hand: [0.17, 0.53, 0.26], elbowHint: [0.85, 0, -0.5], grip: 0.2 }, R: { foot: flat(0.15, -0.32, 8), hand: [0.21, 0.36, 0.27], elbowHint: [0.25, 0.2, -1], palm: [-1, 0, 0] } }),
-    pose(STAND, { hips: [0, 0.81, -0.12], torso: [0, 0.42, 0.91], neck: -24, twist: -6, grip: 1, L: { foot: flat(0.15, 0.13, 8), hand: [0.17, 0.53, 0.26], elbowHint: [0.85, 0, -0.5], grip: 0.2 }, R: { foot: flat(0.15, -0.32, 8), hand: [0.23, 0.72, 0.0], elbowHint: [0.15, 0.5, -0.85], palm: [-1, 0, 0] } })] },
+    pose(STAND, ROW, rowTop, { hand: [0.23, 0.8, 0.1] })] },
+  'Rowing haltère': dumbbellRow,
   // Assis au sol : le buste part un peu en avant, finit droit, les coudes passent le long du corps.
   'Tirage horizontal': { beats: [[1, 1.0], [1, 0.4], [0, 1.4], [0, 0.2]], keys: [
     pose(SEATED, { torso: [0, 1, 0.26], neck: -8, hand: [0.2, 0.54, 0.6], elbowHint: [0.3, -0.3, -1], palm: [-1, 0, 0.1], grip: 1 }),
     pose(SEATED, { torso: [0, 1, -0.1], neck: -3, hand: [0.24, 0.47, 0.17], elbowHint: [0.25, -0.1, -1], palm: [-1, 0, 0.1], grip: 1 })] },
   // Barre : mains à écart fixe, la barre passe devant le visage, la tête recule puis revient.
-  'Développé militaire': { beats: [[1, 1.0], [1, 0.3], [0, 1.4], [0, 0.2]], keys: [
-    pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, 0], neck: -5, hand: [0.28, 1.34, 0.13], elbowHint: [0.55, -0.72, 0.38], palm: [0, 0.2, 1], wrist: -18, grip: 1 }),
-    pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, -0.02], neck: 2, hand: [0.28, 1.92, 0.02], elbowHint: [0.75, -0.6, 0.2], palm: [0, 0.2, 1], wrist: -10, grip: 1 })] },
-  'Développé épaules haltères': { beats: [[1, 1.0], [1, 0.2], [0, 1.5], [0, 0.2]], keys: [
+  'Développé militaire': { gear: { hold: 'bar' }, beats: [[1, 1.0], [1, 0.3], [0, 1.4], [0, 0.2]], keys: [
+    pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, 0], neck: -5, hand: [0.34, 1.56, 0.12], elbowHint: [0.55, -0.72, 0.38], palm: [0, 0.2, 1], wrist: -18, grip: 1, gripAt: 1 }),
+    pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, -0.02], neck: 2, hand: [0.34, 1.93, 0.02], elbowHint: [0.75, -0.6, 0.2], palm: [0, 0.2, 1], wrist: -10, grip: 1, gripAt: 1 })] },
+  'Développé épaules haltères': { gear: { hold: 'dumbbells' }, beats: [[1, 1.0], [1, 0.2], [0, 1.5], [0, 0.2]], keys: [
     pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, 0], neck: 0, hand: [0.4, 1.4, 0.07], elbowHint: [0.8, -0.6, 0.15], palm: [0, 0, 1], wrist: -10, grip: 1 }),
     pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, 0], neck: 0, hand: [0.19, 1.93, 0.02], elbowHint: [0.85, -0.5, 0.1], palm: [0, 0, 1], wrist: -8, grip: 1 })] },
-  'Élévations latérales': { beats: [[1, 1.0], [1, 0.25], [0, 1.5], [0, 0.15]], keys: [
+  'Élévations latérales': { gear: { hold: 'dumbbells' }, beats: [[1, 1.0], [1, 0.25], [0, 1.5], [0, 0.15]], keys: [
     pose(STAND, { hips: [0, 0.915, 0], neck: 0, arm: [0.17, -1, 0.03], fore: [0.1, -1, 0.14], elbowHint: [0.3, 0, -1], palm: [-1, 0, 0.05], grip: 1 }),
     pose(STAND, { hips: [0, 0.915, 0], neck: 0, arm: [1, 0.02, 0.2], fore: [1, -0.1, 0.34], elbowHint: [0.3, 0, -1], palm: [0, -1, 0.05], grip: 1 })] },
   'Face pull': { beats: [[1, 0.9], [1, 0.3], [0, 1.2], [0, 0.2]], keys: [
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 1, -0.05], neck: 0, foot: flat(0.15, 0, 8), hand: [0.1, 1.42, 0.5], elbowHint: [0.8, 0.1, -0.6], palm: [-1, 0, 0], grip: 1 }),
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 1, -0.05], neck: 0, foot: flat(0.15, 0, 8), hand: [0.27, 1.56, 0.1], elbowHint: [0.95, 0.15, -0.25], palm: [-1, 0, 0.15], grip: 1 })] },
   // Le coude reste près du corps, seul l'avant-bras monte ; paumes face à face tout du long.
-  'Curl marteau': { beats: TEMPO_CURL, keys: curlKeys([0.06, 0.8, 0.6], 0.08, { palm: [-1, 0, 0] }) },
+  'Curl marteau': { gear: { hold: 'dumbbells' }, beats: TEMPO_CURL, keys: curlKeys([0.06, 0.8, 0.6], 0.08, { palm: [-1, 0, 0] }) },
   // Barre : les deux bras ensemble, paumes vers l'avant.
-  'Curl barre': { beats: TEMPO_CURL, keys: [
-    pose(STAND, { neck: 0, arm: [0.1, -1, 0.02], fore: [0.05, -1, 0.14], palm: [-0.25, 0, 1], grip: 1 }),
+  'Curl barre': { gear: { hold: 'bar' }, beats: TEMPO_CURL, keys: [
+    pose(STAND, { neck: 0, arm: [0.1, -1, 0.02], fore: [0.03, -1, 0.14], palm: [-0.25, 0, 1], grip: 1 }),
     pose(STAND, { neck: 0, arm: [0.1, -1, 0.08], fore: [0.02, 0.8, 0.6], palm: [-0.25, 0.75, -0.65], grip: 1 })] },
   'Extensions triceps': { beats: [[1, 0.8], [1, 0.25], [0, 1.2], [0, 0.15]], keys: [
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 0.97, 0.22], neck: -10, arm: [0.1, -1, 0.08], fore: [0.06, 0.05, 1], palm: [0, -1, 0.05], grip: 1 }),
@@ -253,6 +286,13 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
   const rot = (axis, deg) => Q().setFromAxisAngle(axis, deg * RAD);
   const L = { thigh: off('LeftUpLeg', 'LeftLeg').length(), shin: off('LeftLeg', 'LeftFoot').length(), arm: off('LeftArm', 'LeftForeArm').length(), fore: off('LeftForeArm', 'LeftHand').length() };
   const ankleH = restP.LeftFoot.y;
+  // Centre du poing fermé par rapport au poignet, au repos (même règle que gripOf dans js/gear3d.js) : sert aux cibles
+  // `gripAt` (barre tenue à écart fixe). Au repos la paume regarde vers le bas.
+  const gripOff = {};
+  for (const S of ['Left', 'Right']) {
+    const m1 = wp(bones[S + 'HandMiddle1']).sub(origin).multiplyScalar(s), h = restP[S + 'Hand'], dir = chainDir(S + 'ForeArm', S + 'Hand'), len = m1.distanceTo(h);
+    gripOff[S] = m1.sub(h).addScaledVector(dir, -0.18 * len).addScaledVector(U, -0.42 * len);
+  }
 
   // Orientation qui amène le repère de repos du segment (axe long + axe de charnière) sur son repère en pose.
   const basis = (dir, axis) => { const x = axis.clone().addScaledVector(dir, -axis.dot(dir)).normalize(), z = V().crossVectors(x, dir).normalize(); return new THREE.Matrix4().makeBasis(x, dir, z); };
@@ -299,6 +339,15 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
         const v = off(S + 'Foot', S + 'ToeBase'), ball = side([f.x, ankleH + (f.lift || 0), f.z], sgn).add(v.clone().applyQuaternion(qYaw));
         const ankle = ball.clone().sub(v.applyQuaternion(qFoot));
         const r = ik(hip, ankle, L.thigh, L.shin, hint); thigh = r.upper; shin = r.lower; kneeAxis = r.axis; targets.push(['Foot', S, ankle]);
+      } else if (f && f.toe) { // dessus du pied posé (banc) : la base des orteils reste fixe, la cheville pivote autour
+        const ball = side([f.x, f.y, f.z], sgn), v = off(S + 'Foot', S + 'ToeBase');
+        let ankle = ball.clone().sub(v.clone().applyQuaternion(rot(LEFT, f.plantar ?? 14))), r;
+        for (let it = 0; it < 4; it++) { // le pied suit le tibia, le tibia dépend de la cheville : quelques passes suffisent
+          r = ik(hip, ankle, L.thigh, L.shin, hint);
+          const qLeg = frame(chainDir(S + 'Leg', S + 'Foot'), LEFT, r.lower, r.axis);
+          ankle = ball.clone().sub(v.clone().applyQuaternion(qLeg.multiply(rot(LEFT, f.plantar ?? 14))));
+        }
+        r = ik(hip, ankle, L.thigh, L.shin, hint); thigh = r.upper; shin = r.lower; kneeAxis = r.axis; targets.push(['Foot', S, ankle], ['ToeBase', S, ball]);
       } else if (f) { // pied en l'air, cible de la cheville
         const ankle = side([f.x, f.y, f.z], sgn);
         const r = ik(hip, ankle, L.thigh, L.shin, hint); thigh = r.upper; shin = r.lower; kneeAxis = r.axis; targets.push(['Foot', S, ankle]);
@@ -307,7 +356,7 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
       d[S + 'Leg'] = frame(chainDir(S + 'Leg', S + 'Foot'), LEFT, shin, kneeAxis);
       // Pied en l'air : la cheville suit le tibia, seule la flexion plantaire change (axe de la charnière du genou).
       d[S + 'Foot'] = ground ? qFoot : d[S + 'Leg'].clone().multiply(rot(LEFT, f?.plantar ?? q.plantar ?? 14));
-      d[S + 'ToeBase'] = ground ? qYaw : d[S + 'Foot'];
+      d[S + 'ToeBase'] = ground ? qYaw : f?.toe ? rot(LEFT, 180) : d[S + 'Foot']; // orteils à plat sur le banc, dessus vers le bas
       // ── Bras ──
       const aRest = LEFT.clone().multiplyScalar(0).addScaledVector(U, sgn); // axe du coude au repos (bras en T) : flexion vers l'avant
       const rUp = chainDir(S + 'Arm', S + 'ForeArm'), rFo = chainDir(S + 'ForeArm', S + 'Hand');
@@ -325,21 +374,30 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
         shoulder = clav.clone().add(toArm.clone().applyQuaternion(qClav));
       }
       d[S + 'Shoulder'] = qClav;
-      const target = targetOf(shoulder); let up, fo, elbowAxis;
-      const elbowHint = side(q.elbowHint || [0.25, -0.1, -1], sgn);
-      if (target) { const r = ik(shoulder, target, L.arm, L.fore, elbowHint); up = r.upper; fo = r.lower; elbowAxis = r.axis; targets.push(['Hand', S, target]); }
-      else { up = side(q.arm, sgn).normalize(); fo = side(q.fore || q.arm, sgn).normalize(); elbowAxis = hingeAxis(up, fo, elbowHint); }
-      const dUp = frame(rUp, aRest, up, elbowAxis), dFo = frame(rFo, aRest, fo, elbowAxis);
-      // Rotation de l'avant-bras : amène la paume (vers le bas au repos) sur la direction demandée, moitié coude, moitié poignet.
-      let twist = 0;
-      if (q.palm) {
-        const now = U.clone().negate().applyQuaternion(dFo), want = side(q.palm, sgn);
-        now.addScaledVector(fo, -now.dot(fo)).normalize(); want.addScaledVector(fo, -want.dot(fo)).normalize();
-        twist = Math.atan2(V().crossVectors(now, want).dot(fo), now.dot(want));
-      }
-      d[S + 'Arm'] = dUp;
-      d[S + 'ForeArm'] = Q().setFromAxisAngle(fo, twist * 0.5).multiply(dFo);
-      d[S + 'Hand'] = Q().setFromAxisAngle(fo, twist).multiply(dFo).multiply(rot(F, (q.wrist || 0) * (S === 'Left' ? -1 : 1)));
+      const target = targetOf(shoulder), elbowHint = side(q.elbowHint || [0.25, -0.1, -1], sgn);
+      // Bras complet pour une cible du poignet (ou sans cible : directions données).
+      const solveArm = (wrist) => {
+        let up, fo, elbowAxis;
+        if (wrist) { const r = ik(shoulder, wrist, L.arm, L.fore, elbowHint); up = r.upper; fo = r.lower; elbowAxis = r.axis; }
+        else { up = side(q.arm, sgn).normalize(); fo = side(q.fore || q.arm, sgn).normalize(); elbowAxis = hingeAxis(up, fo, elbowHint); }
+        const dUp = frame(rUp, aRest, up, elbowAxis), dFo = frame(rFo, aRest, fo, elbowAxis);
+        // Rotation de l'avant-bras : amène la paume (vers le bas au repos) sur la direction demandée, moitié coude, moitié poignet.
+        let twist = 0;
+        if (q.palm) {
+          const now = U.clone().negate().applyQuaternion(dFo), want = side(q.palm, sgn);
+          now.addScaledVector(fo, -now.dot(fo)).normalize(); want.addScaledVector(fo, -want.dot(fo)).normalize();
+          twist = Math.atan2(V().crossVectors(now, want).dot(fo), now.dot(want));
+        }
+        return { dUp, dFo: Q().setFromAxisAngle(fo, twist * 0.5).multiply(dFo),
+          dHand: Q().setFromAxisAngle(fo, twist).multiply(dFo).multiply(rot(F, (q.wrist || 0) * (S === 'Left' ? -1 : 1))) };
+      };
+      let arm;
+      if (target && q.gripAt) { // la cible est le centre du poing (barre rigide) : on corrige le poignet jusqu'à l'y amener
+        let wrist = target.clone();
+        for (let it = 0; it < 4; it++) { arm = solveArm(wrist); wrist.add(target.clone().sub(wrist.clone().add(gripOff[S].clone().applyQuaternion(arm.dHand)))); }
+        arm = solveArm(wrist); targets.push(['Grip', S, target]);
+      } else { arm = solveArm(target); if (target) targets.push(['Hand', S, target]); }
+      d[S + 'Arm'] = arm.dUp; d[S + 'ForeArm'] = arm.dFo; d[S + 'Hand'] = arm.dHand;
       d[kind + 'Grip'] = q.grip || 0;
     }
     return { hips, d, targets };
@@ -380,10 +438,14 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
   for (let f = 0; f <= n; f += 3) {
     for (const bn of list0) { const v = tracks[bn]; bones[bn].quaternion.set(v[f * 4], v[f * 4 + 1], v[f * 4 + 2], v[f * 4 + 3]); }
     bones.Hips.position.copy(hipPos[f]); obj.updateMatrixWorld(true);
-    for (const [bone, S, t] of frames[f].targets) ikError = Math.max(ikError, wp(bones[S + bone]).sub(origin).multiplyScalar(s).distanceTo(t));
+    for (const [bone, S, t] of frames[f].targets) {
+      const p = bone === 'Grip' ? wp(bones[S + 'Hand']).sub(origin).multiplyScalar(s).add(gripOff[S].clone().applyQuaternion(wq(bones[S + 'Hand']).multiply(restQ[S + 'Hand'].clone().invert())))
+        : wp(bones[S + bone]).sub(origin).multiplyScalar(s);
+      ikError = Math.max(ikError, p.distanceTo(t));
+    }
   }
   for (const [b, q, p] of saved) { b.quaternion.copy(q); b.position.copy(p); }
   obj.updateMatrixWorld(true);
-  clip.userData = { tmPrepared: true, ikError };
+  clip.userData = { tmPrepared: true, ikError, frame: { origin: origin.clone(), s, R: R.clone(), U: U.clone(), F: F.clone() } }; // repère des poses (banc posé par gear3d.js)
   return clip;
 }

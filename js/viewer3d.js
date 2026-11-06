@@ -3,13 +3,14 @@
 // En cas d'échec (pas de WebGL, fichier absent), le contenu de repli déjà présent dans le conteneur reste affiché.
 
 const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par session
+const GEAR_URL = 'models/gear.glb'; // haltère, barre, kettlebell, bancs (tools/build-gear.py)
 
 const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
 // sans interaction (la carte reste cliquable), cadrage un peu plus serré.
-export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose }, outfit = null, { showcase = false } = {}) {
-  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio;
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose, gear }, outfit = null, { showcase = false } = {}) {
+  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio, attachGear;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
@@ -17,6 +18,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     ({ buildPoseClip } = await import('./poses.js'));
     fix = await import('./motion-fix.js'); // corrections partagées avec le banc d'essai (tests/motion.test.mjs)
     studio = await import('./studio3d.js'); // argile et lumière partagées avec les vignettes
+    ({ attachGear } = await import('./gear3d.js'));
   } catch { return noop3D; }
 
   const canvas = document.createElement('canvas');
@@ -61,9 +63,10 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   // Corps (homme/femme) + animation de l'exercice dans un petit fichier à part (models/anim/<clip>.glb, squelette seul,
   // commun aux deux corps : mêmes os Mixamo). Chargés en parallèle, gardés en cache pour la session.
   const load = (u) => { if (!cache.has(u)) cache.set(u, new GLTFLoader().loadAsync(u)); return cache.get(u); };
-  let gltf, animGltf = null;
+  let gltf, animGltf = null, gearGltf = null;
+  const soft = (u) => load(u).catch(() => { cache.delete(u); return null; }); // sans animation ni matériel, le corps reste montré
   try {
-    [gltf, animGltf] = await Promise.all([load(url), animUrl ? load(animUrl).catch(() => { cache.delete(animUrl); return null; }) : null]);
+    [gltf, animGltf, gearGltf] = await Promise.all([load(url), animUrl ? soft(animUrl) : null, gear ? soft(GEAR_URL) : null]);
   } catch { cache.delete(url); renderer.dispose(); return noop3D; }
 
   const model = gltf.scene; // le cache garde l'original : on travaille sur une copie liée au squelette
@@ -145,6 +148,8 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
   if (anim) { act = mixer.clipAction(anim); act.play(); }
+  // Matériel (haltères, barre, banc) : suit les mains à chaque image, banc posé au sol (js/gear3d.js).
+  const kit = attachGear(THREE, gearGltf, obj, gear, anim);
 
   // Cadrage sur TOUT le mouvement (pas seulement la pose de repos) : on échantillonne le clip, on relève la position
   // monde des os (+ les bouts de la barre), et on garde pour chaque point sa distance à l'axe vertical du corps
@@ -162,6 +167,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   const samplePose = () => {
     obj.updateMatrixWorld(true);
     obj.traverse((o) => { if (o.isBone) addPt(o.getWorldPosition(wp), MARGIN); });
+    kit.update(); for (const p of kit.points()) addPt(p, 0.02);
     gframes.push({ skin: skinMin(), feet: feetB.map((b) => b.getWorldPosition(new THREE.Vector3())) });
   };
   const NS = 24;
@@ -261,7 +267,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     if (!visible || document.hidden) { raf = 0; return; }
     raf = requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05);
-    mixer.update(dt); uTime.value += dt;
+    mixer.update(dt); uTime.value += dt; kit.update();
     if (beltV.lengthSq()) { grid.position.addScaledVector(beltV, dt); grid.position.x %= 0.25; grid.position.z %= 0.25; } // cases de 25 cm
     if (mistakeMode) for (const { bone, off } of mistakeBones) {
       if (off.x) bone.rotation.x += off.x; if (off.y) bone.rotation.y += off.y; if (off.z) bone.rotation.z += off.z;
@@ -281,7 +287,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   const dispose = () => {
     cancelAnimationFrame(raf); raf = 0; visible = false;
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
-    controls.dispose(); mixer.stopAllAction();
+    controls.dispose(); mixer.stopAllAction(); kit.dispose();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
     grid.geometry.dispose(); grid.material.dispose(); floor.geometry.dispose(); floor.material.alphaMap.dispose(); floor.material.dispose(); catcher.geometry.dispose(); catcher.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
@@ -289,7 +295,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   };
   // Outils de développement (tools/look.html, vignettes) : figer le clip à une fraction, orienter la caméra.
   const dev = {
-    seek(f) { if (!act) return; act.paused = true; act.time = anim.duration * f; mixer.update(0); },
+    seek(f) { if (!act) return; act.paused = true; act.time = anim.duration * f; mixer.update(0); kit.update(); },
     azimuth(deg) { controls.autoRotate = false; const r = camera.position.clone().sub(controls.target), a = THREE.MathUtils.degToRad(deg);
       const h = Math.hypot(r.x, r.z); camera.position.set(controls.target.x + h * Math.sin(a), camera.position.y, controls.target.z + h * Math.cos(a)); controls.update(); },
   };

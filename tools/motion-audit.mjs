@@ -10,6 +10,7 @@ import { model3D } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
 import { prepareClip, landingBox } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
+import { gripOf, barOnBack } from '../js/gear3d.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const cache = new Map();
@@ -61,12 +62,13 @@ const UNILATERAL = new Set(['Fentes bulgares', 'Fentes marchées', 'Squat pistol
   'Curl haltères', 'Corde à sauter']); // curl alterné, corde en pas alternés
 const BALLISTIC = new Set(['Burpee', 'Arraché', 'Épaulé-jeté', 'Box jump', 'Pompes sautées', 'Jumping jacks', 'Corde à sauter', 'Footing', 'Tapis de course', 'Sprint', 'Kettlebell swing', 'Échauffement']);
 // Pieds censés rester à plat et immobiles pendant tout le mouvement (l'exercice ne décolle pas les talons).
-const FLAT_FEET = new Set(['Squat', 'Squat avant', 'Squat overhead', 'Soulevé de terre', 'Soulevé de terre roumain', 'Tirage sumo', 'Rowing barre', 'Rowing haltère', 'Développé militaire', 'Développé épaules haltères', 'Élévations latérales', 'Élévations frontales', 'Face pull', 'Curl haltères', 'Curl barre', 'Curl marteau', 'Extensions triceps', 'Écarté poulie', 'Hip thrust', 'Développé couché', 'Développé couché haltères', 'Développé incliné haltères', 'Barre au front', 'Étirement de la nuque']);
+const FLAT_FEET = new Set(['Squat', 'Squat avant', 'Squat overhead', 'Soulevé de terre', 'Soulevé de terre roumain', 'Tirage sumo', 'Rowing barre', 'Développé militaire', 'Développé épaules haltères', 'Élévations latérales', 'Élévations frontales', 'Face pull', 'Curl haltères', 'Curl barre', 'Curl marteau', 'Extensions triceps', 'Écarté poulie', 'Hip thrust', 'Développé couché', 'Développé couché haltères', 'Développé incliné haltères', 'Barre au front', 'Étirement de la nuque']);
 // Pied avant seul à plat pendant la fente, pied arrière sur les orteils (pas de limite de planéité sur lui).
-const FLAT_FRONT = { 'Fentes bulgares': 'Right' };
-const STILL_FEET = new Set([...FLAT_FEET, 'Fentes bulgares', 'Mollets debout', 'Mollets assis']); // les orteils ne bougent pas (le talon peut monter)
+const FLAT_FRONT = { 'Fentes bulgares': 'Right', 'Rowing haltère': 'Right' }; // rowing haltère : genou gauche sur le banc
+const STILL_FEET = new Set([...FLAT_FEET, 'Fentes bulgares', 'Rowing haltère', 'Mollets debout', 'Mollets assis']); // les orteils ne bougent pas (le talon peut monter)
 // Mouvements couchés : le dos repose au sol au moins pendant la position de départ (sinon le corps flotte).
 const LYING = new Set(['Développé couché', 'Développé couché haltères', 'Barre au front', 'Relevés de jambes', 'Hip thrust', 'Presse à cuisses', 'Sit-up', 'Gainage / crunch', 'Crunch vélo', 'Crunch circulaire']);
+const BENCH_TOP = { flat: 0.44, incline: 0.45 }; // dessus des coussins (tools/build-gear.py)
 export const AUDIT_SETS = { UNILATERAL, BALLISTIC, FLAT_FEET, STILL_FEET, LYING };
 
 const DEG = 180 / Math.PI;
@@ -235,6 +237,14 @@ export async function auditOne(name, sex = 'M') {
   obj.position.set(-h0.x, -f2.y, -h0.z);
   obj.updateMatrixWorld(true);
   const REST = restFrame(obj, Object.fromEntries(['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', ...['Left', 'Right'].flatMap((S) => ['UpLeg', 'Leg', 'Foot', 'Arm', 'ForeArm', 'Hand'].map((n) => S + n))].map((n) => [n, bone(new RegExp(n + '$'))])));
+  // Repère des poses (js/poses.js) mesuré au repos : x vers la droite du personnage, z vers l'avant (le banc y est placé).
+  const Rx = bone(/RightArm$/).getWorldPosition(v()).sub(bone(/LeftArm$/).getWorldPosition(v())).setY(0).normalize(), Fz = v().crossVectors(new THREE.Vector3(0, 1, 0), Rx);
+  const bench = m.gear?.bench, PAD = { flat: [0.14, 0.59], incline: [0.15, 0.17] }; // demi-largeur, demi-longueur du coussin (assise du banc incliné)
+  const benchLow = () => { // point de peau le plus bas au-dessus du coussin (appelé après la déclaration de `skins`)
+    const [hx, hz] = PAD[bench.type], cz = bench.at[2] + (bench.type === 'incline' ? 0.17 : 0); let y = Infinity; const t = v();
+    for (const sk of skins) for (let k = 0; k < sk.geometry.attributes.position.count; k += 7) { sk.getVertexPosition(k, t); t.applyMatrix4(sk.matrixWorld);
+      if (Math.abs(t.dot(Rx) - bench.at[0]) < hx && Math.abs(t.dot(Fz) - cz) < hz && t.y < y) y = t.y; }
+    return y; };
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
   const feet = [/LeftToe_?End/, /RightToe_?End/, /LeftFoot$/, /RightFoot$/].map(bone).filter(Boolean);
   const [hips, lh, rh, ls, rs] = [/Hips$/, /LeftHand$/, /RightHand$/, /LeftShoulder$/, /RightShoulder$/].map(bone);
@@ -246,12 +256,19 @@ export async function auditOne(name, sex = 'M') {
   const BN = {}; for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head']) BN[n] = bone(new RegExp(n + '$'));
   for (const S of ['Left', 'Right']) for (const n of ['UpLeg', 'Leg', 'Foot', 'Arm', 'ForeArm', 'Hand']) BN[S + n] = bone(new RegExp(S + n + '$'));
   const frames = [], seq = [];
+  // Squat : la barre tenue par les poings doit reposer sur les trapèzes (pas devant ni au-dessus de la nuque).
+  const HB = {}; obj.traverse((o) => { if (o.isBone) HB[o.name.replace(/^mixamorig:?/, '')] ||= o; });
+  let gripGap = 0; const barGrip = [];
   for (let i = 0; i <= N; i++) {
     // i = N : juste avant la fin (setTime(duration) retombe sur 0 en boucle) pour mesurer le raccord.
     mixer.setTime(i === N ? clip.duration - 1e-3 : (clip.duration * i) / N); obj.updateMatrixWorld(true);
     const p = (b) => b.getWorldPosition(v());
-    frames.push({ all: bones.map(p), feet: feet.map(p), hips: p(hips), lh: p(lh), rh: p(rh), ls: p(ls), rs: p(rs), skin: skinMin() });
+    frames.push({ all: bones.map(p), feet: feet.map(p), hips: p(hips), lh: p(lh), rh: p(rh), ls: p(ls), rs: p(rs), skin: skinMin(), bench: bench ? benchLow() : null });
     seq.push(measure(BN, REST));
+    if (m.gear?.hold === 'bar' || m.gear?.hold === 'barBack') { const a = gripOf(THREE, HB, 'Left').c, b = gripOf(THREE, HB, 'Right').c; barGrip.push({ w: a.distanceTo(b), y: (a.y + b.y) / 2 }); }
+    if (m.gear?.hold === 'barBack') { // corps normé à 1,75 m : unités monde = mètres
+      const mid = gripOf(THREE, HB, 'Left').c.add(gripOf(THREE, HB, 'Right').c).multiplyScalar(0.5);
+      gripGap = Math.max(gripGap, mid.distanceTo(barOnBack(THREE, HB).c)); }
   }
   // Sol comme la visionneuse : le point de peau le plus bas sur tout le clip est posé à y = 0.
   const ground = Math.min(...frames.map((f) => f.skin));
@@ -283,9 +300,24 @@ export async function auditOne(name, sex = 'M') {
     const travel = Math.max(...q.map((x) => x.distanceTo(a)));
     if (travel > LIMITS.plantTravel) bio['appui qui bouge (m)'] = { value: +travel.toFixed(3), limit: LIMITS.plantTravel, n: 1 };
   }
-  if (LYING.has(name)) { const low = Math.min(...seq.map((_, i) => frames[i].hips.y)); if (low > 0.2) bio['couché : bassin en l\'air (m)'] = { value: +low.toFixed(2), limit: 0.2, n: 1 }; }
+  // Couché : le bassin repose au sol, ou sur le banc (dessus à 0,44 m) quand l'exercice en a un.
+  if (LYING.has(name)) { const base = m.gear?.bench ? BENCH_TOP[m.gear.bench.type] : 0, low = Math.min(...seq.map((_, i) => frames[i].hips.y)) - base;
+    if (low > 0.2) bio['couché : bassin en l\'air (m)'] = { value: +low.toFixed(2), limit: 0.2, n: 1 }; }
+  // Banc : le corps (dos, pied ou genou) touche le coussin sans s'y enfoncer ; le sol de la visionneuse est la peau la plus basse.
+  if (bench) { const top = BENCH_TOP[bench.type], low = frames.map((f) => f.bench - ground).filter(Number.isFinite);
+    const sink = top - Math.min(...low), gap = Math.min(...low) - top;
+    if (!low.length) bio['banc : rien ne repose dessus'] = { value: 1, limit: 0, n: 1 };
+    else if (sink > 0.025) bio['banc : corps dans le coussin (m)'] = { value: +sink.toFixed(3), limit: 0.025, n: 1 };
+    else if (gap > 0.03) bio['banc : corps au-dessus du coussin (m)'] = { value: +gap.toFixed(3), limit: 0.03, n: 1 }; }
+  // Barre rigide : écart des poings constant ; disques (Ø 45 cm) jamais dans le sol.
+  if (m.gear?.hold === 'bar' || m.gear?.hold === 'barBack') {
+    const gw = barGrip.map((g) => g.w), gy = Math.min(...barGrip.map((g) => g.y)) - ground;
+    if (Math.max(...gw) - Math.min(...gw) > 0.03) bio['barre : écart des mains qui change (m)'] = { value: +(Math.max(...gw) - Math.min(...gw)).toFixed(3), limit: 0.03, n: 1 };
+    if (gy < 0.225 - 0.01) bio['barre : disques dans le sol (m)'] = { value: +(0.225 - gy).toFixed(3), limit: 0.01, n: 1 };
+    if (m.gear.fromFloor && gy > 0.225 + 0.02) bio['barre : ne repart pas du sol (m)'] = { value: +(gy - 0.225).toFixed(3), limit: 0.02, n: 1 }; }
+  if (gripGap > 0.04) bio['barre hors des trapèzes (m)'] = { value: +gripGap.toFixed(3), limit: 0.04, n: 1 };
   const r = (x, d = 2) => +x.toFixed(d);
-  return { name, sex, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, prop: m.prop, duration: r(clip.duration),
+  return { name, sex, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, gear: m.gear, duration: r(clip.duration),
     bodyMin: r(bodyMin, 3), feetMin: r(feetMin, 3), slide: slideT ? r(slide / slideT, 3) : 0, drift: r(drift), loop: r(loop, 3),
     gripMin: r(Math.min(...grip)), gripMax: r(Math.max(...grip)), handShoulderMax: r(handShoulder), skinLow: r(skinLow, 3), skinAir: r(skinHigh - skinLow), boxTop: box ? r(box.top) : null, bio, angles: seq.map((f) => f.m) };
 }
@@ -297,11 +329,12 @@ export async function auditAll(sexes = ['M', 'F']) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const rows = await auditAll(process.argv.includes('--f') ? ['F'] : ['M']);
+  const only = process.argv.find((x) => x.startsWith('--only='))?.slice(7).split(',');
+  const rows = only ? (await Promise.all(only.map((n) => auditOne(n, process.argv.includes('--f') ? 'F' : 'M')))).filter(Boolean) : await auditAll(process.argv.includes('--f') ? ['F'] : ['M']);
   if (process.argv.includes('--bio')) {
     for (const r of rows) {
       const ks = Object.entries(r.bio);
-      console.log(`${r.authored ? 'POSE ' : 'CLIP '} ${r.name}${ks.length ? '' : ' : ok'}`);
+      console.log(`${r.authored ? 'POSE ' : 'CLIP '} ${r.name}${ks.length ? '' : ' : ok'}${r.ikError > 0.02 ? ' (IK ' + r.ikError + ' m)' : ''}`);
       for (const [k, e] of ks) console.log(`      ${k} : ${e.value} (limite ${+(+e.limit).toFixed(1)}, ${e.n}/61 images)`);
     }
     console.log(`\n${rows.filter((r) => Object.keys(r.bio).length).length}/${rows.length} exercices en défaut, ${rows.reduce((s, r) => s + Object.keys(r.bio).length, 0)} contrôles en dépassement`);
