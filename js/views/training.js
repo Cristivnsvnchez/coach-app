@@ -75,7 +75,7 @@ export function render(root, go) {
     if (a === 'plates') return platesSheet();
     if (a === 'new-routine') {
       const r = { id: uid(), name: t('Nouvelle routine'), folder: '', exercises: [] };
-      state.routines.push(r); save(); return editRoutine(r, back);
+      state.routines.push(r); save(); return editRoutine(r, back, { isNew: true });
     }
   };
 }
@@ -121,9 +121,14 @@ function workoutDetail(id, back) {
   };
 }
 
-function editRoutine(r, back) {
+function editRoutine(r, back, { isNew = false } = {}) {
   if (!r) return;
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Routine')}</h3></div><div class="body"></div>`, back);
+  // Routine neuve refermée sans exercice : on ne la garde pas (sinon une routine vide reste dans la liste).
+  const onClose = () => {
+    if (isNew && !r.exercises.length && state.routines.includes(r)) { state.routines = state.routines.filter((x) => x !== r); save(); }
+    back();
+  };
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Routine')}</h3></div><div class="body"></div>`, onClose);
   const draw = () => {
     s.querySelector('.body').innerHTML = `
       ${group('', `<div class="cells">
@@ -154,7 +159,7 @@ function editRoutine(r, back) {
       return pickExercise((name) => {
         const info = findExercise(name, state.customExercises) || {};
         L.push({ name, muscle: info.muscle, secondary: info.secondary, type: info.type, upper: info.upper, sets: 3, repMin: 8, repMax: 12, rest: info.upper === false ? 150 : 90 });
-        save(); editRoutine(r, back);
+        save(); draw(); // redessine la feuille ouverte (rouvrir editRoutine empilait une 2e feuille)
       });
     }
     if (el.dataset.a === 'delr') {

@@ -8,6 +8,7 @@ import { icon } from '../icons.js';
 import { t, getLang, setLang, LANGS } from '../i18n.js';
 import { paletteSection, handlePaletteClick } from './palette.js';
 import { exportBackup } from '../install.js';
+import { clearActive } from './session.js';
 
 const opt = (obj, sel, lab = (v) => v.label ?? v) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${esc(t(lab(v)))}</option>`).join('');
 const rateOpts = (goal, sel) => opt(Object.fromEntries((S.GOALS[goal]?.rates || [0]).map((r) => [r, r ? t('{r} % du poids / semaine', { r: fmt(r, 2).replace(/[,.]?0+$/, '') }) : '—'])), sel);
@@ -15,7 +16,7 @@ const rateOpts = (goal, sel) => opt(Object.fromEntries((S.GOALS[goal]?.rates || 
 // Effacement ou restauration : l'apparence suit les nouvelles données, et une séance en cours de l'ancien état ne survit pas.
 function resetAfterReplace(data) {
   replace(data);
-  try { localStorage.removeItem('coach.active'); } catch {}
+  clearActive(); // mémoire + stockage : sinon la séance effacée réapparaît dans Sport
   applyTheme(state.settings.palette, state.settings.shape, state.settings.surface);
   applyScheme(state.settings.scheme);
 }

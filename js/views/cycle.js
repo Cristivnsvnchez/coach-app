@@ -49,7 +49,7 @@ register({
     'Flux': 'Flow', 'Spotting': 'Spotting', 'Léger': 'Light', 'Moyen': 'Medium', 'Abondant': 'Heavy',
     'Symptômes': 'Symptoms',
     'Enregistrer': 'Save',
-    'Règles enregistrées': 'Period saved',
+    'Règles enregistrées': 'Period saved', 'Supprimer ces règles': 'Delete this period', 'Règles supprimées': 'Period deleted',
     'Mois précédent': 'Previous month', 'Mois suivant': 'Next month',
     'Crampes': 'Cramps', 'Fatigue': 'Fatigue', 'Ballonnements': 'Bloating', 'Maux de tête': 'Headache', 'Humeur basse': 'Low mood',
     'Seins sensibles': 'Breast tenderness', 'Fringales': 'Cravings', 'Sommeil perturbé': 'Poor sleep', 'Acné': 'Acne',
@@ -99,7 +99,7 @@ register({
     'Flux': 'Bloeding', 'Spotting': 'Spotting', 'Léger': 'Licht', 'Moyen': 'Matig', 'Abondant': 'Hevig',
     'Symptômes': 'Symptomen',
     'Enregistrer': 'Opslaan',
-    'Règles enregistrées': 'Menstruatie opgeslagen',
+    'Règles enregistrées': 'Menstruatie opgeslagen', 'Supprimer ces règles': 'Deze menstruatie verwijderen', 'Règles supprimées': 'Menstruatie verwijderd',
     'Mois précédent': 'Vorige maand', 'Mois suivant': 'Volgende maand',
     'Crampes': 'Krampen', 'Fatigue': 'Vermoeidheid', 'Ballonnements': 'Opgeblazen gevoel', 'Maux de tête': 'Hoofdpijn', 'Humeur basse': 'Sombere stemming',
     'Seins sensibles': 'Gevoelige borsten', 'Fringales': 'Trek', 'Sommeil perturbé': 'Slecht slapen', 'Acné': 'Acne',
@@ -269,7 +269,14 @@ function openLog(day, done) {
       ${group(t('Flux'), `<div class="cy-chips wrap">${Object.entries(FLOW_LABEL).map(([k, l]) => `<label class="chip ${log.flow === k ? 'on' : ''}"><input type="radio" name="flow" value="${k}" ${log.flow === k ? 'checked' : ''} hidden>${t(l)}</label>`).join('')}</div>`)}
       ${group(t('Symptômes'), `<div class="cy-chips wrap">${C.SYMPTOMS.map((x) => `<label class="chip ${(log.symptoms || []).includes(x) ? 'on' : ''}"><input type="checkbox" name="sym" value="${esc(x)}" ${(log.symptoms || []).includes(x) ? 'checked' : ''} hidden>${t(x)}</label>`).join('')}</div>`)}
       <button class="btn filled large">${t('Enregistrer')}</button>
+      ${cur ? `<div style="margin-top:1rem">${group('', `<div class="cells"><div class="cell action destructive" data-a="del-period" role="button">${t('Supprimer ces règles')}</div></div>`)}</div>` : ''}
       <p class="group-foot center">${t('Estimation par la méthode calendrier : ce n\'est pas une contraception.')}</p></form>`, done);
+  // Règles mal saisies : on doit pouvoir les retirer sans tout effacer (« Annuler » dans le toast).
+  s.querySelector('[data-a=del-period]')?.addEventListener('click', () => {
+    const before = c.periods.slice();
+    c.periods = c.periods.filter((p) => p !== cur); save(); s.close();
+    toast(t('Règles supprimées'), { undo: () => { c.periods = before; save(); done?.(); } });
+  });
   // Pastilles : état visuel suivant la case/radio cachée (un radio peut être décoché en retouchant).
   s.addEventListener('click', (e) => {
     const chip = e.target.closest('label.chip'); if (!chip) return;
@@ -284,6 +291,8 @@ function openLog(day, done) {
     const f = e.target, start = f.start.value, end = f.end.value, d = f.day.value;
     if (!d || d > today() || (start && start > today()) || (end && start && end < start)) return toast(t('Date invalide'));
     if (start) {
+      // Corriger la date de début d'une période existante la déplace (avant : une 2e période fantôme s'ajoutait).
+      if (cur && cur.start !== start && !c.periods.some((x) => x.start === start)) cur.start = start;
       const p = (c.periods ||= []).find((x) => x.start === start);
       if (p) { if (end) p.end = end; else delete p.end; } else c.periods.push(end ? { start, end } : { start });
       c.periods.sort((a, b) => a.start.localeCompare(b.start));

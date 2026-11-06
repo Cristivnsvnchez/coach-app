@@ -332,10 +332,13 @@ body.typing #view { bottom: 0; }
 @keyframes up { from { transform: translateY(100%); } }
 @keyframes fade { from { opacity: 0; } }
 
-.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + .5rem); z-index: 30;
+/* Toast en bas, au-dessus de la barre d'onglets : en haut il recouvrait les boutons des en-têtes (Annuler/Terminer de la séance…). */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--tabbar-h) + .75rem); z-index: 30;
   background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: .5px solid var(--bar-edge);
-  color: var(--label); padding: .6rem 1.1rem; border-radius: 22px; font-weight: 600; font-size: .88rem; box-shadow: 0 8px 32px rgba(0,0,0,.15); animation: drop .3s cubic-bezier(.2,.9,.25,1); white-space: nowrap; }
-@keyframes drop { from { transform: translate(-50%, -150%); } }
+  color: var(--label); padding: .6rem 1.1rem; border-radius: 22px; font-weight: 600; font-size: .88rem; box-shadow: 0 8px 32px rgba(0,0,0,.15); animation: rise .3s cubic-bezier(.2,.9,.25,1);
+  width: max-content; max-width: calc(100vw - 24px - var(--safe-l) - var(--safe-r)); text-wrap: pretty; }
+@keyframes rise { from { transform: translate(-50%, 40%); opacity: 0; } }
+body.typing .toast { bottom: calc(var(--safe-b) + .75rem); }
 
 .cta { background: var(--cell); border-radius: var(--radius); padding: 1.1rem 1rem; margin-bottom: 1.75rem; display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
 .cta p { margin: 0; color: var(--label-2); font-size: .88rem; }

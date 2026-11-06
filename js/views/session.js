@@ -16,12 +16,14 @@ register({
     'Retirer une série par exercice': 'Remove one set per exercise', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cycle: listen to your body today and adjust if needed.',
     'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed',
     'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed',
-    'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?', 'Abandonner sans enregistrer': 'Discard without saving' },
+    'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?', 'Abandonner sans enregistrer': 'Discard without saving',
+    'Abandonner': 'Discard', 'Terminer la séance': 'Finish workout' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
     'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd',
-    'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?', 'Abandonner sans enregistrer': 'Verwerpen zonder op te slaan' },
+    'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?', 'Abandonner sans enregistrer': 'Verwerpen zonder op te slaan',
+    'Abandonner': 'Afbreken', 'Terminer la séance': 'Training afronden' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -29,6 +31,9 @@ export let active = null;
 try { active = JSON.parse(localStorage.getItem(ACTIVE_KEY)); } catch {}
 let restEnd = 0, restTotal = 0, ticker = null;
 let prevRecords = {}; // records historiques par exercice, calculés au démarrage
+
+// Oublie la séance en cours, en mémoire ET dans le stockage (effacement / restauration des données depuis Profil).
+export function clearActive() { active = null; restEnd = 0; prevRecords = {}; persist(); }
 
 export function persist() {
   try { active ? localStorage.setItem(ACTIVE_KEY, JSON.stringify(active)) : localStorage.removeItem(ACTIVE_KEY); } catch {}
@@ -96,7 +101,7 @@ export function renderSession(root, go, back) {
   const total = active.exercises.reduce((n, ex) => n + ex.sets.length, 0);
   const pct = total ? Math.round((sets / total) * 100) : 0;
   root.innerHTML = `
-    <header class="se-top"><button class="btn plain" data-a="discard">${t('Annuler')}</button>
+    <header class="se-top"><button class="btn plain" data-a="discard">${t('Abandonner')}</button>
       <button class="btn filled se-finish" data-a="finish">${t('Terminer')}</button></header>
     <section class="tm-hero se-hero">${shape({ cls: 'se-shape' })}
       <p class="se-kicker">${t('Séance en cours')}</p>
@@ -317,7 +322,7 @@ function finish(root, go, back) {
   const routine = state.routines.find((r) => r.id === active.routineId);
   const differs = W.routineDiffers(routine, active);
   const PRL = { maxKg: 'Charge max', e1rm: '1RM estimé', bestSet: 'Meilleure série', maxReps: 'Reps max' };
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Séance terminée 🎉')}</h3></div>
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Terminer la séance')}</h3></div>
     <div class="cells stats" style="margin-bottom:1.25rem"><div><small>${t('Durée')}</small><b>${minutes} <span class="u">min</span></b></div>
       <div><small>${t('Volume')}</small><b>${fmt(vol)} <span class="u">kg</span></b></div><div><small>${t('Séries')}</small><b>${sets}</b></div></div>
     <p class="footnote secondary center" style="margin:-.5rem 0 1rem">${t('Séance n° {n}', { n: state.workouts.length + 1 })}</p>

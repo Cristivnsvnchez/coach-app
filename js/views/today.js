@@ -20,12 +20,14 @@ register({
     'Cycle · {phase}, jour {n}': 'Cycle · {phase}, day {n}', 'menstruelle': 'menstrual', 'folliculaire': 'follicular', 'ovulatoire': 'ovulatory', 'lutéale': 'luteal', 'hormonale': 'hormonal',
     'Repères ANSES': 'ANSES guidelines', 'Fruits et légumes': 'Fruits and vegetables', 'Poisson': 'Fish', 'portions aujourd\'hui': 'servings today', 'Moyenne 7 jours : {n} / jour': '7-day average: {n} / day',
     'Cette semaine : {n} / 2 (dont 1 gras)': 'This week: {n} / 2 (including 1 oily)', 'Retirer une portion': 'Remove a serving', 'Ajouter une portion': 'Add a serving', 'Coach': 'Coach', 'Profil': 'Profile', 'Aucun aliment': 'No food yet', 'Voir le cycle': 'Open cycle',
+    'Quantité supérieure à 0, ou touche Supprimer': 'Enter more than 0, or tap Delete',
   },
   nl: {
     'Journal': 'Dagboek', 'Mangé': 'Gegeten', 'objectif': 'doel', 'Brûlé': 'Verbrand', 'dont 50 % des kcal brûlées ajoutées au budget': 'incl. 50% van de verbrande kcal toegevoegd aan het budget',
     'Cycle · {phase}, jour {n}': 'Cyclus · {phase}, dag {n}', 'menstruelle': 'menstruatie', 'folliculaire': 'folliculair', 'ovulatoire': 'ovulatie', 'lutéale': 'luteaal', 'hormonale': 'hormonaal',
     'Repères ANSES': 'ANSES-richtlijnen', 'Fruits et légumes': 'Groente en fruit', 'Poisson': 'Vis', 'portions aujourd\'hui': 'porties vandaag', 'Moyenne 7 jours : {n} / jour': 'Gemiddelde 7 dagen: {n} / dag',
     'Cette semaine : {n} / 2 (dont 1 gras)': 'Deze week: {n} / 2 (waarvan 1 vette)', 'Retirer une portion': 'Een portie verwijderen', 'Ajouter une portion': 'Een portie toevoegen', 'Coach': 'Coach', 'Profil': 'Profiel', 'Aucun aliment': 'Nog geen voedingsmiddel', 'Voir le cycle': 'Cyclus openen',
+    'Quantité supérieure à 0, ou touche Supprimer': 'Vul meer dan 0 in, of tik op Verwijderen',
   },
 });
 
@@ -164,8 +166,9 @@ export function render(root, go) {
       const d = parseDate(date); d.setDate(d.getDate() - 1);
       const prev = state.logs[isoDate(d)];
       if (!prev?.meals.length) return toast(t('Rien à copier pour la veille'));
+      const before = log.meals.slice();
       prev.meals.forEach((m) => log.meals.push({ ...m, id: uid() }));
-      save(); toast(t('{n} aliments copiés', { n: prev.meals.length })); return keep();
+      save(); toast(t('{n} aliments copiés', { n: prev.meals.length }), { undo: () => { log.meals = before; save(); keep(); } }); return keep();
     }
     if (el.dataset.add) return openAddFood(el.dataset.add, date, keep);
     if (el.dataset.item) return editItem(log, el.dataset.item, keep);
@@ -190,8 +193,10 @@ function editItem(log, id, done) {
   s.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'save') {
+      // 0 g effacerait les macros pour de bon (on recalcule toujours au prorata) : on refuse et on propose Supprimer.
+      if (!((+g.value || 0) > 0)) return toast(t('Quantité supérieure à 0, ou touche Supprimer'));
       const v = scaled();
-      Object.assign(m, { grams: +g.value || m.grams, kcal: v.kcal, p: +v.p.toFixed(1), c: +v.c.toFixed(1), f: +v.f.toFixed(1), fib: +v.fib.toFixed(1) });
+      Object.assign(m, { grams: +g.value, kcal: v.kcal, p: +v.p.toFixed(1), c: +v.c.toFixed(1), f: +v.f.toFixed(1), fib: +v.fib.toFixed(1) });
       save(); s.close();
     }
     if (a === 'del') {

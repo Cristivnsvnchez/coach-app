@@ -85,7 +85,7 @@ export function md(text) {
   return html + (list ? '</ul>' : '');
 }
 
-export function toast(msg, { undo = null, ms = undo ? 5000 : 2200 } = {}) {
+export function toast(msg, { undo = null, ms = undo ? 7000 : 2200 } = {}) {
   document.querySelectorAll('.toast').forEach((x) => x.remove());
   const el = document.createElement('div');
   el.className = 'toast' + (undo ? ' with-undo' : ''); el.setAttribute('role', 'status');

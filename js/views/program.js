@@ -72,10 +72,13 @@ export function openWizard(done) {
 
   const install = (plan, routines) => {
     // Remplace l'ancien programme daté (ses routines), garde les routines perso.
+    // L'ancien programme (et ses routines, même retouchées) est remplacé : « Annuler » le remet tel quel.
+    const prev = { plan: state.plan, routines: state.routines.slice() };
     const old = new Set(state.plan?.routineIds || []);
     state.routines = state.routines.filter((r) => !old.has(r.id)).concat(routines);
     state.plan = plan;
-    save(); toast(t('Programme créé ✓')); s.close();
+    save(); s.close();
+    toast(t('Programme créé ✓'), prev.plan ? { undo: () => { state.plan = prev.plan; state.routines = prev.routines; save(); done?.(); } } : {});
   };
   step1();
 }

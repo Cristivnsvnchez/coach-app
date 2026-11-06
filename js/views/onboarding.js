@@ -34,7 +34,9 @@ const p = () => state.profile;
 let langPicked = false; // la langue a déjà été choisie sur l'écran d'accueil
 let kc = null; // calories modifiées : { base, val } (null = proposition Mifflin-St Jeor)
 
-const proposal = () => (S.isProfileComplete(p()) ? S.targets({ ...p() }, S.tdeeInitial(p())) : null);
+// Même garde-fou que metrics.current() : aucun objectif chiffré pour un mineur ou une situation médicale déclarée.
+const blocked = () => p().age < 18 || !!p().medical;
+const proposal = () => (S.isProfileComplete(p()) && !blocked() ? S.targets({ ...p() }, S.tdeeInitial(p())) : null);
 const shownKcal = () => { const tg = proposal(); if (!tg) return null; if (kc && kc.base !== tg.kcal) kc = null; return kc ? kc.val : tg.kcal; };
 
 // Chaque étape : { id, title, why?, body(), valid?(), skip?() } — `skip` masque l'étape (ex. cycle pour un homme).
@@ -73,7 +75,7 @@ const STEPS = [
         + stepper('periodLen', t('Durée des règles'), state.cycle.periodLen ?? 5, 2, 10, 1, t('jours'))
         + `<p class="onb-label">${t('Contraception hormonale (pilule, stérilet hormonal, implant…)')}</p>` + choice('hormonal', { no: t('Non'), yes: t('Oui') }, state.cycle.hormonal ? 'yes' : 'no') : '') },
   { id: 'palette', title: () => t('Ta palette'), why: () => t('Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.'), body: paletteSection },
-  { id: 'calories', title: () => t('Tes calories'), why: () => t('Modifiable par pas de 50 kcal. Les macros se recalculent.'), body: summary },
+  { id: 'calories', title: () => t('Tes calories'), why: () => t('Modifiable par pas de 50 kcal. Les macros se recalculent.'), body: summary, skip: blocked },
   { id: 'safe', title: () => t('Protège tes données'), why: () => t("Tes données restent sur ton iPhone. Une copie dans iCloud Drive te protège si tu changes de téléphone ou supprimes l'app."), body: safeBody },
 ];
 
@@ -192,7 +194,12 @@ export function openOnboarding(done) {
     if (a === 'start') { i = 0; return draw(); }
     if (a === 'backup') { readInputs(); state.onboarded = true; save(); return exportBackup().then(draw); }
     if (a === 'kc-reset') { kc = null; return draw(); }
-    if (a === 'skip') return finish();
+    // « Passer » en haut d'une étape saute cette étape seulement ; sur l'accueil (i < 0) il termine l'onboarding.
+    if (a === 'skip') {
+      if (i < 0) return finish();
+      readInputs(); i++;
+      return i >= steps().length ? finish() : draw();
+    }
     if (a === 'back') { readInputs(); i = Math.max(-1, i - 1); return draw(); }
     if (a === 'next') {
       readInputs();

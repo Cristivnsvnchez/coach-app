@@ -293,4 +293,4 @@ html.tm .inst-why { margin: 0 .25rem 1rem; color: var(--label-2); }
 
 /* Toast avec « Annuler » (suppression réversible 5 s) : cliquable, contrairement au toast simple. */
 .toast.with-undo { display: flex; align-items: center; gap: 14px; padding: .45rem .5rem .45rem 1.1rem; pointer-events: auto; }
-.toast-undo { border: 0; border-radius: 999px; padding: .45rem .9rem; background: var(--p-deep); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.toast-undo { flex: none; min-height: 44px; border: 0; border-radius: 999px; padding: 0 1rem; background: var(--p-deep); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }

@@ -82,7 +82,7 @@ function editPlanItem(items, id, done) {
     ${group('', `<div class="cells"><div class="cell action destructive" data-a="del" role="button">${t('Supprimer')}</div></div>`)}`, done);
   s.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
-    if (a === 'save') { const g = s.querySelector('[name=g]'); const k = (+g.value || 0) / m.grams; Object.assign(m, { grams: +g.value || m.grams, kcal: Math.round(m.kcal * k), p: +(m.p * k).toFixed(1), c: +(m.c * k).toFixed(1), f: +(m.f * k).toFixed(1), fib: +(m.fib * k).toFixed(1) }); save(); s.close(); }
+    if (a === 'save') { const g = s.querySelector('[name=g]'); if (!((+g.value || 0) > 0)) return toast(t('Quantité supérieure à 0, ou touche Supprimer')); const k = +g.value / m.grams; Object.assign(m, { grams: +g.value, kcal: Math.round(m.kcal * k), p: +(m.p * k).toFixed(1), c: +(m.c * k).toFixed(1), f: +(m.f * k).toFixed(1), fib: +(m.fib * k).toFixed(1) }); save(); s.close(); }
     if (a === 'del') {
       const k = items.indexOf(m); items.splice(k, 1); save(); s.close();
       toast(t('Retiré du planning'), { undo: () => { items.splice(k, 0, m); save(); done(); } });

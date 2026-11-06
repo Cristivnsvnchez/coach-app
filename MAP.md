@@ -6,7 +6,7 @@
 ## sw.js (36 l.)
 Cache hors ligne de l'app. Incrémenter VERSION à chaque mise à jour pour forcer le rafraîchissement.
 
-## css/app.css (486 l.)
+## css/app.css (489 l.)
 Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 
 ## css/cycle.css (58 l.)
@@ -139,7 +139,7 @@ NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
 exports: MEALS,openAddFood
 
-## js/views/cycle.js (297 l.)
+## js/views/cycle.js (306 l.)
 Vue « cycle » : héros (phase du jour, prochaines ovulation / règles), calendrier mensuel filtrable, statistiques,
 exports: render
 
@@ -155,7 +155,7 @@ exports: toggleHabits,habitsCells handleHabitClick,handleTaskSubmit
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise leave,render openTechnique
 
-## js/views/onboarding.js (217 l.)
+## js/views/onboarding.js (224 l.)
 Onboarding : accueil, puis une question par écran, surtout par sélection (cartes, pastilles, stepper).
 exports: needsOnboarding,openOnboarding
 
@@ -167,23 +167,23 @@ exports: paletteSection,handlePaletteClick
 Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
 exports: render
 
-## js/views/profile.js (154 l.)
+## js/views/profile.js (155 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
-## js/views/program.js (139 l.)
+## js/views/program.js (142 l.)
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
 exports: openWizard,planCard plannedDays,exportCalendar
 
-## js/views/session.js (341 l.)
+## js/views/session.js (352 l.)
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
-exports: active,persist startWorkout,renderSession
+exports: active,clearActive persist,startWorkout renderSession
 
-## js/views/today.js (202 l.)
+## js/views/today.js (207 l.)
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
-## js/views/training.js (168 l.)
+## js/views/training.js (173 l.)
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render
 
