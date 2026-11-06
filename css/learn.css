@@ -7,8 +7,11 @@
 .lrn-day-pic { position: absolute; right: .75rem; top: .75rem; width: 96px; height: 96px; color: rgba(255,255,255,.9); }
 .lrn-day-pic .lrn-pic { width: 100%; height: 100%; }
 .lrn-day-btn { background: #fff; color: var(--p-deep); border-radius: 28px; font-weight: 600; min-height: 44px; padding: 0 1.1rem; display: inline-flex; align-items: center; gap: .35rem; }
-.lrn-cats { margin-bottom: .5rem; }
-.lrn-levels { margin-bottom: .25rem; }
+/* Filtres : une ligne de catégories compacte + un sélecteur de niveau segmenté pleine largeur. */
+.lrn-cats { margin-bottom: .35rem; padding-bottom: .5rem; gap: .4rem; }
+.lrn-cats .chip { min-height: 34px; padding: 0 .9rem; border-radius: 999px; font-size: .84rem; white-space: nowrap; flex: none; }
+.lrn-levels { margin-bottom: .9rem; }
+.lrn-levels button { font-size: .8rem; min-height: 34px; white-space: nowrap; padding: 0 .25rem; }
 .lrn-group-head { list-style: none; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--label-2); padding: .9rem .2rem .3rem; }
 .lrn-group-head:first-child { padding-top: .2rem; }
 .lrn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }

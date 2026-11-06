@@ -12,7 +12,7 @@ Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 ## css/cycle.css (58 l.)
 TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 
-## css/learn.css (110 l.)
+## css/learn.css (113 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 
 ## css/motion.css (51 l.)
@@ -175,7 +175,7 @@ exports: render
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
 exports: openWizard,planCard plannedDays,exportCalendar
 
-## js/views/session.js (335 l.)
+## js/views/session.js (341 l.)
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
 exports: active,persist startWorkout,renderSession
 

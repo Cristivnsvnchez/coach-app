@@ -96,11 +96,11 @@ export function render(root, go) {
       <p>${esc([day.muscle, ...day.secondary].map((m) => t(m)).join(' · '))}</p>
       <button class="btn lrn-day-btn" data-open="${esc(day.name)}">${t('Voir la technique')} ${icon('chevronRight')}</button></section>
     <div class="chips lrn-cats" role="group" aria-label="${t('Catégorie')}">
-      <button class="chip ${cat ? '' : 'on'}" data-cat="">${t('Toutes les catégories')}</button>
+      <button class="chip ${cat ? '' : 'on'}" data-cat="" aria-label="${t('Toutes les catégories')}">${t('Tout')}</button>
       ${CATEGORIES.map((c) => `<button class="chip ${cat === c ? 'on' : ''}" data-cat="${c}">${t(CATEGORY_LABEL[c])}</button>`).join('')}</div>
-    <div class="chips lrn-levels" role="group" aria-label="${t('Niveau')}">
-      <button class="chip ${level ? '' : 'on'}" data-lvl="">${t('Tous les niveaux')}</button>
-      ${LEVELS.map((l) => `<button class="chip ${level === l ? 'on' : ''}" data-lvl="${l}">${t(LEVEL_LABEL[l])}</button>`).join('')}</div>
+    <div class="seg lrn-levels" role="group" aria-label="${t('Niveau')}">
+      <button class="${level ? '' : 'on'}" data-lvl="" aria-label="${t('Tous les niveaux')}">${t('Tous')}</button>
+      ${LEVELS.map((l) => `<button class="${level === l ? 'on' : ''}" data-lvl="${l}">${t(LEVEL_LABEL[l])}</button>`).join('')}</div>
     <ul class="lrn-list"></ul>
     <p class="group-foot">${t('Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.')}</p>`;
   draw();

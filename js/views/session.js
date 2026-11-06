@@ -15,11 +15,13 @@ register({
   en: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cycle: an easier session is advised. You can drop one set per exercise.',
     'Retirer une série par exercice': 'Remove one set per exercise', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cycle: listen to your body today and adjust if needed.',
     'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed',
-    'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed' },
+    'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed',
+    'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
-    'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd' },
+    'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd',
+    'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -212,7 +214,7 @@ function onClick(e, root, go, back) {
 
   if (a === 'discard') {
     if (!confirm(t('Abandonner la séance ?'))) return;
-    active = null; persist(); restEnd = 0; prevRecords = {}; return back();
+    return endSession(back);
   }
   if (a === 'finish') return finish(root, go, back);
   if (a === 'skip') { restEnd = 0; tick(); return; }
@@ -297,9 +299,13 @@ function exerciseMenu(i, keep) {
   });
 }
 
+// Ferme la séance en cours sans l'enregistrer.
+function endSession(back) { active = null; persist(); restEnd = 0; prevRecords = {}; back(); }
+
 function finish(root, go, back) {
   const sets = W.doneSets(active);
-  if (!sets) return toast(t('Valide au moins une série'));
+  // Aucune série validée : rien à enregistrer, mais on doit pouvoir sortir (sinon la séance reste bloquée).
+  if (!sets) { if (confirm(t('Aucune série validée : terminer sans enregistrer la séance ?'))) endSession(back); return; }
   const minutes = Math.max(1, Math.round((Date.now() - active.start) / 60000));
   const vol = W.workoutVolume(active, bw());
   const prs = [];
