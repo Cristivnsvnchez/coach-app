@@ -4,20 +4,19 @@
 
 const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par session
 
-// Tenue par défaut : sport sombre, sobre.
-const DEFAULT_CLOTH = { top: 0x23272f, shorts: 0x121316, shoes: 0xe8e8e6 };
 const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
 // sans interaction (la carte reste cliquable), cadrage un peu plus serré.
 export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose }, outfit = null, { showcase = false } = {}) {
-  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip;
+  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
     ({ OrbitControls } = await import('../vendor/three/OrbitControls.js'));
     ({ buildPoseClip } = await import('./poses.js'));
     fix = await import('./motion-fix.js'); // corrections partagées avec le banc d'essai (tests/motion.test.mjs)
+    studio = await import('./studio3d.js'); // argile et lumière partagées avec les vignettes
   } catch { return noop3D; }
 
   const canvas = document.createElement('canvas');
@@ -28,24 +27,36 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.setClearColor(0x12151c, showcase ? 0 : 1); // décor de studio sombre, comme les fiches de référence (transparent en vitrine)
+  renderer.setClearColor(0x1e1f22, 0); // fond : dégradé gris studio de la carte (CSS), transparent en vitrine
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; // une seule ombre : la lampe principale
 
+  // Studio façon « mannequin d'argile » : lumière principale chaude en 3/4 avant, deux contre-jours froids qui détourent
+  // la silhouette, un peu de lumière d'ambiance, sol gris sombre qui reçoit une ombre douce et se fond dans le fond.
   const scene = new THREE.Scene();
-  if (!showcase) scene.fog = new THREE.Fog(0x12151c, 3.2, 7.5); // la grille se fond dans le noir
+  if (!showcase) scene.fog = new THREE.Fog(0x232427, 3.2, 7.5);
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
-  const grid = new THREE.GridHelper(12, 48, 0x3d7bff, 0x22355e);
-  grid.material.transparent = true; grid.material.opacity = 0.55; grid.material.fog = true; if (!showcase) scene.add(grid);
-  scene.add(new THREE.HemisphereLight(0xeef2ff, 0x8a8f9c, 1.6));
-  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 4, 3); scene.add(key);
-  const rim = new THREE.DirectionalLight(0x9db4ff, 1.4); rim.position.set(-3, 2.5, -2.5); scene.add(rim);
+  const { group: lights, hemi, key } = studio.studioLights(THREE);
+  scene.add(hemi, lights, key.target);
+  // Sol de course sur place (grille discrète, montrée seulement si le sol défile) ; sol de studio : disque qui reçoit l'ombre.
+  const grid = new THREE.GridHelper(12, 48, 0x4a4c52, 0x34363b);
+  grid.material.transparent = true; grid.material.opacity = 0.35; grid.material.fog = true; grid.position.y = 0.001;
+  const fc = document.createElement('canvas'); fc.width = fc.height = 256;
+  const fx = fc.getContext('2d'), fg = fx.createRadialGradient(128, 128, 10, 128, 128, 128);
+  fg.addColorStop(0, 'rgba(255,255,255,1)'); fg.addColorStop(0.4, 'rgba(255,255,255,.7)'); fg.addColorStop(1, 'rgba(255,255,255,0)');
+  fx.fillStyle = fg; fx.fillRect(0, 0, 256, 256);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(4.5, 64), new THREE.MeshStandardMaterial({ color: 0x202124, roughness: 0.95, metalness: 0, alphaMap: new THREE.CanvasTexture(fc), transparent: true, depthWrite: false }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; if (!showcase) scene.add(floor);
+  // En vitrine (fond de palette) : seulement l'ombre portée, sur un sol invisible.
+  const catcher = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.ShadowMaterial({ opacity: 0.28 }));
+  catcher.rotation.x = -Math.PI / 2; catcher.receiveShadow = true; if (showcase) scene.add(catcher);
 
-  // Ombre de contact douce (disque à dégradé radial), sans calcul d'ombre coûteux.
+  // Ombre de contact douce (disque à dégradé radial) sous les pieds, en plus de l'ombre portée.
   const g = document.createElement('canvas'); g.width = g.height = 128;
   const gc = g.getContext('2d'), grad = gc.createRadialGradient(64, 64, 4, 64, 64, 62);
-  grad.addColorStop(0, 'rgba(20,30,70,.35)'); grad.addColorStop(1, 'rgba(20,30,70,0)');
+  grad.addColorStop(0, 'rgba(0,0,0,.45)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
   gc.fillStyle = grad; gc.fillRect(0, 0, 128, 128);
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(g), transparent: true, depthWrite: false }));
-  shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(g), transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.002; scene.add(shadow);
 
   // Corps (homme/femme) + animation de l'exercice dans un petit fichier à part (models/anim/<clip>.glb, squelette seul,
   // commun aux deux corps : mêmes os Mixamo). Chargés en parallèle, gardés en cache pour la session.
@@ -71,25 +82,23 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   }
   const size = new THREE.Vector3(0.6, 1.75, 0.6);
 
-  // Matière « mannequin anatomique » : blanc mat + liseré bleu (effet rayons X) + muscles travaillés lumineux.
+  // Matière « mannequin d'argile » : gris mat, relief des muscles (texture normale accentuée), muscles travaillés lumineux.
   // Le masque musculaire vient des poids de peau : chaque sommet sait à quels os il est lié (cuisses, dos, bras…).
   const uTime = { value: 0 };
   const uHighlight = { value: 1 }; // boosté à l'onglet Conseils : la lueur musculaire devient une planche anatomique
   const byKind = {}; // kind ('top'/'shorts'/'shoes') → matériaux à recolorer quand on change de tenue
   obj.traverse((o) => {
     if (!o.isSkinnedMesh) return;
+    o.castShadow = true; o.frustumCulled = false; // la boîte englobante d'un maillage skinné ne suit pas l'animation
     const names = o.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ''));
     // Lueur par os et par face : [avant, arrière] (biceps devant / triceps derrière sur le même os).
     const WF = new Array(96).fill(0), WB = new Array(96).fill(0);
     names.forEach((n, i) => { if (i < 96 && muscles[n]) { WF[i] = muscles[n][0]; WB[i] = muscles[n][1]; } });
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     o.material = mats.map((m) => {
-      // Peau et cheveux : texture d'origine. Vêtements : texture passée en niveaux de gris × couleur de la tenue
-      // (le grain du tissu reste, la couleur change sans recharger). Le haut laisse passer la lueur des muscles.
-      const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : /sock/i.test(m.name) ? 'socks' : 'skin';
-      const skin = kind === 'skin', hair = kind === 'hair', sole = false, cloth = ['top', 'shorts', 'shoes'].includes(kind), glows = skin || kind === 'top';
-      const tint = cloth ? (outfit?.[kind] ?? DEFAULT_CLOTH[kind]) : m.map ? 0xffffff : 0xe6e7eb; // sans texture : peau de mannequin blanc mat
-      const mm = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, normalScale: m.normalScale, color: tint, roughness: skin ? 0.58 : 0.8, metalness: 0, transparent: false, alphaTest: hair ? 0.4 : 0, side: hair ? THREE.DoubleSide : THREE.FrontSide });
+      // Peau : argile grise ; vêtements : tissu noir recolorable sans recharger. La brassière laisse passer la lueur des pectoraux.
+      const { mm, kind, skin, cloth } = studio.clayMaterial(THREE, m, outfit);
+      const hair = kind === 'hair', glows = skin || kind === 'top';
       if (cloth) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
       mm.onBeforeCompile = (sh) => {
@@ -105,12 +114,13 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
             diffuseColor.rgb = diffuse * clamp(0.55 + grain * 0.9, 0.0, 1.25);` : '#include <map_fragment>')
           .replace('#include <dithering_fragment>', `
             float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.4);
-            gl_FragColor.rgb += vec3(0.32, 0.56, 1.0) * fres * ${hair ? '0.1' : skin ? '0.55' : '0.3'};
+            gl_FragColor.rgb += vec3(0.85, 0.88, 0.95) * fres * ${skin ? '0.07' : '0.04'}; // léger liseré neutre (les contre-jours font le reste)
             float m = smoothstep(0.2, 0.7, vMask) * ${glows ? '1.0' : '0.0'};
             float pulse = 0.85 + 0.15 * sin(uTime * 2.6);
-            // Lueur : cœur jaune chaud, bords orange plus lumineux (comme un muscle qui « chauffe »).
-            vec3 glow = mix(vec3(1.0, 0.88, 0.42), vec3(1.0, 0.38, 0.06), clamp(fres * 1.6, 0.0, 1.0));
-            gl_FragColor.rgb = mix(gl_FragColor.rgb, glow * (1.05 + 0.5 * fres), clamp(m * (0.62 + 0.3 * fres) * pulse * uHighlight, 0.0, 1.0));
+            // Lueur : orange vif qui garde le relief de l'argile (multiplié par l'éclairage), bords plus chauds et plus clairs.
+            float lum = dot(gl_FragColor.rgb, vec3(0.3, 0.59, 0.11));
+            vec3 glow = mix(vec3(1.0, 0.52, 0.16), vec3(1.0, 0.3, 0.05), clamp(fres * 1.4, 0.0, 1.0)) * (0.45 + 1.1 * lum) + vec3(0.18, 0.05, 0.0);
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, glow, clamp(m * 0.9 * pulse * uHighlight, 0.0, 1.0));
             #include <dithering_fragment>`);
       };
       return mm;
@@ -173,6 +183,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     if (n) beltV.multiplyScalar(1 / n);
     if (beltV.length() < 0.6) beltV.set(0, 0, 0);
   }
+  if (beltV.lengthSq() && !showcase) scene.add(grid); // course sur place : lignes au sol pour voir le sol défiler
   if (reduce && act) { act.paused = true; act.time = anim.duration * 0.5; }
   let yMin = 0, yMax = 0;
   for (const [, y, m] of pts) { yMin = Math.min(yMin, y - m); yMax = Math.max(yMax, y + m); }
@@ -256,6 +267,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
       if (off.x) bone.rotation.x += off.x; if (off.y) bone.rotation.y += off.y; if (off.z) bone.rotation.z += off.z;
     }
     controls.update();
+    lights.rotation.y = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
     renderer.render(scene, camera);
   }
   const onVis = () => { if (!document.hidden && !raf) { clock.getDelta(); loop(); } };
@@ -271,9 +283,15 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
     controls.dispose(); mixer.stopAllAction();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
-    grid.geometry.dispose(); grid.material.dispose();
+    grid.geometry.dispose(); grid.material.dispose(); floor.geometry.dispose(); floor.material.alphaMap.dispose(); floor.material.dispose(); catcher.geometry.dispose(); catcher.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
     renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); // rend le contexte WebGL tout de suite (Safari en limite le nombre)
   };
-  return { dispose, setOutfit, setMode };
+  // Outils de développement (tools/look.html, vignettes) : figer le clip à une fraction, orienter la caméra.
+  const dev = {
+    seek(f) { if (!act) return; act.paused = true; act.time = anim.duration * f; mixer.update(0); },
+    azimuth(deg) { controls.autoRotate = false; const r = camera.position.clone().sub(controls.target), a = THREE.MathUtils.degToRad(deg);
+      const h = Math.hypot(r.x, r.z); camera.position.set(controls.target.x + h * Math.sin(a), camera.position.y, controls.target.z + h * Math.cos(a)); controls.update(); },
+  };
+  return { dispose, setOutfit, setMode, dev };
 }

@@ -71,8 +71,8 @@
 .v3d-hint svg.ic { width: 14px; height: 14px; }
 .lrn-hero.v3d.ready .v3d-hint { opacity: 1; }
 .lrn-hero.v3d.touched .v3d-hint { opacity: 0; }
-/* Studio sombre (références) : la carte 3D reste noire bleutée en clair comme en sombre */
-.lrn-hero.v3d { background: radial-gradient(80% 60% at 50% 30%, #1c2333, #12151c 70%); height: min(92vw, 420px); }
+/* Studio gris sombre (mannequin d'argile) : halo clair derrière le corps, bords presque noirs, en clair comme en sombre */
+.lrn-hero.v3d { background: radial-gradient(75% 60% at 50% 38%, #46484d, #2a2b2f 55%, #18191b 100%); height: min(92vw, 420px); }
 .lrn-hero.v3d .v3d-hint { background: rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .8); }
 .lrn-hero.v3d > .lrn-pic { filter: invert(1) brightness(1.6); }
 

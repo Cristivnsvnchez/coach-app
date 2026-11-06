@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Outil de développement (pas chargé par l'app) : visionneuse 3D seule, au format de la fiche Apprendre sur iPhone,
+     pour régler matière, lumière, matériel et gestes. ?ex=Squat&sex=F&t=0.5 (t : fraction du clip, figée) &az=0 (degrés). -->
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="../"><title>Look 3D</title>
+<link rel="stylesheet" href="css/app.css"><link rel="stylesheet" href="css/trackme.css"><link rel="stylesheet" href="css/learn.css">
+<style>body{margin:0;background:#0b0b0d;padding:12px;font:12px system-ui;color:#aaa}.lrn-hero{margin-bottom:8px}</style></head>
+<body><div class="lrn-hero v3d" id="box"></div><div id="info"></div>
+<script type="module">
+import { mount3D } from './js/viewer3d.js';
+import { model3D, outfitsFor } from './js/technique.js';
+const q = new URLSearchParams(location.search), ex = q.get('ex') || 'Squat', sex = q.get('sex') || 'M';
+const m = model3D(ex, sex);
+const v = await mount3D(document.getElementById('box'), m, outfitsFor(sex)[0]);
+window.v3d = v;
+if (q.has('t')) v.dev?.seek(+q.get('t'));
+if (q.has('az')) v.dev?.azimuth(+q.get('az'));
+document.getElementById('info').textContent = ex + ' ' + sex + ' ' + (m.prop || '');
+</script></body></html>

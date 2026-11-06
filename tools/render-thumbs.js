@@ -9,6 +9,7 @@ import { model3D, outfitsFor } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
 import { prepareClip } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
+import { studioLights, clayMaterial } from '../js/studio3d.js';
 
 const SIZE = 640;
 const loader = new GLTFLoader();
@@ -20,12 +21,15 @@ function setup() {
   renderer.setPixelRatio(1); renderer.setSize(SIZE, SIZE);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Même studio que la visionneuse (argile, principale + contre-jours), ombre douce sur un sol invisible.
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f9c, 1.9));
-  const key = new THREE.DirectionalLight(0xffffff, 2.4); key.position.set(2.5, 4, 3); scene.add(key);
-  const rim = new THREE.DirectionalLight(0xb9c8ff, 1.2); rim.position.set(-3, 2.5, -2.5); scene.add(rim);
+  const { group: lights, hemi, key } = studioLights(THREE);
+  scene.add(hemi, lights, key.target);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShadowMaterial({ opacity: 0.3 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 50);
-  return { renderer, scene, camera };
+  return { renderer, scene, camera, lights };
 }
 
 // Corps habillé (tenue par défaut du sexe), sans la lueur musculaire de la visionneuse.
@@ -33,15 +37,9 @@ function dress(obj, outfit) {
   obj.traverse((o) => {
     if (!o.isMesh) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
-    // Matériaux opaques neufs, comme la visionneuse (ceux du glb peuvent être transparents → trous dans le corps).
-    o.material = mats.map((m) => {
-      const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : 'skin';
-      const mm = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, normalScale: m.normalScale, color: outfit[kind] ?? 0xffffff, roughness: 0.65, metalness: 0, alphaTest: kind === 'hair' ? 0.4 : 0, side: kind === 'hair' ? THREE.DoubleSide : THREE.FrontSide });
-      if (outfit[kind] && m.map) mm.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = diffuse * clamp(0.55 + dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11)) * 0.9, 0.0, 1.25);'); };
-      return mm;
-    });
+    o.material = mats.map((m) => clayMaterial(THREE, m, outfit).mm); // matériaux opaques neufs, comme la visionneuse
     if (o.material.length === 1) o.material = o.material[0];
-    o.frustumCulled = false;
+    o.frustumCulled = false; o.castShadow = true;
   });
 }
 
@@ -80,6 +78,7 @@ export async function renderOne(ctx, name, sex) {
   for (const [k, i] of [0, best].entries()) {
     const c = boxes[k].getCenter(new THREE.Vector3());
     ctx.camera.position.copy(c).addScaledVector(dir, dist); ctx.camera.lookAt(c); ctx.camera.updateProjectionMatrix();
+    ctx.lights.rotation.y = Math.atan2(dir.x, dir.z); // lumière de studio calée sur la caméra, comme la visionneuse
     sample((clip.duration * i) / N);
     ctx.renderer.render(ctx.scene, ctx.camera);
     const blob = await new Promise((res) => ctx.renderer.domElement.toBlob(res, 'image/webp', 0.86));
