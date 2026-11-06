@@ -1,26 +1,46 @@
 // Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 import { state, save, today, uid } from '../store.js';
 import { habitStatus, habitRates } from '../metrics.js';
-import { AUTO, streak, habitName, addTask, toggleTask, removeTask, tasksLeft } from '../habits.js';
+import { AUTO, streak, habitName, addTask, toggleTask, removeTask, suggestTasks } from '../habits.js';
+import { schedule } from '../planner.js';
 import { isoDate, parseDate } from '../science.js';
 import { esc, sheet, group, fmtDate, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, register } from '../i18n.js';
 
 register({
-  en: { 'Pour ce jour seulement': 'For this day only', 'Ex : aller au magasin, poster un colis…': 'E.g. go to the store, post a parcel…',
-    '{n} tâche(s) à faire': '{n} task(s) to do', 'Tâche supprimée': 'Task removed', 'Ajouter une tâche pour ce jour': 'Add a task for this day' },
-  nl: { 'Pour ce jour seulement': 'Alleen voor deze dag', 'Ex : aller au magasin, poster un colis…': 'Bijv. naar de winkel, pakje posten…',
-    '{n} tâche(s) à faire': '{n} taak/taken te doen', 'Tâche supprimée': 'Taak verwijderd', 'Ajouter une tâche pour ce jour': 'Taak toevoegen voor deze dag' },
+  en: { 'Tâche supprimée': 'Task removed', 'Ajouter une tâche pour ce jour': 'Add a task for this day',
+    'À faire aujourd\'hui': 'To do today', 'Aujourd\'hui seulement': 'Today only', 'Chaque jour': 'Every day', 'Ajouter une action pour aujourd\'hui…': 'Add something to do today…',
+    'Idées': 'Ideas', 'Suivi automatique': 'Auto-tracked', 'Se coche avec ton journal': 'Ticks itself from your log', 'Coche-le si tu as fait du repos actif': 'Tick it if you did active rest',
+    'Aller au sport': 'Go to the gym', 'Aller au sport : {r}': 'Go to the gym: {r}', 'Faire les courses pour la semaine prochaine': 'Do the shopping for next week',
+    'Préparer mes repas de demain': "Prep tomorrow's meals", 'Au lit avant 23 h': 'In bed before 11 pm', '10 min d\'étirements': '10 min of stretching',
+    'Faire 10 000 pas': 'Walk 10,000 steps', 'Dormir au moins 7 h': 'Sleep at least 7 h' },
+  nl: { 'Tâche supprimée': 'Taak verwijderd', 'Ajouter une tâche pour ce jour': 'Taak toevoegen voor deze dag',
+    'À faire aujourd\'hui': 'Vandaag te doen', 'Aujourd\'hui seulement': 'Alleen vandaag', 'Chaque jour': 'Elke dag', 'Ajouter une action pour aujourd\'hui…': 'Iets toevoegen voor vandaag…',
+    'Idées': 'Ideeën', 'Suivi automatique': 'Automatisch gevolgd', 'Se coche avec ton journal': 'Wordt afgevinkt via je dagboek', 'Coche-le si tu as fait du repos actif': 'Vink aan als je actief hebt gerust',
+    'Aller au sport': 'Naar de sportschool', 'Aller au sport : {r}': 'Naar de sportschool: {r}', 'Faire les courses pour la semaine prochaine': 'Boodschappen doen voor volgende week',
+    'Préparer mes repas de demain': 'Maaltijden voor morgen voorbereiden', 'Au lit avant 23 h': 'Voor 23 u in bed', '10 min d\'étirements': '10 min stretchen',
+    'Faire 10 000 pas': '10.000 stappen zetten', 'Dormir au moins 7 h': 'Minstens 7 u slapen' },
 });
 
-// Tâche ponctuelle du jour : case à cocher + suppression.
-const taskRow = (x) => `<li class="cell sub habit tap ${x.done ? 'done' : ''}" data-task="${esc(x.id)}" role="checkbox" aria-checked="${x.done}">
-    <span class="check"><span class="ring-o">${x.done ? icon('check') : ''}</span></span>
-    <div class="grow"><span class="t">${esc(x.name)}</span><span class="s">${t('Pour ce jour seulement')}</span></div>
-    <button class="icon-btn" data-task-del="${esc(x.id)}" aria-label="${t('Supprimer')}">${icon('trash')}</button></li>`;
+// Une action à cocher : habitude quotidienne (« Chaque jour ») ou tâche de ce jour seulement (supprimable).
+const actionRow = ({ id, name, done, task }) => `<li class="hb-act ${done ? 'done' : ''}">
+    <button class="hb-tick" ${task ? `data-task="${esc(id)}"` : `data-habit="${esc(id)}"`} role="checkbox" aria-checked="${done}">
+      <span class="ring-o" aria-hidden="true">${done ? icon('check') : ''}</span>
+      <span class="grow"><span class="t">${esc(task ? name : t(name))}</span><span class="s">${t(task ? 'Aujourd\'hui seulement' : 'Chaque jour')}</span></span></button>
+    ${task ? `<button class="icon-btn hb-del" data-task-del="${esc(id)}" aria-label="${t('Supprimer')} — ${esc(name)}">${icon('trash')}</button>` : ''}</li>`;
 
-// Checklist repliable : une ligne résumé (x/y · série), qui se déplie sur les habitudes du jour.
+// Icône de chaque habitude automatique (bande « Suivi automatique »).
+const AUTO_ICON = { protein: 'bolt', kcal: 'flame', fiber: 'meal', water: 'drop', weigh: 'weight', workout: 'dumbbell' };
+
+// Séance prévue ce jour par le programme (nom de la routine), sinon null.
+function plannedWorkout(date) {
+  if (!state.plan || state.workouts.some((w) => w.date === date)) return null;
+  const ev = schedule(state.plan, date, date)[0];
+  return ev ? t(state.routines.find((r) => r.id === ev.routineId)?.name || 'Séance') : null;
+}
+
+// Le suivi automatique (protéines, kcal, eau…) est replié en une bande d'icônes ; il se déplie au toucher.
 let expanded = false;
 export const toggleHabits = () => (expanded = !expanded);
 
@@ -28,27 +48,42 @@ export function habitsCells(date) {
   const status = habitStatus(date);
   const rates = habitRates(60);
   const n = streak(rates, today());
-  const done = status.filter((s) => s.done).length;
-  const pct = status.length ? done / status.length : 0;
-  const tasks = state.dayTasks[date] || [], left = tasksLeft(state.dayTasks, date);
-  const head = `<li class="cell tap" data-a="habits-toggle" role="button" aria-expanded="${expanded}">
-      <span class="mini-ring" style="--p:${Math.round(pct * 100)}%" aria-hidden="true"></span>
-      <div class="grow"><span class="t">${t('Checklist du jour')}</span><span class="s">${done}/${status.length}${n ? ' · ' + t('{n} jours de suite', { n }) : ''}${left ? ' · ' + t('{n} tâche(s) à faire', { n: left }) : ''}</span></div>
-      ${icon(expanded ? 'chevronUp' : 'chevronDown', { cls: 'chev' })}</li>`;
-  // Les tâches du jour restent visibles même repliée : ce sont les choses à ne pas oublier aujourd'hui.
-  const addRow = `<li class="cell sub"><form class="row" data-f="task" style="flex:1"><input class="input" name="n" enterkeyhint="done" placeholder="${t('Ex : aller au magasin, poster un colis…')}" maxlength="80" aria-label="${t('Ajouter une tâche pour ce jour')}"><button class="btn filled">${t('Ajouter')}</button></form></li>`;
-  if (!expanded) return head + tasks.map(taskRow).join('');
+  const autos = status.filter((h) => h.auto), manual = status.filter((h) => !h.auto);
+  const tasks = state.dayTasks[date] || [];
+  const actions = [...manual.map((h) => ({ id: h.id, name: h.name, done: h.done })), ...tasks.map((x) => ({ ...x, task: true }))];
+  const doneN = actions.filter((a) => a.done).length, autoN = autos.filter((h) => h.done).length;
+  const pct = actions.length ? doneN / actions.length : 0;
+
+  // Idées : on cache celles déjà présentes dans la liste du jour.
+  const taken = new Set(actions.map((a) => (a.task ? a.name : t(a.name)).toLowerCase()));
+  const ideas = suggestTasks({ date, shopDay: state.settings.shopDay ?? 6, workoutName: plannedWorkout(date) })
+    .map((s) => t(s.name, s.vars)).filter((s) => !taken.has(s.toLowerCase())).slice(0, 4);
+
+  const head = `<li class="hb-head"><span class="mini-ring" style="--p:${Math.round(pct * 100)}%" aria-hidden="true"></span>
+      <div class="grow"><span class="t">${t('À faire aujourd\'hui')}</span><span class="s num">${doneN}/${actions.length}${n ? ' · ' + t('{n} jours de suite', { n }) : ''}</span></div></li>`;
+  const list = actions.map(actionRow).join('');
+  const add = `<li class="hb-add"><form class="row" data-f="task"><input class="input" name="n" enterkeyhint="done" placeholder="${t('Ajouter une action pour aujourd\'hui…')}" maxlength="80" aria-label="${t('Ajouter une tâche pour ce jour')}"><button class="btn filled">${t('Ajouter')}</button></form></li>`;
+  const idea = ideas.length ? `<li class="hb-ideas"><span class="caption secondary">${t('Idées')}</span>
+      <div class="chips hb-chips">${ideas.map((s) => `<button class="chip" data-idea="${esc(s)}">${icon('plus')} ${esc(s)}</button>`).join('')}</div></li>` : '';
+  const strip = `<li><button class="hb-auto" data-a="habits-toggle" aria-expanded="${expanded}">
+      <span class="hb-pips" aria-hidden="true">${autos.map((h) => `<span class="hb-pip ${h.done ? 'on' : ''}">${icon(AUTO_ICON[h.id] || 'check')}</span>`).join('')}</span>
+      <span class="grow"><span class="t">${t('Suivi automatique')}</span><span class="s num">${autoN}/${autos.length} · ${t('Se coche avec ton journal')}</span></span>
+      ${icon(expanded ? 'chevronUp' : 'chevronDown', { cls: 'chev' })}</button></li>`;
+  if (!expanded) return head + list + add + idea + strip;
+
   const week = Array.from({ length: 7 }, (_, i) => isoDate(new Date(parseDate(today()).getTime() - (6 - i) * 86400000)));
-  const dots = `<li class="cell sub" style="display:block"><div class="week">${week.map((d) => {
+  const dots = `<li class="hb-week"><div class="week">${week.map((d) => {
     const r = rates[d] ?? 0;
     return `<div class="wday ${d === date ? 'sel' : ''}"><span class="caption secondary">${fmtDate(d, { weekday: 'narrow' })}</span>
       <span class="wdot" style="--p:${Math.round(r * 100)}%" aria-label="${fmtDate(d, { weekday: 'long' })} ${Math.round(r * 100)} %"></span></div>`;
   }).join('')}</div></li>`;
-  return head + dots + status.map((h) => `<li class="cell sub habit ${h.tappable ? 'tap' : ''} ${h.done ? 'done' : ''}" ${h.tappable ? `data-habit="${esc(h.id)}" role="checkbox" aria-checked="${h.done}"` : ''}>
-      <span class="check"><span class="ring-o">${h.done ? icon('check') : ''}</span></span>
-      <div class="grow"><span class="t">${esc(t(h.name))}</span>${h.auto ? `<span class="s">${h.autoDone ? t('Validé automatiquement') : t('Se coche automatiquement')}</span>` : ''}</div></li>`).join('')
-    + tasks.map(taskRow).join('') + addRow
-    + `<li class="cell sub action" data-a="habits-edit" role="button">${t('Modifier mes habitudes')}</li>`;
+  const autoRows = autos.map((h) => `<li class="hb-arow ${h.done ? 'done' : ''}">
+      ${h.tappable ? `<button class="hb-tick" data-habit="${esc(h.id)}" role="checkbox" aria-checked="${h.done}">` : '<div class="hb-tick">'}
+      <span class="hb-pip ${h.done ? 'on' : ''}" aria-hidden="true">${icon(AUTO_ICON[h.id] || 'check')}</span>
+      <span class="grow"><span class="t">${esc(t(h.name))}</span><span class="s">${h.autoDone ? t('Validé automatiquement') : h.tappable ? t('Coche-le si tu as fait du repos actif') : t('Se coche automatiquement')}</span></span>
+      ${h.tappable ? '</button>' : '</div>'}</li>`).join('');
+  return head + list + add + idea + strip + autoRows + dots
+    + `<li><button class="hb-edit" data-a="habits-edit">${icon('pencil')} ${t('Modifier mes habitudes')}</button></li>`;
 }
 
 // Envoi du champ « tâche du jour ». Renvoie true si l'événement a été traité.
@@ -68,6 +103,8 @@ export function handleHabitClick(e, date, rerender) {
     toast(t('Tâche supprimée'), { undo: () => { state.dayTasks[date] = before; save(); rerender(); } });
     return true;
   }
+  const idea = e.target.closest('[data-idea]');
+  if (idea) { addTask(state.dayTasks, date, idea.dataset.idea, 'tk-' + uid()); save(); rerender(); navigator.vibrate?.(10); return true; }
   const tk = e.target.closest('[data-task]');
   if (tk) { toggleTask(state.dayTasks, date, tk.dataset.task); save(); rerender(); navigator.vibrate?.(10); return true; }
   if (e.target.closest('[data-f=task]')) return true; // clic dans le champ : ne replie pas la liste

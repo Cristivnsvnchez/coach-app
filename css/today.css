@@ -43,6 +43,46 @@
 .td-card .cells { background: transparent; box-shadow: none; }
 .td-quick .cell + .cell::before { display: none; }
 .td-quick .cell.sub { background: var(--fill); margin: 0 12px 6px; border-radius: 16px; }
+
+/* Checklist du jour : actions à cocher d'abord, idées en pastilles pointillées, suivi automatique replié en bande d'icônes. */
+.td-quick .cells > li:not(.cell) { list-style: none; }
+.hb-head { display: flex; align-items: center; gap: 12px; padding: 16px 16px 10px; }
+.hb-head .grow, .hb-tick .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hb-head .t { font-size: 1.06rem; font-weight: 600; letter-spacing: -.01em; }
+.hb-head .s, .hb-tick .s, .hb-auto .s { font-size: .78rem; color: var(--label-2); }
+.hb-act, .hb-arow { display: flex; align-items: center; margin: 0 12px 6px; background: var(--fill); border-radius: 16px; }
+.hb-tick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+div.hb-tick { cursor: default; }
+.hb-tick .t { font-size: .95rem; overflow-wrap: anywhere; }
+.hb-act .ring-o { width: 24px; height: 24px; flex: none; border-radius: 50%; border: 2px solid var(--label-3); display: inline-flex; align-items: center; justify-content: center; transition: background-color .18s ease-out, border-color .18s ease-out; }
+.hb-act.done .ring-o { background: var(--tint); border-color: var(--tint); color: #fff; }
+.hb-act .ring-o svg.ic { width: 14px; height: 14px; stroke-width: 3; }
+.hb-act.done .t { color: var(--label-2); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--label-2) 60%, transparent); }
+.hb-del { margin-right: 4px; color: var(--label-3); }
+.hb-add { margin: 2px 12px 8px; }
+.hb-add .row { gap: 8px; }
+.hb-add .input { flex: 1; min-width: 0; border-radius: 14px; }
+.hb-add .btn { border-radius: 14px; flex: none; }
+.hb-ideas { padding: 2px 16px 10px; }
+.hb-ideas .caption { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.hb-chips { margin: 6px -16px 0; padding: 0 16px 2px; gap: 6px; }
+.hb-chips .chip, html[data-look="glass"] .hb-chips .chip { flex: none; min-height: 36px; padding: 0 12px; border-radius: 999px; background: transparent; border: 1.5px dashed color-mix(in srgb, var(--tint) 45%, var(--separator));
+  -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--label); font-size: .84rem; white-space: nowrap; }
+.hb-chips .chip svg.ic { width: 14px; height: 14px; }
+.hb-auto { display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 2px 12px 10px; padding: 10px 12px; min-height: 52px; border: 0; border-radius: 16px; background: color-mix(in srgb, var(--tint) 9%, var(--fill)); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.hb-auto .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hb-auto .t { font-size: .92rem; font-weight: 600; }
+.hb-auto .chev { color: var(--label-3); width: 1rem; height: 1rem; flex: none; }
+.hb-pips { display: flex; flex: none; padding-left: 6px; }
+.hb-pip { width: 28px; height: 28px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--cell); color: var(--label-2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint) 9%, var(--fill)); }
+.hb-pips .hb-pip { margin-left: -6px; }
+.hb-pip.on { background: var(--tint); color: #fff; }
+.hb-pip svg.ic { width: 14px; height: 14px; }
+.hb-arow .hb-pip { box-shadow: none; }
+.hb-arow.done .t { color: var(--label-2); }
+.hb-week { padding: 4px 16px 4px; }
+.hb-edit { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 0 4px 6px; padding: 0 12px; border: 0; background: none; color: var(--tint-text); font: inherit; font-size: .9rem; cursor: pointer; }
+.hb-edit svg.ic { width: 16px; height: 16px; }
 .td-h { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 4px 8px; font-size: 1.2rem; font-weight: 600; letter-spacing: -.02em; }
 .td-h b { font-size: .9rem; color: var(--label-2); font-weight: 500; }
 .td-meal + .td-meal { margin-top: 8px; }

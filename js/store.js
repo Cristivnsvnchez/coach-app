@@ -1,17 +1,19 @@
 // État persistant dans localStorage (données uniquement sur le téléphone).
 import { isoDate } from './science.js';
-import { DEFAULT_HABITS, cleanDayTasks } from './habits.js';
+import { DEFAULT_HABITS, cleanDayTasks, migrateHabits } from './habits.js';
 import { migrateProgram } from './workout.js';
 import { DEFAULT_PROGRAM } from './exercises.js';
 
 const KEY = 'coach.v1';
 // Version du schéma des données : incrémenter et ajouter une étape dans MIGRATIONS à chaque changement de forme.
-export const SCHEMA = 3;
+export const SCHEMA = 4;
 const MIGRATIONS = {
   // 1 → 2 : TrackMe (palette, matière, cycle, repères ANSES, Strava) ; les champs manquants viennent de empty().
   2: (d) => d,
   // 2 → 3 : Strava retiré.
   3: (d) => { delete d.strava; return d; },
+  // 3 → 4 : habitudes par défaut devenues des actions (« Faire 10 000 pas »…), fruits/légumes laissés à l'anneau ANSES.
+  4: (d) => { if (Array.isArray(d.habits)) d.habits = migrateHabits(d.habits); return d; },
 };
 
 const empty = () => ({

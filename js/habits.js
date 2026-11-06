@@ -15,10 +15,29 @@ export const AUTO = {
 export const DEFAULT_HABITS = [
   { id: 'protein', auto: true }, { id: 'kcal', auto: true }, { id: 'water', auto: true },
   { id: 'weigh', auto: true }, { id: 'workout', auto: true },
-  { id: 'sleep', name: 'Sommeil ≥ 7 h' },
-  { id: 'steps', name: '8 000 pas' },
-  { id: 'veg', name: '5 portions de fruits et légumes' },
+  { id: 'steps', name: 'Faire 10 000 pas' },
+  { id: 'sleep', name: 'Dormir au moins 7 h' },
 ];
+
+// Anciennes habitudes par défaut → actions concrètes ; fruits et légumes déjà suivis par l'anneau ANSES du Journal.
+// Seules les valeurs par défaut intactes changent : une habitude renommée par l'utilisateur reste telle quelle.
+const OLD_DEFAULTS = { sleep: ['Sommeil ≥ 7 h', 'Dormir au moins 7 h'], steps: ['8 000 pas', 'Faire 10 000 pas'], veg: ['5 portions de fruits et légumes', null] };
+export function migrateHabits(habits) {
+  return habits.flatMap((h) => {
+    const o = OLD_DEFAULTS[h.id];
+    if (!o || h.auto || h.name !== o[0]) return [h];
+    return o[1] ? [{ ...h, name: o[1] }] : [];
+  });
+}
+
+// Idées d'actions pour un jour (à ajouter d'un toucher comme tâche du jour). Noms = clés FR traduites à l'affichage.
+export function suggestTasks({ date, shopDay = 6, workoutName = null } = {}) {
+  const wd = parseDate(date).getDay();
+  const out = [workoutName ? { name: 'Aller au sport : {r}', vars: { r: workoutName } } : { name: 'Aller au sport' }];
+  if (wd === shopDay || wd === (shopDay + 6) % 7) out.push({ name: 'Faire les courses pour la semaine prochaine' });
+  out.push({ name: 'Préparer mes repas de demain' }, { name: 'Au lit avant 23 h' }, { name: '10 min d\'étirements' });
+  return out;
+}
 
 export const habitName = (h) => (h.auto ? AUTO[h.id]?.name : h.name) || h.name || h.id;
 

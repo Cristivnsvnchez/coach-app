@@ -27,7 +27,7 @@ TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.
 ## css/session.css (42 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
-## css/today.css (72 l.)
+## css/today.css (112 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
 ## css/trackme.css (296 l.)
@@ -57,9 +57,9 @@ exports: GOALS,getPortions addPortion,weekDates weekTotal,avg7
 Base d'aliments génériques embarquée (recherche instantanée, hors ligne).
 exports: BASE_FOODS
 
-## js/habits.js (85 l.)
+## js/habits.js (104 l.)
 Checklist quotidienne : habitudes auto-cochées d'après les données du jour + habitudes manuelles, et série de jours.
-exports: AUTO,DEFAULT_HABITS habitName,dayStatus addTask,toggleTask removeTask,tasksLeft cleanDayTasks,completion streak
+exports: AUTO,DEFAULT_HABITS habitName,dayStatus migrateHabits,suggestTasks addTask,toggleTask removeTask,tasksLeft cleanDayTasks,completion streak
 
 ## js/i18n.js (237 l.)
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
@@ -105,7 +105,7 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
 exports: dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
-## js/store.js (170 l.)
+## js/store.js (172 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay latestWeight,recentFoods
 
@@ -147,7 +147,7 @@ exports: render
 Feuilles liées aux exercices : sélection (bibliothèque + perso), fiche (graphique, records, historique), disques.
 exports: pickExercise,openExercise platesSheet
 
-## js/views/habits.js (115 l.)
+## js/views/habits.js (152 l.)
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick,handleTaskSubmit
 
