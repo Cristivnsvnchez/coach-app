@@ -2,6 +2,7 @@
 // Clé = nom français exact de l'exercice dans LIBRARY (js/exercises.js). Contenu pédagogique général, sans valeur de conseil médical :
 // en cas de douleur ou de pathologie, demander l'avis d'un professionnel de santé.
 import { LIBRARY } from './exercises.js';
+import { POSES as POSES3D } from './poses.js';
 
 export const LEVELS = ['debutant', 'intermediaire', 'avance'];
 export const LEVEL_LABEL = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' };
@@ -69,7 +70,9 @@ const SVG_ATTR = 'viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-w
 // Figures 3D (mannequin argile rendu dans Blender, design/mannequin.blend) : 2 poses par exercice, enchaînées en boucle.
 // Les exercices sans rendu gardent le pictogramme au trait.
 // Vignettes « avatar » (img/ex/<m|f>/<clip>-1|2.webp, rendues par tools/render-thumbs.js) : tout exercice animé en a.
-export const hasFigure = (name) => !!CLIPS[name];
+export const hasFigure = (name) => !!(CLIPS[name] || POSES3D[name]);
+// Exercices sans clip Mixamo : mouvement construit depuis des poses clés (js/poses.js).
+const poseSlug = (name) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 // Modèles 3D animés (humain Mixamo converti dans Blender) : un fichier glb par sexe, plusieurs animations dedans
 // (une par exercice, ajoutées au fur et à mesure des imports Mixamo).
 const BODY = { M: 'models/trackme-human.glb', F: 'models/trackme-human-f.glb' };
@@ -86,7 +89,7 @@ const CLIPS = {
   "Pompes sautées": "jump_push_up",
   "Jumping jacks": "jumping_jacks",
   "Corde à sauter": "jump_rope",
-  "Box jump": "box_jump",
+  
   "Footing": "jogging",
   "Tapis de course": "treadmill",
   "Sprint": "sprint",
@@ -96,30 +99,26 @@ const CLIPS = {
   "Étirement des bras": "arm_stretch",
 };
 const BUILTIN = new Set(['squat']); // clips déjà contenus dans le glb du corps
-// Accessoire montré par la visionneuse : seulement quand le clip le tient vraiment (vérifié par tests/motion.test.mjs).
-// Les clips Mixamo d'arraché, d'épaulé-jeté, de tirage sumo et le curl (clip haltères) écartent les mains de 25 à 45 cm
-// en cours de mouvement : une barre rigide y glisserait entre les doigts → mouvement montré sans barre.
-const PROPS = { 'Squat avant': 'barHands', 'Squat overhead': 'barHands', Squat: 'barBack', 'Kettlebell swing': 'kettlebell', 'Box jump': 'box' };
-const propFor = (e) => PROPS[e?.name] || (e?.equipment === 'haltères' ? 'dumbbells' : null);
-// Muscle (nom FR de exercises.js) → os du squelette Mixamo, intensité de la lueur.
-// Valeur > 0 : tout le segment ; valeur < 0 : face arrière seulement (ex. fessiers = os Hips, côté dos).
+// Muscle (nom FR de exercises.js) → os du squelette Mixamo, intensité de la lueur [face avant, face arrière] :
+// un os porte plusieurs muscles (cuisse : quadriceps devant, ischios derrière ; bras : biceps devant, triceps derrière).
 const MUSCLE_BONES = {
-  Quadriceps: { LeftUpLeg: 1, RightUpLeg: 1 },
-  Fessiers: { Hips: -0.9 },
-  Ischios: { LeftUpLeg: -0.55, RightUpLeg: -0.55 },
-  Mollets: { LeftLeg: 1, RightLeg: 1 },
-  Dos: { Spine1: -0.9, Spine2: -0.9 },
-  Pectoraux: { Spine2: 0.85, Spine1: 0.3 },
-  Triceps: { LeftForeArm: 1, RightForeArm: 1 },
-  Épaules: { LeftShoulder: 1, RightShoulder: 1, LeftArm: 0.4, RightArm: 0.4 },
-  Biceps: { LeftArm: -0.7, RightArm: -0.7 },
-  Abdos: { Spine: 1 },
+  Quadriceps: { LeftUpLeg: [1, 0], RightUpLeg: [1, 0] },
+  Fessiers: { Hips: [0, 0.95] },
+  Ischios: { LeftUpLeg: [0, 0.9], RightUpLeg: [0, 0.9] },
+  Mollets: { LeftLeg: [0, 1], RightLeg: [0, 1] },
+  Dos: { Spine1: [0, 0.95], Spine2: [0, 0.95] },
+  Pectoraux: { Spine2: [1, 0] },
+  Triceps: { LeftArm: [0, 1], RightArm: [0, 1] },
+  Épaules: { LeftShoulder: [1, 1], RightShoulder: [1, 1] },
+  Biceps: { LeftArm: [1, 0], RightArm: [1, 0] },
+  Abdos: { Spine: [1, 0], Spine1: [0.6, 0] },
+  'Avant-bras': { LeftForeArm: [1, 1], RightForeArm: [1, 1] },
 };
-// Combine muscle principal (intensité pleine) + secondaires (0,55×) : à os partagé, la plus forte intensité l'emporte.
-function combineMuscles(primary, secondary = []) {
+// Combine muscle principal (intensité pleine) + secondaires (0,55×) : par face, la plus forte intensité l'emporte.
+export function combineMuscles(primary, secondary = []) {
   const W = {};
   const add = (name, scale) => { const b = MUSCLE_BONES[name]; if (!b) return;
-    for (const bone in b) { const v = b[bone] * scale; if (!(bone in W) || Math.abs(v) > Math.abs(W[bone])) W[bone] = v; } };
+    for (const bone in b) { const w = (W[bone] ||= [0, 0]); w[0] = Math.max(w[0], b[bone][0] * scale); w[1] = Math.max(w[1], b[bone][1] * scale); } };
   add(primary, 1); secondary.forEach((m) => add(m, 0.55));
   return W;
 }
@@ -148,9 +147,9 @@ function mistakeFor(e) {
   return DEFORM.backRound; // cardio, haltéro
 }
 export function model3D(name, sex = 'M') {
-  const clip = CLIPS[name]; if (!clip) return null;
+  const pose = POSES3D[name], clip = CLIPS[name] || (pose ? poseSlug(name) : null); if (!clip) return null;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, clip, prop: propFor(e), muscles: combineMuscles(e?.muscle, e?.secondary || []), equipment: e?.equipment, mistake: mistakeFor(e), name };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, mistake: mistakeFor(e), name };
 }
 // Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).
@@ -168,7 +167,7 @@ export const OUTFITS = {
 };
 export const outfitsFor = (sex) => OUTFITS[sex === 'F' ? 'F' : 'M'];
 export const pictogram = (name, cls = '', sex = 'M') => {
-  const f = CLIPS[name], d = sex === 'F' ? 'f' : 'm';
+  const f = CLIPS[name] || (POSES3D[name] ? poseSlug(name) : null), d = sex === 'F' ? 'f' : 'm';
   if (f) return `<span class="lrn-pic lrn-3d ${cls}" aria-hidden="true"><img src="img/ex/${d}/${f}-1.webp" alt="" decoding="async" loading="lazy"><img src="img/ex/${d}/${f}-2.webp" alt="" decoding="async" loading="lazy"></span>`;
   const k = (TECH[name] || {}).pose;
   return `<svg class="lrn-pic ${cls}" ${SVG_ATTR}>${POSES[k] || POSES.plank}</svg>`;

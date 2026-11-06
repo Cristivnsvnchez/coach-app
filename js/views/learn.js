@@ -131,7 +131,7 @@ export function openTechnique(name, go) {
   const m3d = model3D(name, sex);
   let dispose = () => {}, setOutfit = () => {}, setMode = () => {};
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
-    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big', state.profile?.sex)}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
+    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big', state.profile?.sex)}${m3d?.worked?.length ? `<div class="v3d-worked"><b>${esc(t(m3d.worked[0]))}</b>${m3d.worked.slice(1).map((x) => `<span>${esc(t(x))}</span>`).join('')}</div>` : ''}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
       <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
   if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); }).catch(() => {});
   const openDress = () => {

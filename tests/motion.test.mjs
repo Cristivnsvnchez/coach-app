@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { auditAll } from '../tools/motion-audit.mjs';
+import { LIBRARY } from '../js/exercises.js';
+import { model3D } from '../js/technique.js';
 
 // Banc d'essai du réalisme : chaque exercice animé, homme et femme, tel que la visionneuse le montre.
 const rows = await auditAll(['M', 'F']);
@@ -26,19 +29,22 @@ test('mouvements : les pieds ne glissent pas au sol (sauf course sur place, où 
   assert.deepEqual(bad, []);
 });
 
-test('accessoires : une barre tenue n\'apparaît que si la prise est stable, une barre sur le dos que si les mains sont aux épaules', () => {
-  const bad = [];
-  for (const r of rows) {
-    if (r.prop === 'barHands' && r.gripMax - r.gripMin > 0.12) bad.push(`${r.name} ${r.sex} : mains ${r.gripMin}-${r.gripMax} m sur une barre rigide`);
-    if (r.prop === 'barBack' && r.handShoulderMax > 0.42) bad.push(`${r.name} ${r.sex} : mains à ${r.handShoulderMax} m des épaules, barre sur le dos`);
-    if (r.prop === 'kettlebell' && r.gripMax > 0.2) bad.push(`${r.name} ${r.sex} : mains écartées de ${r.gripMax} m sur une seule poignée`);
-  }
-  assert.deepEqual(bad, []);
+test('couverture : les 60 exercices sont animés en 3D, sans aucun accessoire', () => {
+  const missing = LIBRARY.filter((e) => !model3D(e.name)).map((e) => e.name);
+  assert.deepEqual(missing, []);
+  assert.deepEqual(LIBRARY.filter((e) => model3D(e.name).prop).map((e) => e.name), []);
 });
 
-test('supports : un mouvement qui monte et reste en hauteur (> 30 cm) a un support sous les pieds (box)', () => {
-  const bad = rows.filter((r) => r.boxTop && r.prop !== 'box').map((r) => `${r.name} ${r.sex} : pieds posés à ${r.boxTop} m sans support`);
+test('corps : homme et femme sont deux corps complets (surface + articulations), sans trous', () => {
+  for (const f of ['models/trackme-human.glb', 'models/trackme-human-f.glb']) {
+    const b = readFileSync(f), j = JSON.parse(b.slice(20, 20 + b.readUInt32LE(12)).toString());
+    assert.equal(j.meshes.length, 2, f + ' : surface + articulations');
+  }
+  const size = (f) => readFileSync(f).length;
+  assert.notEqual(size('models/trackme-human.glb'), size('models/trackme-human-f.glb'));
+});
+
+test('poses : pieds et mains arrivent là où la pose le demande (IK), sans os étiré', async () => {
+  const bad = rows.filter((r) => r.authored && r.ikError > 0.05).map((r) => `${r.name} ${r.sex} ${r.ikError} m`);
   assert.deepEqual(bad, []);
-  const box = rows.filter((r) => r.prop === 'box');
-  assert.ok(box.length && box.every((r) => r.boxTop > 0.25 && r.boxTop < 0.8), JSON.stringify(box.map((r) => r.boxTop)));
 });

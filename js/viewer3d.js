@@ -8,12 +8,13 @@ const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
 // sans interaction (la carte reste cliquable), cadrage un peu plus serré.
-export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equipment, mistake, name, prop }, outfit = null, { showcase = false } = {}) {
-  let THREE, GLTFLoader, OrbitControls, fix;
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose }, outfit = null, { showcase = false } = {}) {
+  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
     ({ OrbitControls } = await import('../vendor/three/OrbitControls.js'));
+    ({ buildPoseClip } = await import('./poses.js'));
     fix = await import('./motion-fix.js'); // corrections partagées avec le banc d'essai (tests/motion.test.mjs)
   } catch { return noop3D; }
 
@@ -76,9 +77,9 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   obj.traverse((o) => {
     if (!o.isSkinnedMesh) return;
     const names = o.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ''));
-    // Valeur > 0 : tout le segment ; valeur < 0 : face arrière seulement (ex. fessiers = os Hips, côté dos).
-    const W = new Array(64).fill(0);
-    names.forEach((n, i) => { if (i < 64 && muscles[n]) W[i] = muscles[n]; });
+    // Lueur par os et par face : [avant, arrière] (biceps devant / triceps derrière sur le même os).
+    const WF = new Array(64).fill(0), WB = new Array(64).fill(0);
+    names.forEach((n, i) => { if (i < 64 && muscles[n]) { WF[i] = muscles[n][0]; WB[i] = muscles[n][1]; } });
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     o.material = mats.map((m) => {
       // Peau : blanc mat + lueur. Haut : tissu sombre, la lueur passe à travers (pectoraux, dos). Short et chaussures : sans lueur.
@@ -90,12 +91,12 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
       if (!skin && !sole) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
       mm.onBeforeCompile = (sh) => {
-        sh.uniforms.uW = { value: W }; sh.uniforms.uTime = uTime; sh.uniforms.uHighlight = uHighlight;
-        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uW[64];\nvarying float vMask;')
+        sh.uniforms.uWF = { value: WF }; sh.uniforms.uWB = { value: WB }; sh.uniforms.uTime = uTime; sh.uniforms.uHighlight = uHighlight;
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWF[64];\nuniform float uWB[64];\nvarying float vMask;')
           .replace('#include <skinning_vertex>', `#include <skinning_vertex>
-            float back = smoothstep(-0.15, 0.35, objectNormal.z); // le modèle exporté regarde vers -Z : dos = +Z
+            float back = smoothstep(0.15, -0.35, objectNormal.z); // les corps regardent vers +Z : dos = -Z (0 devant, 1 derrière)
             vMask = 0.0;
-            for (int k = 0; k < 4; k++) { float wv = uW[int(skinIndex[k])]; vMask += (wv < 0.0 ? -wv * back : wv) * skinWeight[k]; }`);
+            for (int k = 0; k < 4; k++) { int ib = int(skinIndex[k]); vMask += mix(uWF[ib], uWB[ib], back) * skinWeight[k]; }`);
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHighlight;\nvarying float vMask;')
           .replace('#include <dithering_fragment>', `
             float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.4);
@@ -112,120 +113,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     if (o.material.length === 1) o.material = o.material[0];
   });
 
-  // Charge en main : objet simple (pas de modèle Blender) qui suit un os chaque image. On ne le rend pas
-  // enfant du bone directement : certains exports glTF portent une échelle parasite sur l'armature, qui
-  // déformerait un enfant non skinné. On recopie juste position + rotation du bone à chaque frame.
   const findBone = (re) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && re.test(o.name)) b = o; }); return b; };
-  const rigs = []; // { bone, group, offset: Vector3 (espace local du bone) }
-  const attach = (bone, mat, parts, offset) => {
-    if (!bone) return;
-    const group = new THREE.Group();
-    for (const { geo, pos, rot } of parts) {
-      const mesh = new THREE.Mesh(geo, mat);
-      if (pos) mesh.position.set(...pos);
-      if (rot) mesh.rotation.set(...rot);
-      group.add(mesh);
-    }
-    scene.add(group);
-    rigs.push({ bone, group, offset: new THREE.Vector3(...offset) });
-  };
-  // Décor de machine : posé au sol, fixe (ne suit pas l'animation — aucun clip « machine » n'existe encore).
-  const decor = [];
-  const addDecor = (group) => { scene.add(group); decor.push(group); };
-  const boxMesh = (w, h, d, mat, pos, rot) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); if (pos) m.position.set(...pos); if (rot) m.rotation.set(...rot); return m; };
-  const metal = () => new THREE.MeshStandardMaterial({ color: 0x33363c, roughness: 0.35, metalness: 0.7 });
-  const pad = () => new THREE.MeshStandardMaterial({ color: 0x1c1d22, roughness: 0.75, metalness: 0.05 });
-  const stack = (g, mat, pos, n = 7) => { for (let i = 0; i < n; i++) g.add(boxMesh(0.2, 0.022, 0.16, mat, [pos[0], pos[1] + i * 0.03, pos[2]])); };
-  if (equipment === 'poulie') {
-    const g = new THREE.Group(), mMetal = metal(), mPad = new THREE.MeshStandardMaterial({ color: 0x4a4d54, roughness: 0.4, metalness: 0.5 });
-    g.add(boxMesh(0.26, 2.0, 0.22, mMetal, [0, 1.0, 0]));
-    stack(g, mPad, [0, 0.32, 0.03]);
-    const arm = boxMesh(0.5, 0.03, 0.03, mMetal, [0.25, 1.78, 0.12], null); g.add(arm);
-    const pulley = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 16), mMetal); pulley.position.set(0.5, 1.78, 0.12); pulley.rotation.x = Math.PI / 2; g.add(pulley);
-    const cable = boxMesh(0.012, 0.7, 0.012, mMetal, [0.5, 1.4, 0.12]); g.add(cable);
-    g.add(boxMesh(0.26, 0.03, 0.03, mMetal, [0.5, 1.03, 0.12]));
-    g.position.set(0.55, 0, 0.1);
-    addDecor(g);
-  } else if (name === 'Presse à cuisses') {
-    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
-    const rail = boxMesh(0.1, 0.1, 1.05, mMetal, [-0.18, 0.4, -0.75], [0.6, 0, 0]);
-    const rail2 = boxMesh(0.1, 0.1, 1.05, mMetal, [0.18, 0.4, -0.75], [0.6, 0, 0]);
-    g.add(rail, rail2);
-    g.add(boxMesh(0.46, 0.5, 0.05, mPad, [0, 0.82, -1.18], [0.6, 0, 0])); // chariot / cale-pieds
-    g.add(boxMesh(0.44, 0.1, 0.42, mPad, [0, 0.26, -0.28])); // assise
-    g.add(boxMesh(0.44, 0.55, 0.1, mPad, [0, 0.52, -0.02], [-0.25, 0, 0])); // dossier
-    g.add(boxMesh(0.5, 0.08, 0.5, mMetal, [0, 0.04, -0.6])); // socle au sol
-    addDecor(g);
-  } else if (name === 'Leg extension' || name === 'Leg curl') {
-    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
-    g.add(boxMesh(0.5, 0.9, 0.5, mMetal, [0.45, 0.45, -0.3])); // bâti + pile de poids (bloc simplifié)
-    stack(g, mMetal.clone(), [0.45, 0.3, -0.05], 6);
-    g.add(boxMesh(0.42, 0.45, 0.1, mPad, [0, 0.5, -0.1], [-0.15, 0, 0])); // dossier/assise
-    g.add(boxMesh(0.42, 0.08, 0.4, mPad, [0, 0.26, 0.1])); // assise
-    const leverUp = name === 'Leg extension';
-    g.add(boxMesh(0.06, 0.06, 0.55, mMetal, [0, leverUp ? 0.45 : 0.1, 0.42], [leverUp ? -0.9 : 0.3, 0, 0])); // bras de levier
-    g.add(boxMesh(0.4, 0.06, 0.06, mPad, [0, leverUp ? 0.65 : -0.05, 0.6])); // rouleau cheville
-    addDecor(g);
-  } else if (name === 'Mollets debout' || name === 'Mollets assis') {
-    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
-    g.add(boxMesh(0.5, 0.14, 0.4, mMetal, [0, 0.07, -0.3])); // plateforme / cale-pieds
-    g.add(boxMesh(0.44, 0.04, 0.3, mPad, [0, 0.16, -0.22])); // bord de la cale
-    if (name === 'Mollets assis') {
-      g.add(boxMesh(0.4, 0.3, 0.1, mPad, [0, 0.45, 0.05])); // genouillères
-    } else {
-      g.add(boxMesh(0.08, 0.9, 0.08, mMetal, [-0.2, 0.85, -0.3]));
-      g.add(boxMesh(0.08, 0.9, 0.08, mMetal, [0.2, 0.85, -0.3]));
-      g.add(boxMesh(0.44, 0.1, 0.14, mPad, [0, 1.3, -0.3])); // épaulières
-    }
-    stack(g, mMetal.clone(), [0.4, 0.1, 0.1], 6);
-    addDecor(g);
-  } else if (name === 'Dips assistés' || name === 'Tractions assistées') {
-    const g = new THREE.Group(), mMetal = metal(), mPad = pad();
-    g.add(boxMesh(0.08, 2.1, 0.08, mMetal, [-0.3, 1.05, -0.2]));
-    g.add(boxMesh(0.08, 2.1, 0.08, mMetal, [0.3, 1.05, -0.2]));
-    g.add(boxMesh(0.68, 0.06, 0.4, mMetal, [0, 2.1, -0.2])); // traverse haute
-    if (name === 'Dips assistés') g.add(boxMesh(0.5, 0.05, 0.05, mPad, [0, 1.2, 0.05])); // poignées parallèles
-    else g.add(boxMesh(0.5, 0.05, 0.05, mPad, [0, 1.95, -0.05])); // barre de traction
-    g.add(boxMesh(0.4, 0.06, 0.3, mPad, [0, 0.55, -0.15])); // plateforme d'assistance (contrepoids)
-    stack(g, mMetal.clone(), [0.42, 0.9, -0.2], 6);
-    addDecor(g);
-  }
-  // Accessoires : seulement ceux que le clip tient vraiment (`prop` de model3D, vérifié par tests/motion.test.mjs).
-  if (prop === 'barHands' || prop === 'barBack') {
-    // Barre tenue à deux mains : au milieu des mains, dans l'axe main gauche → main droite (squat avant, overhead ; au
-    // back squat les mains la tiennent sur les épaules, derrière la nuque). Repli sur le buste sans os des mains.
-    const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
-    const L = findBone(/LeftHand$/), R = findBone(/RightHand$/);
-    const parts = [
-      { geo: new THREE.CylinderGeometry(0.014, 0.014, 1.3, 12), rot: [0, 0, Math.PI / 2] },
-      { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [-0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
-      { geo: new THREE.CylinderGeometry(0.16, 0.16, 0.035, 24), pos: [0.56, 0, 0], rot: [0, 0, Math.PI / 2] },
-    ];
-    if (L && R) {
-      const group = new THREE.Group();
-      for (const { geo, pos, rot } of parts) { const mesh = new THREE.Mesh(geo, mat); if (pos) mesh.position.set(...pos); if (rot) mesh.rotation.set(...rot); group.add(mesh); }
-      scene.add(group); rigs.push({ hands: [L, R], group });
-    } else attach(findBone(/Spine2$/) || findBone(/Spine1$/), mat, parts, [0, 0.04, 0.09]);
-  } else if (prop === 'kettlebell') {
-    // Un kettlebell tenu à deux mains (pas deux haltères) : poignée entre les mains, boule dessous.
-    const mat = new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.45, metalness: 0.4 });
-    const L = findBone(/LeftHand$/), R = findBone(/RightHand$/);
-    if (L && R) {
-      const group = new THREE.Group();
-      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.012, 8, 20, Math.PI), mat);
-      const bell = new THREE.Mesh(new THREE.SphereGeometry(0.11, 18, 14), mat); bell.position.set(0, -0.15, 0);
-      group.add(handle, bell); scene.add(group); rigs.push({ hands: [L, R], group, hang: true });
-    }
-  } else if (prop === 'dumbbells') {
-    const mat = new THREE.MeshStandardMaterial({ color: 0x43464e, roughness: 0.3, metalness: 0.75 });
-    for (const side of ['Left', 'Right']) {
-      attach(findBone(new RegExp(side + 'Hand$')), mat, [
-        { geo: new THREE.CylinderGeometry(0.012, 0.012, 0.14, 10), rot: [0, 0, Math.PI / 2] },
-        { geo: new THREE.SphereGeometry(0.045, 12, 10), pos: [-0.075, 0, 0] },
-        { geo: new THREE.SphereGeometry(0.045, 12, 10), pos: [0.075, 0, 0] },
-      ], [0, -0.02, 0.03]);
-    }
-  }
   // Onglet Erreurs : rotation fixe ajoutée par-dessus l'animation sur quelques os, pour montrer le défaut typique.
   // Onglet Conseils : pose figée + lueur musculaire renforcée, façon planche anatomique.
   let mistakeMode = false;
@@ -236,27 +124,9 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     if (act && !reduce) act.paused = tab === 'tips';
   };
 
-  const tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion(), tmpScale = new THREE.Vector3();
-  const pL = new THREE.Vector3(), pR = new THREE.Vector3(), axisX = new THREE.Vector3(1, 0, 0), dirLR = new THREE.Vector3();
-  const updateRigs = () => {
-    for (const { bone, group, offset, hands, hang } of rigs) {
-      if (hands) { // barre (ou kettlebell) entre les deux mains
-        hands[0].getWorldPosition(pL); hands[1].getWorldPosition(pR);
-        group.position.copy(pL).add(pR).multiplyScalar(0.5);
-        dirLR.subVectors(pR, pL);
-        if (hang) dirLR.y = 0; // kettlebell : reste à la verticale (la boule pend sous la poignée)
-        if (dirLR.lengthSq() > 1e-6) group.quaternion.setFromUnitVectors(axisX, dirLR.normalize()); // mains confondues : on garde l'orientation précédente
-        continue;
-      }
-      bone.matrixWorld.decompose(tmpPos, tmpQuat, tmpScale);
-      group.position.copy(offset).applyQuaternion(tmpQuat).add(tmpPos);
-      group.quaternion.copy(tmpQuat);
-    }
-  };
-
   const mixer = new THREE.AnimationMixer(obj);
   // Clip corrigé (dérive retirée, retour vers la pose de départ si la répétition ne boucle pas) : voir motion-fix.js.
-  const anim = fix.prepareClip(animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0]);
+  const anim = pose ? buildPoseClip(THREE, obj, pose, clip) : fix.prepareClip(animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0]);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
   if (anim) { act = mixer.clipAction(anim); act.play(); }
@@ -266,8 +136,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
   // (ρ) et sa hauteur (y) — l'orbite tourne autour de cet axe, donc seuls ρ et y comptent.
   const MARGIN = 0.15; // tête, mains, pieds : l'os est au centre du membre
   const pts = []; // [ρ, y, marge]
-  const wp = new THREE.Vector3(), sL = new THREE.Vector3(), sR = new THREE.Vector3(), sD = new THREE.Vector3();
-  const barL = prop === 'barHands' || prop === 'barBack' ? findBone(/LeftHand$/) : null, barR = barL ? findBone(/RightHand$/) : null;
+  const wp = new THREE.Vector3();
   // Sol réel : point de peau le plus bas (sommets skinnés, 1 sur 15) + pieds, à chaque instant échantillonné.
   const skins = []; obj.traverse((o) => { if (o.isSkinnedMesh) skins.push(o); });
   const feetB = [/LeftToe_?End/, /RightToe_?End/, /LeftFoot$/, /RightFoot$/].map(findBone).filter(Boolean);
@@ -279,11 +148,6 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     obj.updateMatrixWorld(true);
     obj.traverse((o) => { if (o.isBone) addPt(o.getWorldPosition(wp), MARGIN); });
     gframes.push({ skin: skinMin(), feet: feetB.map((b) => b.getWorldPosition(new THREE.Vector3())) });
-    if (barL && barR) { // disques à ~0,65 m de chaque côté du milieu des mains (rayon 0,16 m)
-      barL.getWorldPosition(sL); barR.getWorldPosition(sR);
-      const mid = wp.copy(sL).add(sR).multiplyScalar(0.5); sD.subVectors(sR, sL).normalize().multiplyScalar(0.65);
-      addPt(sL.copy(mid).add(sD), 0.2); addPt(sR.copy(mid).sub(sD), 0.2);
-    }
   };
   const NS = 24;
   if (anim) { for (let i = 0; i < NS; i++) { mixer.setTime(anim.duration * i / NS); samplePose(); } mixer.setTime(0); }
@@ -294,14 +158,6 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     obj.position.y -= ground; obj.updateMatrixWorld(true);
     for (const q of pts) q[1] -= ground;
     for (const f of gframes) { f.skin -= ground; f.feet.forEach((q) => { q.y -= ground; }); }
-  }
-  // Box jump : une vraie box sous les pieds à l'endroit et à la hauteur où le clip atterrit.
-  if (prop === 'box') {
-    const lb = fix.landingBox(gframes);
-    if (lb) {
-      const g = new THREE.Group(), mBox = new THREE.MeshStandardMaterial({ color: 0x3a3f4b, roughness: 0.7, metalness: 0.05 });
-      g.add(boxMesh(0.6, lb.top, 0.5, mBox, [lb.x, lb.top / 2, lb.z])); addDecor(g);
-    }
   }
   // Course sur place : le sol défile à la vitesse des pieds posés (comme un tapis), sinon ils glisseraient.
   const beltV = new THREE.Vector3();
@@ -394,8 +250,6 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     if (mistakeMode) for (const { bone, off } of mistakeBones) {
       if (off.x) bone.rotation.x += off.x; if (off.y) bone.rotation.y += off.y; if (off.z) bone.rotation.z += off.z;
     }
-    if (rigs.length || mistakeMode) obj.updateMatrixWorld(true);
-    if (rigs.length) updateRigs();
     controls.update();
     renderer.render(scene, camera);
   }
@@ -412,8 +266,6 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, equ
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
     controls.dispose(); mixer.stopAllAction();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
-    rigs.forEach(({ group }) => { scene.remove(group); group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); });
-    decor.forEach((group) => { scene.remove(group); group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); });
     grid.geometry.dispose(); grid.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
     renderer.dispose(); renderer.forceContextLoss(); canvas.remove(); // rend le contexte WebGL tout de suite (Safari en limite le nombre)

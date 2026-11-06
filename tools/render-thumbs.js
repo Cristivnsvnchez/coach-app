@@ -8,6 +8,7 @@ import { clone } from '../vendor/three/SkeletonUtils.js';
 import { model3D, outfitsFor } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
 import { prepareClip } from '../js/motion-fix.js';
+import { buildPoseClip } from '../js/poses.js';
 
 const SIZE = 640;
 const loader = new GLTFLoader();
@@ -48,8 +49,8 @@ const bones = (obj) => { const b = []; obj.traverse((o) => { if (o.isBone) b.pus
 export async function renderOne(ctx, name, sex) {
   const m = model3D(name, sex); if (!m) return null;
   const body = await load(m.url), anim = m.anim ? await load(m.anim) : null;
-  const clip = prepareClip(anim?.animations[0] || body.animations[0]); // mêmes corrections que la visionneuse
   const obj = clone(body.scene); dress(obj, outfitsFor(sex)[0]);
+  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : prepareClip(anim?.animations[0] || body.animations[0]); // mêmes corrections que la visionneuse
   ctx.scene.add(obj);
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
   const bs = bones(obj);
@@ -73,7 +74,7 @@ export async function renderOne(ctx, name, sex) {
   const boxes = [0, best].map((i) => new THREE.Box3().setFromPoints(frames[i]));
   const r = Math.max(...boxes.map((b) => { const s = b.getSize(new THREE.Vector3()); return Math.max(s.x, s.y, s.z); })) * 0.5 + 0.12; // marge tête et mains
   const dist = r / Math.sin(THREE.MathUtils.degToRad(ctx.camera.fov / 2));
-  const dir = new THREE.Vector3(0.62, 0.22, -1).normalize(); // le modèle exporté regarde vers -Z : vue 3/4 de face
+  const dir = new THREE.Vector3(0.62, 0.22, 1).normalize(); // le corps regarde vers +Z : vue 3/4 de face
   const shots = [];
   for (const [k, i] of [0, best].entries()) {
     const c = boxes[k].getCenter(new THREE.Vector3());

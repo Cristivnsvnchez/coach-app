@@ -9,6 +9,7 @@ import { clone } from '../vendor/three/SkeletonUtils.js';
 import { model3D } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
 import { prepareClip, landingBox } from '../js/motion-fix.js';
+import { buildPoseClip } from '../js/poses.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const cache = new Map();
@@ -26,8 +27,8 @@ const v = () => new THREE.Vector3();
 export async function auditOne(name, sex = 'M') {
   const m = model3D(name, sex); if (!m) return null;
   const body = await parse(m.url), anim = m.anim ? await parse(m.anim) : null;
-  const clip = prepareClip(anim?.animations[0] || body.animations[0]); // mêmes corrections que la visionneuse
   const obj = clone(body.scene);
+  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : prepareClip(anim?.animations[0] || body.animations[0]); // mêmes corrections que la visionneuse
   const bone = (re) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && re.test(o.name)) b = o; }); return b; };
   const bones = []; obj.traverse((o) => { if (o.isBone) bones.push(o); });
   // Normalisation identique à la visionneuse : 1,75 m de la tête aux orteils, pieds au sol, centré.
@@ -74,7 +75,7 @@ export async function auditOne(name, sex = 'M') {
   const skinLow = Math.min(...frames.map((f) => f.skin)), skinHigh = Math.max(...frames.map((f) => f.skin));
   const box = landingBox(frames);
   const r = (x, d = 2) => +x.toFixed(d);
-  return { name, sex, clip: m.clip, equipment: m.equipment, prop: m.prop, duration: r(clip.duration),
+  return { name, sex, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, prop: m.prop, duration: r(clip.duration),
     bodyMin: r(bodyMin, 3), feetMin: r(feetMin, 3), slide: slideT ? r(slide / slideT, 3) : 0, drift: r(drift), loop: r(loop, 3),
     gripMin: r(Math.min(...grip)), gripMax: r(Math.max(...grip)), handShoulderMax: r(handShoulder), skinLow: r(skinLow, 3), skinAir: r(skinHigh - skinLow), boxTop: box ? r(box.top) : null };
 }

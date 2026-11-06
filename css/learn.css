@@ -102,3 +102,9 @@
 .lrn-day-3d .lrn-3d { width: 150px; height: 150px; }
 .lrn-day-3d.ready .lrn-3d { display: none; } /* la figure sert de repli tant que la 3D n'est pas prête */
 .lrn-day-btn { position: relative; z-index: 2; }
+
+/* Ce que la personne travaille : muscle principal en orange (couleur de la lueur), secondaires discrets */
+.v3d-worked { position: absolute; left: 12px; top: 12px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 84px); pointer-events: none; }
+.v3d-worked > * { padding: 6px 11px; border-radius: 999px; font-size: .78rem; line-height: 1.1; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.v3d-worked b { background: linear-gradient(100deg, #ff6210, #ffb13b); color: #17110a; font-weight: 700; }
+.v3d-worked span { background: rgba(255, 255, 255, .12); color: rgba(255, 255, 255, .86); font-weight: 600; }

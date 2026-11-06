@@ -190,3 +190,12 @@ Demande : « il y a des barres là où il faut pas… les mouvements doivent êt
 - **`js/motion-fix.js`** (partagé visionneuse / banc d'essai / vignettes) : `prepareClip` retire la dérive horizontale du bassin (axe vertical = plus grande composante à la 1re image) et, si la fin ne raccorde pas (> 7° ou > 3 cm), ajoute 1,2 s de retour calme vers la pose de départ après la répétition ; `landingBox` déduit la box du box jump.
 - **Visionneuse** : sol = point de peau le plus bas sur tout le clip ; accessoires par `prop` (`technique.js` `PROPS`) : barre à deux mains (squat avant, overhead), barre sur le dos (Squat, nouveau clip Mixamo **Back Squat**), kettlebell, haltères ; **pas de barre** sur arraché, épaulé-jeté, tirage sumo, curl barre (les clips écartent les mains de 25-45 cm). Box réelle sous le box jump. Course sur place (footing, tapis, sprint) : la grille défile à la vitesse des pieds posés.
 - Défauts trouvés et corrigés : sprint qui partait de 3 m et revenait d'un coup, arraché/tirage sumo qui sautaient à chaque boucle (50 cm), sit-up et crunchs dans le sol ou en l'air (3-4 cm), box jump sur une box invisible, barre derrière la nuque au Squat avec les mains devant.
+
+
+## 13. État 3D (v33, 2026-11-06) — remplace les indications antérieures sur les accessoires et les corps
+- **60/60 exercices animés.** 27 clips Mixamo (`models/anim/`) + 33 mouvements par poses clés (`js/poses.js` : bassin, tronc, cibles pieds/mains résolues par IK 2 os). Mixamo n'a ni soulevé de terre, ni développé couché, ni fentes, ni tractions, ni rowing : recherche faite.
+- **Accessoires et décors de machines retirés** (demande de l'utilisateur : irréalistes et inutiles). Ce qui se fait assis ou couché se fait au sol.
+- **Corps** : homme = Y Bot (Alpha), femme = X Bot (Beta), chacun surface + articulations. L'ancien glb « femme » était le corps homme sans ses articulations : c'était la cause des trous.
+- **Lueur** : `MUSCLE_BONES` donne [avant, arrière] par os ; `back` dans le shader vaut 1 derrière (corps tournés vers +Z). Noms des muscles affichés sur la visionneuse (`.v3d-worked`).
+- Référence visuelle de l'utilisateur : chaîne YouTube DEMIC (mannequin anatomique, muscle travaillé lumineux). Limites : mannequin à segments, peu musclé ; lueur par segment d'os, pas par muscle dessiné. Pas encore fait : bandeau de petits corps face/dos, séries × reps.
+- Comparaison Hevy (8 fonctionnalités classées) : voir la session dédiée, rien de codé.
