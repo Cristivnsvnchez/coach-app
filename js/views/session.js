@@ -16,12 +16,12 @@ register({
     'Retirer une série par exercice': 'Remove one set per exercise', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cycle: listen to your body today and adjust if needed.',
     'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed',
     'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed',
-    'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?' },
+    'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?', 'Abandonner sans enregistrer': 'Discard without saving' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
     'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd',
-    'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?' },
+    'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?', 'Abandonner sans enregistrer': 'Verwerpen zonder op te slaan' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -324,7 +324,13 @@ function finish(root, go, back) {
     ${prs.length ? group(t('Records'), `<ul class="cells">${prs.map((p) => `<li class="cell with-icon"><span class="badge bg-orange">${icon('trophy')}</span><div class="grow"><span class="t">${esc(t(p.name))}</span><span class="s">${p.kinds.map((k) => t(PRL[k])).join(' · ')}</span></div></li>`).join('')}</ul>`) : ''}
     ${group('', `<div class="cells"><label class="cell field"><span>${t('Nom')}</span><input name="wname" value="${esc(t(active.name))}"></label>
       ${differs ? `<div class="cell toggle-row"><span class="grow subhead">${t('Mettre à jour la routine avec cette séance')}</span><label class="switch"><input type="checkbox" name="upd" checked><span></span></label></div>` : ''}</div>`)}
-    <button class="btn filled large" data-a="save">${t('Enregistrer la séance')}</button>`);
+    <button class="btn filled large" data-a="save">${t('Enregistrer la séance')}</button>
+    <div style="margin-top:1rem">${group('', `<div class="cells"><div class="cell action destructive" data-a="drop" role="button">${t('Abandonner sans enregistrer')}</div></div>`)}</div>`);
+  // On doit toujours pouvoir sortir sans enregistrer (la croix, elle, ramène à la séance en cours).
+  s.querySelector('[data-a=drop]').onclick = () => {
+    if (!confirm(t('Abandonner la séance ?'))) return;
+    s.close(); endSession(back);
+  };
   s.querySelector('[data-a=save]').onclick = () => {
     const w = { ...active, name: s.querySelector('[name=wname]').value.trim() || active.name, minutes, volume: Math.round(vol) };
     w.exercises = w.exercises.map(({ why, whyVars, ...ex }) => ({ ...ex, sets: ex.sets.filter((x) => x.done) })).filter((ex) => ex.sets.length);
