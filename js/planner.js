@@ -44,7 +44,11 @@ export const TEMPLATES = {
       { name: 'Force A', exercises: [ex('Squat', 'Quadriceps', 5, 3, 5, false), ex('Développé couché', 'Pectoraux', 5, 3, 5), ex('Rowing barre', 'Dos', 4, 5, 8), ex('Gainage / crunch', 'Abdos', 3, 10, 15)] },
       { name: 'Force B', exercises: [ex('Squat', 'Quadriceps', 5, 3, 5, false), ex('Développé militaire', 'Épaules', 5, 3, 5), ex('Soulevé de terre', 'Dos', 3, 3, 5, false), ex('Tractions', 'Dos', 3, 5, 8)] },
     ] },
-  home3: { name: 'Maison / poids du corps', days: 3, equipment: ['maison', 'aucun'], level: 'débutant',
+  bodyweight3: { name: 'Poids du corps', days: 3, equipment: ['aucun'], level: 'tous niveaux', why: 'Aucun matériel : seulement des mouvements au poids du corps.', plan: [
+      { name: 'Corps A', exercises: [ex('Fentes marchées', 'Quadriceps', 3, 8, 15, false), ex('Pompes', 'Pectoraux', 3, 8, 20), ex('Hip thrust', 'Fessiers', 3, 10, 20, false), ex('Planche', 'Abdos', 3, 30, 60)] },
+      { name: 'Corps B', exercises: [ex('Squat pistol', 'Quadriceps', 3, 5, 10, false), ex('Pompes sautées', 'Pectoraux', 3, 5, 10), ex('Relevés de jambes', 'Abdos', 3, 8, 15), ex('Burpee', 'Quadriceps', 3, 8, 15, false)] },
+    ] },
+  home3: { name: 'Maison (haltères)', days: 3, equipment: ['maison'], level: 'débutant',
     why: 'Sans salle : variantes au poids du corps et haltères, à rendre plus difficiles quand les reps dépassent la plage.',
     plan: [
       { name: 'Maison A', exercises: [ex('Fentes bulgares', 'Fessiers', 3, 8, 15, false), ex('Pompes', 'Pectoraux', 3, 8, 20), ex('Rowing haltère', 'Dos', 3, 8, 15), ex('Planche', 'Abdos', 3, 30, 60)] },
@@ -54,6 +58,7 @@ export const TEMPLATES = {
 
 // Modèle conseillé selon le nombre de jours et le matériel.
 export function recommendTemplate({ days = 3, equipment = 'salle', goal = 'hypertrophie' } = {}) {
+  if (equipment === 'aucun') return 'bodyweight3';
   if (equipment !== 'salle') return 'home3';
   if (goal === 'force') return 'force3';
   if (days >= 5) return 'ppl';

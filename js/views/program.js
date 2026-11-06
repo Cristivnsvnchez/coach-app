@@ -16,7 +16,7 @@ const plus = (iso, days) => { const d = parseDate(iso); d.setDate(d.getDate() + 
 export function openWizard(done) {
   const p = state.profile;
   const b = { goal: { perte: 'seche', prise: 'hypertrophie', maintien: 'forme' }[p.goal] || 'hypertrophie', start: nextMonday(), end: plus(nextMonday(), 83),
-    weekdays: P.defaultWeekdays(p.sessions || 3), minutes: 60, level: 'intermédiaire', injuries: '', equipment: p.equipment || 'salle' };
+    weekdays: P.defaultWeekdays(p.sessions || 3), level: 'intermédiaire', equipment: p.equipment || 'salle' };
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Nouveau programme')}</h3></div><div class="body"></div>`, done);
   const body = s.querySelector('.body');
 
@@ -29,10 +29,8 @@ export function openWizard(done) {
         <label class="cell field"><span>${b.goal === 'evenement' ? t('Date de l\'épreuve') : t('Date cible')}</span><input type="date" name="end" value="${b.end}"></label></div>`,
         t('Le programme est découpé en phases jusqu\'à cette date, avec une semaine de décharge régulière.'))}
       ${group(t('Tes jours d\'entraînement'), `<div class="cells"><div class="cell"><div class="daypick">${DAYS.map((d) => `<button type="button" class="${b.weekdays.includes(d) ? 'on' : ''}" data-day="${d}" aria-pressed="${b.weekdays.includes(d)}">${dayLabel(d)}</button>`).join('')}</div></div>
-        <label class="cell field"><span>${t('Durée par séance')}</span><select name="minutes">${[30, 45, 60, 75, 90].map((m) => `<option value="${m}" ${m === b.minutes ? 'selected' : ''}>${m} min</option>`).join('')}</select></label>
         <label class="cell field"><span>${t('Niveau')}</span><select name="level">${['débutant', 'intermédiaire', 'avancé'].map((l) => `<option value="${l}" ${l === b.level ? 'selected' : ''}>${t(l)}</option>`).join('')}</select></label>
-        <label class="cell field"><span>${t('Matériel')}</span><select name="equipment">${[['salle', 'Salle complète'], ['maison', 'Haltères à la maison'], ['aucun', 'Poids du corps']].map(([k, l]) => `<option value="${k}" ${k === b.equipment ? 'selected' : ''}>${t(l)}</option>`).join('')}</select></label>
-        <label class="cell field"><span>${t('Blessures / douleurs')}</span><input name="injuries" value="${esc(b.injuries)}" placeholder="${t('aucune')}"></label></div>`)}
+        <label class="cell field"><span>${t('Matériel')}</span><select name="equipment">${[['salle', 'Salle complète'], ['maison', 'Haltères à la maison'], ['aucun', 'Poids du corps']].map(([k, l]) => `<option value="${k}" ${k === b.equipment ? 'selected' : ''}>${t(l)}</option>`).join('')}</select></label></div>`)}
       <button class="btn filled large" data-a="next">${t('Voir les programmes proposés')}</button>`;
     body.onclick = (e) => {
       const g = e.target.closest('[data-goal]'); if (g) { read(); b.goal = g.dataset.goal; return step1(); }
@@ -49,7 +47,7 @@ export function openWizard(done) {
   const read = () => {
     const v = (n) => body.querySelector(`[name=${n}]`)?.value;
     if (!body.querySelector('[name=start]')) return;
-    Object.assign(b, { start: v('start'), end: v('end'), minutes: +v('minutes'), level: v('level'), equipment: v('equipment'), injuries: v('injuries').trim() });
+    Object.assign(b, { start: v('start'), end: v('end'), level: v('level'), equipment: v('equipment') });
   };
 
   // Étape 2 : programmes proposés (conseillé en premier), détail de chaque séance
@@ -57,7 +55,7 @@ export function openWizard(done) {
     const rec = P.recommendTemplate({ days: b.weekdays.length, equipment: b.equipment, goal: b.goal });
     const ids = [rec, ...Object.keys(P.TEMPLATES).filter((k) => k !== rec && P.TEMPLATES[k].equipment.includes(b.equipment))];
     const weeks = Math.ceil(((parseDate(b.end) - parseDate(b.start)) / 86400000 + 1) / 7);
-    body.innerHTML = `<p class="footnote secondary" style="margin:-.25rem .25rem 1rem">${t(P.PLAN_GOALS[b.goal])} · ${weeks} ${t('semaines')} · ${b.weekdays.map(dayLabel).join(', ')} · ${b.minutes} min</p>
+    body.innerHTML = `<p class="footnote secondary" style="margin:-.25rem .25rem 1rem">${t(P.PLAN_GOALS[b.goal])} · ${weeks} ${t('semaines')} · ${b.weekdays.map(dayLabel).join(', ')}</p>
       ${ids.map((id) => { const tp = P.TEMPLATES[id];
         return group(`${t(tp.name)}${id === rec ? `<b class="tint">${t('Conseillé')}</b>` : ''}`, `<div class="cells">
           <div class="cell"><span class="grow subhead">${t(tp.why)}</span></div>
@@ -130,9 +128,9 @@ export function exportCalendar() {
     const events = P.schedule(plan, today(), plan.end).map((e) => ({ ...e, uid: `${plan.id}-${e.date}`,
       title: `${rname(e.routineId)}${e.deload ? ' (' + t('décharge') + ')' : ''}`,
       description: `${t(plan.name)} — ${t('Semaine {w} sur {n}', { w: e.week, n: plan.weeks })}. ${t(P.phaseOf(plan, e.week).focus)}` }));
-    const ics = P.toICS(events, { time: v('time'), minutes: +v('min') || 60, alarm: +v('alarm') || 0, calName: 'Coach' });
-    const file = new File([ics], 'coach-seances.ics', { type: 'text/calendar' });
-    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Coach' }); s.close(); return; } catch {} }
+    const ics = P.toICS(events, { time: v('time'), minutes: +v('min') || 60, alarm: +v('alarm') || 0, calName: 'TrackMe' });
+    const file = new File([ics], 'trackme-seances.ics', { type: 'text/calendar' });
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'TrackMe' }); s.close(); return; } catch {} }
     const url = URL.createObjectURL(file);
     const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 4000); s.close();

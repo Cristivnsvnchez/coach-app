@@ -139,6 +139,15 @@ export function intakesByDay() {
   return out;
 }
 
+// Poids saisi hors de l'écran Poids (Profil) : devient la pesée du jour, seule source du poids courant dès qu'il y a des pesées.
+export function recordWeight(kg, date = today()) {
+  if (!(kg >= 20 && kg <= 400)) return;
+  const w = state.weights.find((x) => x.date === date);
+  if (w) w.kg = kg; else state.weights.push({ date, kg });
+  state.profile.weight = kg;
+  save();
+}
+
 export function latestWeight() {
   const w = [...state.weights].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
   return w ? w.kg : state.profile.weight;

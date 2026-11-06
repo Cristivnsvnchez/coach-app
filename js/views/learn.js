@@ -13,7 +13,7 @@ import * as W from '../workout.js';
 
 register({
   en: { 'Apprends les bons mouvements': 'Learn the right movements', 'Glisse pour tourner': 'Swipe to rotate', 'Apprendre les mouvements': 'Learn the movements', 'Rechercher un mouvement': 'Search a movement',
-    'Geste du jour': 'Move of the day', 'Voir la technique': 'See the technique', 'Débutant': 'Beginner', 'Intermédiaire': 'Intermediate', 'Avancé': 'Advanced',
+    'À découvrir': 'Discover', 'Voir la technique': 'See the technique', 'Débutant': 'Beginner', 'Intermédiaire': 'Intermediate', 'Avancé': 'Advanced',
     'Étapes': 'Steps', 'Erreurs': 'Mistakes', 'Conseils': 'Tips', 'Voir mes records': 'See my records', 'Ajouter à ma séance': 'Add to my workout',
     'Ajouté à ta séance': 'Added to your workout', 'Maîtrise': 'Mastery', '{n}/8 séances': '{n}/8 workouts', 'Haut du corps': 'Upper body', 'Bas du corps': 'Lower body',
     'Technique': 'Technique', 'Aucun mouvement trouvé.': 'No movement found.', 'Tous les niveaux': 'All levels', 'Niveau': 'Level',
@@ -23,7 +23,7 @@ register({
     'Col zippé blanc': 'White zip top', 'Crop gris': 'Grey crop top', 'Demi-zip gris': 'Grey half-zip',
     'Toutes les catégories': 'All categories', 'Catégorie': 'Category', 'Jambes': 'Legs', 'Abdos': 'Abs', 'Cardio': 'Cardio', 'Haltéro': 'Weightlifting', 'Mobilité': 'Mobility' },
   nl: { 'Apprends les bons mouvements': 'Leer de juiste bewegingen', 'Glisse pour tourner': 'Veeg om te draaien', 'Apprendre les mouvements': 'Bewegingen leren', 'Rechercher un mouvement': 'Zoek een beweging',
-    'Geste du jour': 'Beweging van de dag', 'Voir la technique': 'Bekijk de techniek', 'Débutant': 'Beginner', 'Intermédiaire': 'Gevorderd', 'Avancé': 'Expert',
+    'À découvrir': 'Ontdek', 'Voir la technique': 'Bekijk de techniek', 'Débutant': 'Beginner', 'Intermédiaire': 'Gevorderd', 'Avancé': 'Expert',
     'Étapes': 'Stappen', 'Erreurs': 'Fouten', 'Conseils': 'Tips', 'Voir mes records': 'Mijn records bekijken', 'Ajouter à ma séance': 'Toevoegen aan mijn training',
     'Ajouté à ta séance': 'Toegevoegd aan je training', 'Maîtrise': 'Beheersing', '{n}/8 séances': '{n}/8 trainingen', 'Haut du corps': 'Bovenlichaam', 'Bas du corps': 'Onderlichaam',
     'Technique': 'Techniek', 'Aucun mouvement trouvé.': 'Geen beweging gevonden.', 'Tous les niveaux': 'Alle niveaus', 'Niveau': 'Niveau',
@@ -92,7 +92,7 @@ export function render(root, go) {
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
     <section class="lrn-day tm-hero">${shape({ cls: 'lrn-day-shape' })}
       <span class="lrn-day-3d">${pictogram(day.name, '', sex)}</span>
-      <small>${t('Geste du jour')}</small><h2>${esc(t(day.name))}</h2>
+      <small>${t('À découvrir')}</small><h2>${esc(t(day.name))}</h2>
       <p>${esc([day.muscle, ...day.secondary].map((m) => t(m)).join(' · '))}</p>
       <button class="btn lrn-day-btn" data-open="${esc(day.name)}">${t('Voir la technique')} ${icon('chevronRight')}</button></section>
     <div class="chips lrn-cats" role="group" aria-label="${t('Catégorie')}">
@@ -137,13 +137,13 @@ export function openTechnique(name, go) {
   const openDress = () => {
     const ds = sheet(`<div class="sheet-head"><h3 class="title2">${t('Choisir une tenue')}</h3></div>
       <ul class="v3d-outfits">${outfits.map((o, i) => `<li><button class="v3d-outfit ${i === outfitIdx ? 'on' : ''}" data-outfit="${i}">
-        <span class="v3d-swatch" style="background:#${o.top.toString(16).padStart(6, '0')}"></span>
+        ${o.top != null ? `<span class="v3d-swatch" style="background:#${o.top.toString(16).padStart(6, '0')}"></span>` : ''}
         <span class="v3d-swatch" style="background:#${o.shorts.toString(16).padStart(6, '0')}"></span>
         <span class="v3d-outfit-label">${esc(t(o.label))}</span>${i === outfitIdx ? icon('check') : ''}</button></li>`).join('')}</ul>`);
     ds.addEventListener('click', (e) => {
       const b = e.target.closest('[data-outfit]'); if (!b) return;
       outfitIdx = +b.dataset.outfit; state.settings.outfit = outfitIdx; save();
-      setOutfit(outfits[outfitIdx]); ds.close();
+      setOutfit(outfits[outfitIdx]); showcase?.setOutfit?.(outfits[outfitIdx]); ds.close();
     });
   };
   const draw = () => {

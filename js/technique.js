@@ -151,18 +151,18 @@ export function model3D(name, sex = 'M') {
   const e = LIBRARY.find((x) => x.name === name);
   return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, mistake: mistakeFor(e), name };
 }
-// Tenues de sport : 3 par sexe (haut / short / baskets). Choix dans la visionneuse,
+// Tenues de sport : 3 par sexe. Homme : short seul (torse nu) ; femme : brassière + short. Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).
 export const OUTFITS = {
   M: [
-    { id: 'noir', label: 'Noir et graphite', top: 0x23272f, shorts: 0x121316, shoes: 0xe8e8e6 },
-    { id: 'marine', label: 'Marine et gris', top: 0x10172a, shorts: 0x9a9da3, shoes: 0xb8babd },
-    { id: 'gris', label: 'Gris chiné', top: 0xa8a8ac, shorts: 0x6c6d72, shoes: 0xf4f4f2 },
+    { id: 'noir', label: 'Short noir', shorts: 0x121316 },
+    { id: 'marine', label: 'Short marine', shorts: 0x18233f },
+    { id: 'gris', label: 'Short gris', shorts: 0x6c6d72 },
   ],
   F: [
-    { id: 'noir', label: 'Noir et graphite', top: 0x23272f, shorts: 0x121316, shoes: 0xe8e8e6 },
-    { id: 'blanc', label: 'Blanc et noir', top: 0xf0efeb, shorts: 0x16161a, shoes: 0xe8e8e6 },
-    { id: 'gris', label: 'Gris chiné', top: 0xa8a8ac, shorts: 0x6c6d72, shoes: 0xf4f4f2 },
+    { id: 'noir', label: 'Noir', top: 0x23272f, shorts: 0x121316 },
+    { id: 'blanc', label: 'Blanc et noir', top: 0xf0efeb, shorts: 0x16161a },
+    { id: 'gris', label: 'Gris chiné', top: 0xa8a8ac, shorts: 0x6c6d72 },
   ],
 };
 export const outfitsFor = (sex) => OUTFITS[sex === 'F' ? 'F' : 'M'];

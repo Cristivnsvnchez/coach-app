@@ -65,8 +65,6 @@ const STEPS = [
   { id: 'training', title: () => t('Ton entraînement'), why: () => t('Pour te proposer un programme qui tient dans ta semaine.'),
     body: () => stepper('sessions', t('Séances par semaine'), p().sessions ?? 3, 1, 7, 1, '')
       + `<p class="onb-label">${t('Matériel')}</p>` + choice('equipment', { salle: t('Salle complète'), maison: t('Haltères à la maison'), aucun: t('Poids du corps') }, p().equipment || 'salle') },
-  { id: 'diet', title: () => t('Ton alimentation'), why: () => t('Le coach en tient compte dans ses recettes.'),
-    body: () => chips('diet', ['Végétarien', 'Vegan', 'Halal', 'Sans gluten', 'Sans lactose', 'Pescétarien', 'Sans porc'], (p().diet || '').split(', ').filter(Boolean)) },
   { id: 'cycle', title: () => t('Suivi de ton cycle'), skip: () => p().sex !== 'F',
     why: () => t('Optionnel. Il aide à lire tes variations de poids (rétention d\'eau) et à adapter tes séances selon tes sensations. Tes données restent sur ton téléphone.'),
     body: () => choice('cycleOn', { yes: t('Oui, activer le suivi'), no: t('Non merci') }, state.cycle?.enabled ? 'yes' : state.cycle?.enabled === false ? 'no' : null)
