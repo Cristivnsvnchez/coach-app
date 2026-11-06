@@ -88,7 +88,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
       // (le grain du tissu reste, la couleur change sans recharger). Le haut laisse passer la lueur des muscles.
       const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : /sock/i.test(m.name) ? 'socks' : 'skin';
       const skin = kind === 'skin', hair = kind === 'hair', sole = false, cloth = ['top', 'shorts', 'shoes'].includes(kind), glows = skin || kind === 'top';
-      const tint = cloth ? (outfit?.[kind] ?? DEFAULT_CLOTH[kind]) : 0xffffff;
+      const tint = cloth ? (outfit?.[kind] ?? DEFAULT_CLOTH[kind]) : m.map ? 0xffffff : 0xe6e7eb; // sans texture : peau de mannequin blanc mat
       const mm = new THREE.MeshStandardMaterial({ map: m.map, color: tint, roughness: skin ? 0.58 : 0.8, metalness: 0, transparent: false, alphaTest: hair ? 0.4 : 0, side: hair ? THREE.DoubleSide : THREE.FrontSide });
       if (cloth) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
@@ -100,7 +100,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
             vMask = 0.0;
             for (int k = 0; k < 4; k++) { int ib = int(skinIndex[k]); vMask += mix(uWF[ib], uWB[ib], back) * skinWeight[k]; }`);
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHighlight;\nvarying float vMask;')
-          .replace('#include <map_fragment>', cloth ? `#include <map_fragment>
+          .replace('#include <map_fragment>', cloth && m.map ? `#include <map_fragment>
             float grain = dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11));
             diffuseColor.rgb = diffuse * clamp(0.55 + grain * 0.9, 0.0, 1.25);` : '#include <map_fragment>')
           .replace('#include <dithering_fragment>', `

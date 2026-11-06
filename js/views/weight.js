@@ -38,7 +38,7 @@ export function render(root, go) {
     return { x: S.parseDate(m.date), y: m.kg, done: st.reached };
   }).filter((m) => !since || +m.x >= since);
   // Cycle actif : pesées tombant en rétention d'eau probable (fin de phase lutéale, début des règles).
-  const retention = (d) => state.cycle?.enabled && Cy.weightNote(state.cycle, d) === 'retention';
+  const retention = (d) => state.profile?.sex === 'F' && state.cycle?.enabled && Cy.weightNote(state.cycle, d) === 'retention';
   const chart = !trend.length ? `<p class="empty footnote">${t('Enregistre ta première pesée pour voir la courbe.')}</p>` : lineChart([
     { points: shown.map((x) => ({ x: S.parseDate(x.date), y: x.kg })), cls: 'raw', dots: true },
     { points: shown.map((x) => ({ x: S.parseDate(x.date), y: x.trend })), cls: 'trend' },
@@ -84,7 +84,7 @@ export function render(root, go) {
         ${chart}
       </div></div>`,
       trend.length < 2 ? t('Pèse-toi 3 à 7 fois par semaine, le matin à jeun : la tendance devient fiable après une à deux semaines.')
-        : (state.cycle?.enabled ? t('Points roses : pesées en rétention d\'eau probable (cycle). ') : '') + t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.'))}
+        : (state.profile?.sex === 'F' && state.cycle?.enabled ? t('Points roses : pesées en rétention d\'eau probable (cycle). ') : '') + t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.'))}
     ${group(t('Timeline'), !target ? `<div class="cells"><div class="cell" style="display:block"><p class="t wrap" style="margin:.25rem 0">${t('Définis ton poids cible (plus bas) pour voir la date d\'arrivée estimée et tes étapes.')}</p></div></div>`
       : `<ul class="cells">
         <li class="cell ms-head" style="display:block"><div class="row-between"><span class="t headline">${t('Arrivée estimée')}</span>

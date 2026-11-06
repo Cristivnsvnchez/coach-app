@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-06 · version en ligne : **trackme-v32** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-06 · version en ligne : **trackme-v34** (voir section 16 pour le travail en cours) · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -192,12 +192,29 @@ Demande : « il y a des barres là où il faut pas… les mouvements doivent êt
 - Défauts trouvés et corrigés : sprint qui partait de 3 m et revenait d'un coup, arraché/tirage sumo qui sautaient à chaque boucle (50 cm), sit-up et crunchs dans le sol ou en l'air (3-4 cm), box jump sur une box invisible, barre derrière la nuque au Squat avec les mains devant.
 
 
-## 13. État 3D (v34, 2026-11-06) — remplace les indications antérieures sur les accessoires et les corps
-- **60/60 exercices animés.** 27 clips Mixamo (`models/anim/`) + 33 mouvements par poses clés (`js/poses.js` : bassin, tronc, cibles pieds/mains résolues par IK 2 os). Mixamo n'a ni soulevé de terre, ni développé couché, ni fentes, ni tractions, ni rowing : recherche faite.
-- **Accessoires et décors de machines retirés** (demande de l'utilisateur : irréalistes et inutiles). Ce qui se fait assis ou couché se fait au sol.
-- **Corps (v34)** : humains réalistes Mixamo, homme = Bryce, femme = Sophie (visage, cheveux, peau texturée, short, baskets), ~2,5 Mo chacun, textures 1024 WebP. Pas de torse sous le t-shirt de Bryce : torse nu impossible sur cette base. L'ancien glb « femme » était un corps sans articulations : c'était la cause des trous.
-- **Tenues** : matériaux `TM_Top/Shorts/Shoes`, texture en niveaux de gris × couleur (`OUTFITS`), recolorés en direct. Source Blender : `design/trackme-human-real.blend`.
-- Pour un corps musclé type DEMIC : il faudrait un modèle anatomique payant ou fait sur mesure (MPFB possible, à retargeter sur le squelette Mixamo).
-- **Lueur** : `MUSCLE_BONES` donne [avant, arrière] par os ; `back` dans le shader vaut 1 derrière (corps tournés vers +Z). Noms des muscles affichés sur la visionneuse (`.v3d-worked`).
-- Référence visuelle de l'utilisateur : chaîne YouTube DEMIC (mannequin anatomique, muscle travaillé lumineux). Limites : mannequin à segments, peu musclé ; lueur par segment d'os, pas par muscle dessiné. Pas encore fait : bandeau de petits corps face/dos, séries × reps.
-- Comparaison Hevy (8 fonctionnalités classées) : voir la session dédiée, rien de codé.
+## 16. ÉTAT ACTUEL ET REPRISE (2026-11-06) — À LIRE EN PRIORITÉ, remplace les sections 5 à 7 et 13 sur la 3D
+**En ligne (`main`, v34)** : 60/60 exercices animés, corps Bryce/Sophie (humains Mixamo). **Pas encore publié, sur la branche `wip-3d-mpfb`** : tout ce qui suit. Reprendre depuis cette branche (`git fetch origin wip-3d-mpfb && git checkout wip-3d-mpfb`). Elle est en cours : `tests/motion.test.mjs` y est rouge (voir point 1), ne pas la publier en l'état.
+
+### Demandes de l'utilisateur, à respecter
+- Corps 3D comme la chaîne YouTube DEMIC : anatomique, musclé, blanc mat, avec un visage, short de sport, muscle travaillé lumineux. Pas d'accessoires ni de machines (« irréalistes et inutiles ») : ce qui se fait assis ou couché se fait au sol.
+- « Certains mouvements ne sont pas réalistes, il faut que ce soit cohérent avec le physique et les muscles. Exemple : au bulgarian split squat il tord sa cheville. »
+- Changer de sexe dans Profil doit changer l'avatar. Plus largement : tout choix doit avoir son effet sans action cachée.
+
+### Sur la branche
+- **Corps MPFB** (extension Blender libre, MakeHuman) : `models/trackme-human.glb` (homme musclé, short, torse nu) et `-f.glb` (femme, brassière + short), ~0,8 Mo, sans texture. Script : `tools/build-mpfb-body.py`, source `design/trackme-human-real.blend` non versionnée (122 Mo) : à régénérer. Recette : `HumanService.create_human(... feet_on_ground=True, scale=0.1, macro_detail_dict=...)` (homme gender 1, muscle 1, weight .55 ; femme gender 0, muscle .75, weight .42), `add_builtin_rig(b, 'game_engine', import_weights=True)`, puis `build(body, rig, ref, tag, female)`. `ref` = armature de Y Bot (homme) ou X Bot (femme), importée de `~/trackme-3d/ybot-squat.fbx` / `xbot-squat.fbx`. Pièges : le rig `mixamo` de MPFB ne colle pas au corps (bras en A) ; « pieds au sol » laisse le rig 0,9 m plus bas (`align_rig`) ; lancer les opérateurs dans `temp_override(window, area, screen)` sans `object=`.
+- `js/viewer3d.js` : matériaux sans texture gérés, tenue recolorée en direct. `OUTFITS` : homme = short seul, femme = brassière + short.
+- Profil : enregistrement à chaque changement (plus de bouton oublié), le poids saisi crée la pesée du jour (`recordWeight`, testé), lien vers le suivi du cycle pour une femme, reset/import réappliquent l'apparence et vident la séance en cours.
+- Retirés car sans effet : Blessures, Durée, Régime, Allergies, étape Alimentation. Nouveau modèle `bodyweight3` (aucun matériel).
+
+### Reste à faire, dans l'ordre
+1. **Biomécanique** : `tools/motion-audit.mjs` + `tests/motion.test.mjs` mesurent les limites articulaires et relevaient 429 violations (test écrit, corrections pas encore faites quand ce document a été écrit ; un agent y travaillait dans la session d'origine, ses corrections peuvent manquer sur la branche). Corriger `js/poses.js` : `buildPoseClip` n'impose rien sur la torsion, le pied ne suit pas le plan du genou (cheville tordue). Puis revoir les 33 poses selon `js/technique.js`, mesurer les 27 clips Mixamo et remplacer ceux qui sont faux. Contrôle visuel obligatoire : les chiffres ne suffisent pas. Ne pas relâcher les limites pour faire passer le test.
+2. Régénérer les vignettes : `tools/render-thumbs.js` (116 images dans `img/ex/{m,f}`, encore rendues avec les anciens corps sur la branche), depuis la page servie en local avec un petit récepteur local.
+3. Vérifier au format iPhone : passage Homme↔Femme dans Profil, 3D, tenues. Puis `VERSION` de `sw.js` (déjà v35), `MAP.md`, tests, publication sur `main`.
+4. Mineurs relevés en revue, non faits : `state.settings.outfit` partagé entre sexes ; besoins périmés dans Profil après une saisie au clavier jusqu'au redessin.
+5. Si l'utilisateur le veut : bandeau de petits corps avec le muscle ciblé, séries × reps sur l'animation, reprise de fonctions Hevy.
+
+### Limites à dire à l'utilisateur
+Corps sans cheveux ni yeux détaillés (assets MPFB non installés). Lueur par segment d'os, pas par muscle dessiné. Jamais testé sur un vrai iPhone. Droits Mixamo à vérifier avant d'ouvrir l'app à d'autres (animations et squelette dans un dépôt public).
+
+### Outils de la session d'origine
+Blender + addon MCP sur le Mac de l'utilisateur (port 9876, extension MPFB installée). Session Mixamo ouverte dans le navigateur intégré : token `localStorage.access_token`, `params` en texte (section 12). Ne jamais saisir ses identifiants.

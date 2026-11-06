@@ -1,6 +1,7 @@
 // Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 import * as S from '../science.js';
-import { state, save, replace, today } from '../store.js';
+import { state, save, replace, recordWeight, latestWeight } from '../store.js';
+import { applyTheme, applyScheme } from '../theme.js';
 import { current } from '../metrics.js';
 import { esc, fmt, fmtDate, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
@@ -10,6 +11,14 @@ import { exportBackup } from '../install.js';
 
 const opt = (obj, sel, lab = (v) => v.label ?? v) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${esc(t(lab(v)))}</option>`).join('');
 const rateOpts = (goal, sel) => opt(Object.fromEntries((S.GOALS[goal]?.rates || [0]).map((r) => [r, r ? t('{r} % du poids / semaine', { r: fmt(r, 2).replace(/[,.]?0+$/, '') }) : '—'])), sel);
+
+// Effacement ou restauration : l'apparence suit les nouvelles données, et une séance en cours de l'ancien état ne survit pas.
+function resetAfterReplace(data) {
+  replace(data);
+  try { localStorage.removeItem('coach.active'); } catch {}
+  applyTheme(state.settings.palette, state.settings.shape, state.settings.surface);
+  applyScheme(state.settings.scheme);
+}
 
 export function render(root, go) {
   const p = state.profile, st = state.settings;
@@ -25,7 +34,7 @@ export function render(root, go) {
     ${targets ? group(targets.custom ? t('Mes objectifs (personnalisés)') : t('Tes besoins calculés'), `<div class="cells"><div class="stats">
         <div><small>${t('Dépense')}</small><b>${fmt(targets.tdee)}</b><small>${energy.method === 'adaptatif' ? t('adaptative ({n} j)', { n: energy.loggedDays }) : t('formule')}</small></div>
         <div><small>${t('Objectif')}</small><b>${fmt(targets.kcal)}</b><small>${t('kcal/j')}</small></div>
-        <div><small>${t('Protéines')}</small><b>${fmt(targets.protein)} g</b><small>${fmt(targets.protein / p.weight, 1)} g/kg</small></div>
+        <div><small>${t('Protéines')}</small><b>${fmt(targets.protein)} g</b><small>${fmt(targets.protein / (latestWeight() || p.weight), 1)} g/kg</small></div>
       </div>
       <div class="cell"><span class="grow subhead secondary num">${t('Lipides')} ${fmt(targets.fat)} g · ${t('Glucides')} ${fmt(targets.carbs)} g · ${t('Fibres')} ${fmt(targets.fiber)} g</span></div>
       <div class="cell action" data-a="edit-needs" role="button">${icon('pencil')} ${t('Modifier mes objectifs')}</div></div>`,
@@ -33,9 +42,10 @@ export function render(root, go) {
     <form data-f="profile">
       ${group(t('Mes informations'), `<div class="cells">
         ${sel('sex', t('Sexe'), `<option value="">—</option>${opt({ M: 'Homme', F: 'Femme' }, p.sex)}`)}
+        ${p.sex === 'F' ? `<div class="cell tap" data-a="cycle" role="button"><span class="grow">${t('Suivi de ton cycle')}</span>${icon('chevronRight', { cls: 'chev' })}</div>` : ''}
         ${num('age', t('Âge'), p.age, 'inputmode="numeric"')}
         ${num('height', t('Taille (cm)'), p.height)}
-        ${num('weight', t('Poids (kg)'), p.weight, 'step="0.1"')}
+        ${num('weight', t('Poids (kg)'), latestWeight() ?? p.weight, 'step="0.1"')}
         ${num('bodyFat', t('% masse grasse (optionnel, plus précis)'), p.bodyFat, 'step="0.1" placeholder="—"')}
         ${sel('activity', t('Activité'), opt(S.PAL, p.activity))}</div>`)}
       ${group(t('Mon objectif'), `<div class="cells">
@@ -44,8 +54,6 @@ export function render(root, go) {
         ${num('sessions', t('Séances / sem'), p.sessions ?? 3, 'inputmode="numeric"')}
         ${sel('equipment', t('Matériel'), opt({ salle: 'Salle complète', maison: 'Haltères à la maison', aucun: 'Poids du corps' }, p.equipment))}</div>`)}
       ${group(t('Préférences'), `<div class="cells">
-        ${txt('diet', t('Régime / préférences'), p.diet, t('Ex : végétarien, halal, pas de poisson'))}
-        ${txt('allergies', t('Allergies / intolérances'), p.allergies, '—')}
         <div class="cell toggle-row"><span class="grow subhead">${t('Grossesse/allaitement, trouble du comportement alimentaire ou pathologie chronique')}</span>
           <label class="switch"><input type="checkbox" name="medical" ${p.medical ? 'checked' : ''} aria-label="${t('Grossesse/allaitement, trouble du comportement alimentaire ou pathologie chronique')}"><span></span></label></div></div>`)}
       <button class="btn filled large" style="margin-bottom:1.75rem">${t('Enregistrer')}</button>
@@ -59,24 +67,35 @@ export function render(root, go) {
       t('Cette app ne remplace pas un avis médical.'))}
     ${group('', `<div class="cells"><div class="cell action destructive" data-a="reset" role="button">${t('Tout effacer')}</div></div>`)}`;
 
-  root.querySelector('[data-f=profile]').onsubmit = (e) => {
-    e.preventDefault();
-    const v = Object.fromEntries(new FormData(e.target));
+  // Le profil s'enregistre dès qu'un champ change : rien ne doit dépendre d'un bouton en bas de page qu'on oublie
+  // (sexe → avatar, objectif → besoins…). Le bouton reste pour confirmer et fermer le clavier.
+  const form = root.querySelector('[data-f=profile]');
+  const persist = ({ commitWeight = false } = {}) => {
+    const v = Object.fromEntries(new FormData(form));
     const n = (x) => (x === '' || x == null ? null : parseFloat(String(x).replace(',', '.')));
     const rates = S.GOALS[v.goal].rates;
     Object.assign(state.profile, {
-      sex: v.sex, age: n(v.age), height: n(v.height), weight: n(v.weight), bodyFat: n(v.bodyFat),
+      sex: v.sex, age: n(v.age), height: n(v.height), bodyFat: n(v.bodyFat),
       activity: v.activity, goal: v.goal, rate: v.goal === 'maintien' ? 0 : (rates.includes(n(v.rate)) ? n(v.rate) : rates[Math.min(1, rates.length - 1)]),
-      sessions: n(v.sessions), equipment: v.equipment, diet: v.diet, allergies: v.allergies, medical: !!v.medical,
+      sessions: n(v.sessions), equipment: v.equipment, medical: !!v.medical,
     });
-    // La première saisie de poids alimente aussi la courbe.
-    if (state.profile.weight && !state.weights.length) state.weights.push({ date: today(), kg: state.profile.weight });
-    save(); toast(t('Profil enregistré')); const y = root.scrollTop; render(root, go); root.scrollTop = y;
+    // Le poids devient une pesée seulement quand la saisie est finie (sinon « 7 » de « 70 » serait une pesée).
+    if (commitWeight && n(v.weight) !== latestWeight()) recordWeight(n(v.weight));
+    save();
   };
+  const redraw = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
+  form.onsubmit = (e) => { e.preventDefault(); persist({ commitWeight: true }); toast(t('Profil enregistré')); redraw(); };
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'goal') return; // géré ci-dessous : la liste des rythmes change d'abord
+    persist({ commitWeight: true });
+    if (e.target.tagName === 'SELECT') redraw(); // une saisie au clavier ne redessine pas : le focus resterait perdu
+  });
+  form.addEventListener('input', (e) => { if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.name !== 'weight') persist(); }); // rien de perdu si on quitte l'écran en pleine saisie
   // Changer d'objectif ne met à jour que la liste des rythmes (sans perdre la saisie en cours).
   root.querySelector('[data-f=profile] [name=goal]').onchange = (e) => {
     const rs = S.GOALS[e.target.value].rates;
     root.querySelector('[data-f=profile] [name=rate]').innerHTML = rateOpts(e.target.value, rs[Math.min(1, rs.length - 1)]);
+    persist({ commitWeight: true }); redraw();
   };
   root.querySelector('[data-backup-every]')?.addEventListener('change', (e) => { state.settings.backupEvery = +e.target.value; save(); });
   root.onclick = (e) => {
@@ -86,7 +105,8 @@ export function render(root, go) {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'edit-needs') return editNeeds(auto, () => render(root, go));
     if (a === 'export') return exportBackup();
-    if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { replace({}); render(root, go); }
+    if (a === 'cycle') return go('cycle');
+    if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { resetAfterReplace({}); render(root, go); }
   };
   root.querySelector('[data-a=import]').onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -95,7 +115,7 @@ export function render(root, go) {
       if (!data.profile || !data.logs) throw new Error(t('Fichier non reconnu'));
       if (!confirm(t('Remplacer les données actuelles par cette sauvegarde ?'))) return;
       // On garde la clé IA de cet appareil (absente des sauvegardes).
-      replace(data);
+      resetAfterReplace(data);
       toast(t('Sauvegarde restaurée')); render(root, go);
     } catch (err) { toast(t('Import impossible : {e}', { e: err.message })); }
   };
