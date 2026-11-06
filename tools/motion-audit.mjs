@@ -10,6 +10,7 @@ import { model3D } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
 import { prepareClip, landingBox } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
+import { limitJoints } from '../js/joint-limits.js';
 import { gripOf, barOnBack } from '../js/gear3d.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -226,7 +227,7 @@ export async function auditOne(name, sex = 'M') {
   const m = model3D(name, sex); if (!m) return null;
   const body = await parse(m.url), anim = m.anim ? await parse(m.anim) : null;
   const obj = clone(body.scene);
-  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : prepareClip(anim?.animations[0] || body.animations[0], sex); // mêmes corrections que la visionneuse
+  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : limitJoints(THREE, prepareClip(anim?.animations[0] || body.animations[0], sex), obj, { symmetric: m.symmetric }); // mêmes corrections que la visionneuse
   const bone = (re) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && re.test(o.name)) b = o; }); return b; };
   const bones = []; obj.traverse((o) => { if (o.isBone) bones.push(o); });
   // Normalisation identique à la visionneuse : 1,75 m de la tête aux orteils, pieds au sol, centré.

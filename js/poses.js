@@ -103,6 +103,26 @@ const BAR_ON_BACK = { elbowHint: [0.45, -1, -0.9], palm: [0, 0.15, 1], grip: 1, 
 const backSquat = { gear: { hold: 'barBack' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
   pose(BAR_ON_BACK, { chest: [0.46, 0.25, -0.08], hips: [0, 0.915, 0], torso: [0, 1, 0.05], neck: 0, foot: SQUAT_FOOT }),
   pose(BAR_ON_BACK, { chest: [0.46, 0.22, -0.05], hips: [0, 0.525, -0.2], torso: [0, 0.73, 0.68], neck: -26, foot: SQUAT_FOOT })] };
+// Squat avant : barre posée sur l'avant des épaules, coudes hauts, doigts sous la barre ; buste presque droit.
+const FRONT_FOOT = flat(0.16, 0, 18);
+const FRONT_RACK = { gripAt: 1, elbowHint: [0.3, -1, 0.5], palm: [0, 0.5, 1], wrist: -30, grip: 0.6 };
+const frontSquat = { gear: { hold: 'bar' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
+  pose(FRONT_RACK, { chest: [0.27, 0.33, 0.28], hips: [0, 0.915, 0], torso: [0, 1, 0.02], neck: 0, foot: FRONT_FOOT }),
+  pose(FRONT_RACK, { chest: [0.27, 0.33, 0.28], hips: [0, 0.55, -0.2], torso: [0, 0.97, 0.24], neck: -6, foot: FRONT_FOOT })] };
+// Squat overhead : prise large, bras verrouillés au-dessus de la tête, la barre reste au-dessus du milieu du pied.
+const OH_FOOT = flat(0.18, 0, 22);
+const OVERHEAD = { gripAt: 1, elbowHint: [0.6, 0, -0.6], palm: [0, -0.3, 1], wrist: -45, grip: 1 };
+const overheadSquat = { gear: { hold: 'bar' }, beats: [[1, 1.6], [1, 0.25], [0, 1.2], [0, 0.6]], keys: [
+  pose(OVERHEAD, { chest: [0.54, 0.72, 0.06], hips: [0, 0.915, 0], torso: [0, 1, 0], neck: 0, foot: OH_FOOT }),
+  pose(OVERHEAD, { chest: [0.54, 0.7, 0], hips: [0, 0.58, -0.19], torso: [0, 0.92, 0.38], neck: -8, foot: OH_FOOT })] };
+// Tirage sumo (sumo deadlift high pull) : pieds très écartés, pointes ouvertes, prise serrée ; la barre part du sol,
+// monte le long du corps jusqu'au menton, coudes plus hauts que les mains.
+const SUMO_FOOT = flat(0.33, 0, 32);
+const SUMO = { gripAt: 1, palm: [0, -0.2, -1], grip: 1 };
+const sumoHighPull = { gear: { hold: 'bar', fromFloor: true }, beats: [[1, 0.8], [2, 0.7], [2, 0.15], [1, 0.75, true], [0, 0.85], [0, 0.4]], keys: [
+  pose(SUMO, { hips: [0, 0.48, -0.18], torso: [0, 0.7, 0.71], neck: -22, foot: SUMO_FOOT, hand: [0.16, 0.21, 0.08], elbowHint: [0.3, 0, -1] }),
+  pose(SUMO, { hips: [0, 0.9, 0], torso: [0, 1, 0.05], neck: -2, foot: SUMO_FOOT, hand: [0.16, 0.78, 0.11], elbowHint: [0.6, 0.2, -0.8] }),
+  pose(SUMO, { hips: [0, 0.91, 0], torso: [0, 1, -0.02], neck: 0, foot: SUMO_FOOT, hand: [0.16, 1.37, 0.2], elbowHint: [0.85, 0.5, -0.2] })] };
 // Couché sur le banc plat : dos et tête sur le coussin, pieds à plat au sol de part et d'autre du banc, léger cambré.
 const BENCH_LIE = { hips: [0, 0.545, 0], torso: [0, 0.06, -1], neck: 2, foot: flat(0.3, 0.44, 14) };
 const ON_FLAT_BENCH = { type: 'flat', at: [0, 0, -0.36] };
@@ -129,6 +149,9 @@ export const POSES = {
     pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.56, z: 0.24, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] }),
     pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.67, z: 0.52, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] })] },
   Squat: backSquat,
+  'Squat avant': frontSquat,
+  'Squat overhead': overheadSquat,
+  'Tirage sumo': { ...sumoHighPull, F: { 0: { hips: [0, 0.46, -0.18] } } }, // femme : bras plus courts, bassin un peu plus bas
   'Fentes bulgares': bulgarianBench,
   'Fentes marchées': { ...walkLunge, gear: { hold: 'dumbbells' } },
   // Assis au sol, en appui sur les mains : seule la jambe bouge, la cuisse reste fixe.

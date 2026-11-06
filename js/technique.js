@@ -99,6 +99,8 @@ const CLIPS = {
   "Étirement des bras": "arm_stretch",
 };
 const BUILTIN = new Set(['squat']); // clips déjà contenus dans le glb du corps
+// Clips Mixamo d'un geste qui alterne les côtés ou n'en travaille qu'un : pas de symétrisation gauche/droite (js/joint-limits.js).
+const ONE_SIDED = new Set(['Squat pistol', 'Curl haltères', 'Crunch vélo', 'Footing', 'Tapis de course', 'Sprint', 'Étirement de la nuque', 'Étirement des bras', 'Échauffement', 'Épaulé-jeté', 'Burpee', 'Corde à sauter']);
 // Matériel tenu ou utilisé (voir js/gear3d.js) pour les clips Mixamo ; les mouvements par poses le déclarent dans
 // js/poses.js (`gear`), à côté des poses qu'il contraint (banc sous le dos, barre entre des mains à écart fixe).
 const GEAR = {
@@ -156,7 +158,7 @@ export function model3D(name, sex = 'M') {
   // Variante par corps (`F: { indice de pose clé: réglages }`) quand la morphologie l'impose (bras plus courts…).
   const pose = base?.F && sex === 'F' ? { ...base, keys: base.keys.map((k, i) => (base.F[i] ? { ...k, ...base.F[i] } : k)) } : base;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, gear: pose?.gear || GEAR[name] || null, mistake: mistakeFor(e), name };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, gear: pose?.gear || GEAR[name] || null, symmetric: !pose && !ONE_SIDED.has(name), mistake: mistakeFor(e), name };
 }
 // Tenues de sport : 3 par sexe. Homme : short seul (torse nu) ; femme : brassière + short. Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).

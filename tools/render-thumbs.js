@@ -9,6 +9,7 @@ import { model3D, outfitsFor } from '../js/technique.js';
 import { LIBRARY } from '../js/exercises.js';
 import { prepareClip } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
+import { limitJoints } from '../js/joint-limits.js';
 import { studioLights, clayMaterial } from '../js/studio3d.js';
 
 const SIZE = 640;
@@ -49,7 +50,7 @@ export async function renderOne(ctx, name, sex) {
   const m = model3D(name, sex); if (!m) return null;
   const body = await load(m.url), anim = m.anim ? await load(m.anim) : null;
   const obj = clone(body.scene); dress(obj, outfitsFor(sex)[0]);
-  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : prepareClip(anim?.animations[0] || body.animations[0], sex); // mêmes corrections que la visionneuse
+  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : limitJoints(THREE, prepareClip(anim?.animations[0] || body.animations[0], sex), obj, { symmetric: m.symmetric }); // mêmes corrections que la visionneuse
   ctx.scene.add(obj);
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
   const bs = bones(obj);

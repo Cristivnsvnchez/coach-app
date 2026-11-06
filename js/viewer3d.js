@@ -9,8 +9,8 @@ const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
 // sans interaction (la carte reste cliquable), cadrage un peu plus serré.
-export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose, gear }, outfit = null, { showcase = false } = {}) {
-  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio, attachGear;
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose, gear, symmetric }, outfit = null, { showcase = false } = {}) {
+  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio, attachGear, limitJoints;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
@@ -19,6 +19,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     fix = await import('./motion-fix.js'); // corrections partagées avec le banc d'essai (tests/motion.test.mjs)
     studio = await import('./studio3d.js'); // argile et lumière partagées avec les vignettes
     ({ attachGear } = await import('./gear3d.js'));
+    ({ limitJoints } = await import('./joint-limits.js'));
   } catch { return noop3D; }
 
   const canvas = document.createElement('canvas');
@@ -144,7 +145,9 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
 
   const mixer = new THREE.AnimationMixer(obj);
   // Clip corrigé (dérive retirée, retour vers la pose de départ si la répétition ne boucle pas) : voir motion-fix.js.
-  const anim = pose ? buildPoseClip(THREE, obj, pose, clip) : fix.prepareClip(animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0], /-f\.glb$/.test(url) ? 'F' : 'M');
+  const raw = animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0];
+  // Clip Mixamo : dérive et boucle (motion-fix.js), puis articulations ramenées dans leurs amplitudes (joint-limits.js).
+  const anim = pose ? buildPoseClip(THREE, obj, pose, clip) : limitJoints(THREE, fix.prepareClip(raw, /-f\.glb$/.test(url) ? 'F' : 'M'), obj, { symmetric });
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
   if (anim) { act = mixer.clipAction(anim); act.play(); }
