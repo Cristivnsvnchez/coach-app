@@ -89,7 +89,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
       const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : /sock/i.test(m.name) ? 'socks' : 'skin';
       const skin = kind === 'skin', hair = kind === 'hair', sole = false, cloth = ['top', 'shorts', 'shoes'].includes(kind), glows = skin || kind === 'top';
       const tint = cloth ? (outfit?.[kind] ?? DEFAULT_CLOTH[kind]) : m.map ? 0xffffff : 0xe6e7eb; // sans texture : peau de mannequin blanc mat
-      const mm = new THREE.MeshStandardMaterial({ map: m.map, color: tint, roughness: skin ? 0.58 : 0.8, metalness: 0, transparent: false, alphaTest: hair ? 0.4 : 0, side: hair ? THREE.DoubleSide : THREE.FrontSide });
+      const mm = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, normalScale: m.normalScale, color: tint, roughness: skin ? 0.58 : 0.8, metalness: 0, transparent: false, alphaTest: hair ? 0.4 : 0, side: hair ? THREE.DoubleSide : THREE.FrontSide });
       if (cloth) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
       mm.onBeforeCompile = (sh) => {
@@ -131,7 +131,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
 
   const mixer = new THREE.AnimationMixer(obj);
   // Clip corrigé (dérive retirée, retour vers la pose de départ si la répétition ne boucle pas) : voir motion-fix.js.
-  const anim = pose ? buildPoseClip(THREE, obj, pose, clip) : fix.prepareClip(animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0]);
+  const anim = pose ? buildPoseClip(THREE, obj, pose, clip) : fix.prepareClip(animGltf?.animations[0] || gltf.animations.find((a) => a.name.toLowerCase() === (clip || '').toLowerCase()) || gltf.animations[0], /-f\.glb$/.test(url) ? 'F' : 'M');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let act = null;
   if (anim) { act = mixer.clipAction(anim); act.play(); }

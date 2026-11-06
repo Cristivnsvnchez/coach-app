@@ -99,6 +99,7 @@ register({ nl: {
   "Sauvegarde": "Back-up", "Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).": "Je gegevens staan alleen op deze telefoon. Exporteer ze regelmatig (Bestanden / iCloud Drive).",
   "Exporter": "Exporteren", "Importer": "Importeren", "Tout effacer": "Alle gegevens wissen",
   "Références scientifiques": "Wetenschappelijke bronnen", "Cette app ne remplace pas un avis médical.": "Deze app vervangt geen medisch advies.",
+  "Crédits 3D": "3D-credits", "Corps 3D adaptés de ces sculptures (forme et relief), sur une base MakeHuman (CC0).": "3D-lichamen aangepast van deze sculpturen (vorm en spierreliëf), op een MakeHuman-basis (CC0).",
   "Profil enregistré": "Profiel opgeslagen",
   "Effacer TOUTES les données de l'app ? (irréversible)": "ALLE gegevens van de app wissen? (onomkeerbaar)",
   "Fichier non reconnu": "Bestand niet herkend", "Remplacer les données actuelles par cette sauvegarde ?": "Huidige gegevens vervangen door deze back-up?",

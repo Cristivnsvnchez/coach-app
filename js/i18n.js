@@ -100,6 +100,7 @@ const EN = {
   'Sauvegarde': 'Backup', 'Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).': 'Your data lives only on this phone. Export it regularly (Files / iCloud Drive).',
   'Exporter': 'Export', 'Importer': 'Import', 'Tout effacer': 'Erase all data',
   'Références scientifiques': 'Scientific references', 'Cette app ne remplace pas un avis médical.': 'This app does not replace medical advice.',
+  'Crédits 3D': '3D credits', 'Corps 3D adaptés de ces sculptures (forme et relief), sur une base MakeHuman (CC0).': '3D bodies adapted from these sculpts (shape and muscle detail), on a MakeHuman base (CC0).',
   'Profil enregistré': 'Profile saved',
   "Effacer TOUTES les données de l'app ? (irréversible)": 'Erase ALL app data? (cannot be undone)',
   'Fichier non reconnu': 'Unrecognized file', 'Remplacer les données actuelles par cette sauvegarde ?': 'Replace current data with this backup?',

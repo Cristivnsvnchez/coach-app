@@ -36,8 +36,8 @@ function dress(obj, outfit) {
     // Matériaux opaques neufs, comme la visionneuse (ceux du glb peuvent être transparents → trous dans le corps).
     o.material = mats.map((m) => {
       const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : 'skin';
-      const mm = new THREE.MeshStandardMaterial({ map: m.map, color: outfit[kind] ?? 0xffffff, roughness: 0.65, metalness: 0, alphaTest: kind === 'hair' ? 0.4 : 0, side: kind === 'hair' ? THREE.DoubleSide : THREE.FrontSide });
-      if (outfit[kind]) mm.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = diffuse * clamp(0.55 + dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11)) * 0.9, 0.0, 1.25);'); };
+      const mm = new THREE.MeshStandardMaterial({ map: m.map, normalMap: m.normalMap, normalScale: m.normalScale, color: outfit[kind] ?? 0xffffff, roughness: 0.65, metalness: 0, alphaTest: kind === 'hair' ? 0.4 : 0, side: kind === 'hair' ? THREE.DoubleSide : THREE.FrontSide });
+      if (outfit[kind] && m.map) mm.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = diffuse * clamp(0.55 + dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11)) * 0.9, 0.0, 1.25);'); };
       return mm;
     });
     if (o.material.length === 1) o.material = o.material[0];
@@ -51,7 +51,7 @@ export async function renderOne(ctx, name, sex) {
   const m = model3D(name, sex); if (!m) return null;
   const body = await load(m.url), anim = m.anim ? await load(m.anim) : null;
   const obj = clone(body.scene); dress(obj, outfitsFor(sex)[0]);
-  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : prepareClip(anim?.animations[0] || body.animations[0]); // mêmes corrections que la visionneuse
+  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : prepareClip(anim?.animations[0] || body.animations[0], sex); // mêmes corrections que la visionneuse
   ctx.scene.add(obj);
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
   const bs = bones(obj);

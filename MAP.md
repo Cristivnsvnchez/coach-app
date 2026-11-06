@@ -61,7 +61,7 @@ exports: BASE_FOODS
 Checklist quotidienne : habitudes auto-cochées d'après les données du jour + habitudes manuelles, et série de jours.
 exports: AUTO,DEFAULT_HABITS habitName,dayStatus completion,streak
 
-## js/i18n.js (236 l.)
+## js/i18n.js (237 l.)
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
 exports: register,hasTranslation LANGS,getLang locale,setLang t
 
@@ -77,7 +77,7 @@ exports: isStandalone,exportBackup startupNudges
 Objectifs du jour calculés à partir du profil, du dernier poids et de la dépense adaptative.
 exports: current,observedKgPerWeek weeklyVolume,habitStatus habitRates
 
-## js/motion-fix.js (89 l.)
+## js/motion-fix.js (176 l.)
 Corrections des clips Mixamo avant affichage (pures, partagées par la visionneuse, le banc d'essai
 exports: loopGap,prepareClip landingBox
 
@@ -89,11 +89,11 @@ exports: reducedMotion,countUp
 Réseau résilient pour toutes les API externes (Claude, Open Food Facts) :
 exports: retryDelay,shouldRetry fetchRetry
 
-## js/planner.js (138 l.)
+## js/planner.js (143 l.)
 Planification (pure, testée sous Node) : modèles de programmes, programme daté (phases + décharges),
 exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildPlan weekOf,isDeload phaseOf,schedule toICS
 
-## js/poses.js (216 l.)
+## js/poses.js (389 l.)
 Mouvements 3D décrits par poses clés (exercices absents de Mixamo : soulevé de terre, développé couché, fentes…).
 exports: POSES,buildPoseClip
 
@@ -105,7 +105,7 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
 exports: dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
-## js/store.js (159 l.)
+## js/store.js (168 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay latestWeight,recentFoods
 
@@ -132,7 +132,7 @@ exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume wor
 ## js/i18n/extra.js (64 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
 
-## js/i18n/nl-base.js (204 l.)
+## js/i18n/nl-base.js (205 l.)
 NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 
 ## js/views/addfood.js (157 l.)
@@ -155,7 +155,7 @@ exports: toggleHabits,habitsCells handleHabitClick
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise leave,render openTechnique
 
-## js/views/onboarding.js (219 l.)
+## js/views/onboarding.js (217 l.)
 Onboarding : accueil, puis une question par écran, surtout par sélection (cartes, pastilles, stepper).
 exports: needsOnboarding,openOnboarding
 
@@ -167,11 +167,11 @@ exports: paletteSection,handlePaletteClick
 Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
 exports: render
 
-## js/views/profile.js (129 l.)
+## js/views/profile.js (154 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
-## js/views/program.js (141 l.)
+## js/views/program.js (139 l.)
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
 exports: openWizard,planCard plannedDays,exportCalendar
 

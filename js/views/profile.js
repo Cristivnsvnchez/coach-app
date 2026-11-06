@@ -65,6 +65,11 @@ export function render(root, go) {
     </div>`, t('Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).'))}
     ${group(t('Références scientifiques'), `<ul class="cells md-ref">${S.REFS.map((r) => `<li class="cell tap"><a href="${r.url}" target="_blank" rel="noopener" class="grow"><div class="grow"><span class="t">${esc(r.k)}</span><span class="s" style="white-space:normal">${esc(r.t)}</span></div>${icon('chevronRight', { cls: 'chev' })}</a></li>`).join('')}</ul>`,
       t('Cette app ne remplace pas un avis médical.'))}
+    ${group(t('Crédits 3D'), `<ul class="cells md-ref">${[
+      ['Anatomy study 2.0 Basemesh Human Male Body', 'varvarwork', 'https://sketchfab.com/3d-models/c3f13a4baa2f4ea5a0a88d29e7fa1779'],
+      ['Study Human Female Sculpt', 'uladzislau', 'https://sketchfab.com/3d-models/854fbf358991477aab518e07556da906'],
+    ].map(([title, author, url]) => `<li class="cell tap"><a href="${url}" target="_blank" rel="noopener" class="grow"><div class="grow"><span class="t" style="white-space:normal">${esc(title)}</span><span class="s">${esc(author)} · Sketchfab · CC BY 4.0</span></div>${icon('chevronRight', { cls: 'chev' })}</a></li>`).join('')}</ul>`,
+      t('Corps 3D adaptés de ces sculptures (forme et relief), sur une base MakeHuman (CC0).'))}
     ${group('', `<div class="cells"><div class="cell action destructive" data-a="reset" role="button">${t('Tout effacer')}</div></div>`)}`;
 
   // Le profil s'enregistre dès qu'un champ change : rien ne doit dépendre d'un bouton en bas de page qu'on oublie
