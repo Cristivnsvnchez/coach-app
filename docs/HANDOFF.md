@@ -1,6 +1,6 @@
 # TrackMe — passation (à lire en premier par la prochaine session Claude)
 
-Dernière mise à jour : 2026-11-05 · version en ligne : **trackme-v31** · https://cristivnsvnchez.github.io/coach-app/
+Dernière mise à jour : 2026-11-06 · version en ligne : **trackme-v32** · https://cristivnsvnchez.github.io/coach-app/
 
 ## 1. Le projet en 30 secondes
 - PWA iPhone (installée depuis Safari → « Sur l'écran d'accueil ») : coach sportif + diététicien. Vanilla JS ES modules, **pas de build**, données uniquement sur le téléphone (localStorage, schéma versionné v3).
@@ -183,7 +183,7 @@ Retesté depuis la session Mixamo de l'utilisateur (navigateur intégré, Air Sq
 - 57 clés i18n orphelines liées à l'IA supprimées (`js/i18n.js`, `js/i18n/nl-base.js`, `js/i18n/extra.js`). Onglet mémorisé (`sessionStorage`/historique) validé contre `VIEWS` : un ancien `coach` ne donne plus un écran vide.
 - **Cadrage 3D** (`viewer3d.js`) : calculé sur tout le mouvement (24 instants, os + disques de barre, 16 angles d'orbite), plafonné à 1,3 × le cadrage d'un corps debout ; brouillard calé sur la distance. Barre dans les mains sauf `Squat` (sur le dos) ; kettlebell unique à deux mains pour `Kettlebell swing`.
 
-## 15. Réalisme des mouvements 3D : banc d'essai automatique (2026-11-05, non publié)
+## 15. Réalisme des mouvements 3D : banc d'essai automatique (2026-11-05, v32)
 Demande : « il y a des barres là où il faut pas… les mouvements doivent être naturels, fais quelque chose pour tester de manière cohérente ».
 - **`tools/motion-audit.mjs`** (Node, three.js sans navigateur) : charge corps + animation comme la visionneuse, échantillonne 60 instants, mesure sur la **peau réelle** (sommets skinnés) : contact au sol, hauteur en l'air, glissade des pieds posés, dérive du bassin, raccord de boucle, écart des mains (barre rigide), mains-épaules (barre sur le dos). `node tools/motion-audit.mjs` (homme) ou `--f` (femme) affiche le tableau.
 - **`tests/motion.test.mjs`** (6 tests, homme + femme) : sol à ±1,2 cm, raccord < 5 cm, dérive < 60 cm, glissade < 0,6 m/s (sauf course sur place), accessoire seulement si le clip le tient (barre : prise stable à 12 cm près ; barre sur le dos : mains < 42 cm des épaules ; kettlebell : mains < 20 cm), support obligatoire si le corps reste > 25 cm du sol.
