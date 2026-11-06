@@ -192,10 +192,12 @@ Demande : « il y a des barres là où il faut pas… les mouvements doivent êt
 - Défauts trouvés et corrigés : sprint qui partait de 3 m et revenait d'un coup, arraché/tirage sumo qui sautaient à chaque boucle (50 cm), sit-up et crunchs dans le sol ou en l'air (3-4 cm), box jump sur une box invisible, barre derrière la nuque au Squat avec les mains devant.
 
 
-## 13. État 3D (v33, 2026-11-06) — remplace les indications antérieures sur les accessoires et les corps
+## 13. État 3D (v34, 2026-11-06) — remplace les indications antérieures sur les accessoires et les corps
 - **60/60 exercices animés.** 27 clips Mixamo (`models/anim/`) + 33 mouvements par poses clés (`js/poses.js` : bassin, tronc, cibles pieds/mains résolues par IK 2 os). Mixamo n'a ni soulevé de terre, ni développé couché, ni fentes, ni tractions, ni rowing : recherche faite.
 - **Accessoires et décors de machines retirés** (demande de l'utilisateur : irréalistes et inutiles). Ce qui se fait assis ou couché se fait au sol.
-- **Corps** : homme = Y Bot (Alpha), femme = X Bot (Beta), chacun surface + articulations. L'ancien glb « femme » était le corps homme sans ses articulations : c'était la cause des trous.
+- **Corps (v34)** : humains réalistes Mixamo, homme = Bryce, femme = Sophie (visage, cheveux, peau texturée, short, baskets), ~2,5 Mo chacun, textures 1024 WebP. Pas de torse sous le t-shirt de Bryce : torse nu impossible sur cette base. L'ancien glb « femme » était un corps sans articulations : c'était la cause des trous.
+- **Tenues** : matériaux `TM_Top/Shorts/Shoes`, texture en niveaux de gris × couleur (`OUTFITS`), recolorés en direct. Source Blender : `design/trackme-human-real.blend`.
+- Pour un corps musclé type DEMIC : il faudrait un modèle anatomique payant ou fait sur mesure (MPFB possible, à retargeter sur le squelette Mixamo).
 - **Lueur** : `MUSCLE_BONES` donne [avant, arrière] par os ; `back` dans le shader vaut 1 derrière (corps tournés vers +Z). Noms des muscles affichés sur la visionneuse (`.v3d-worked`).
 - Référence visuelle de l'utilisateur : chaîne YouTube DEMIC (mannequin anatomique, muscle travaillé lumineux). Limites : mannequin à segments, peu musclé ; lueur par segment d'os, pas par muscle dessiné. Pas encore fait : bandeau de petits corps face/dos, séries × reps.
 - Comparaison Hevy (8 fonctionnalités classées) : voir la session dédiée, rien de codé.

@@ -151,18 +151,18 @@ export function model3D(name, sex = 'M') {
   const e = LIBRARY.find((x) => x.name === name);
   return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, mistake: mistakeFor(e), name };
 }
-// Tenues : 3 par sexe, couleurs tirées de références photo (haut / bas / chaussures). Choix dans la visionneuse,
+// Tenues de sport : 3 par sexe (haut / short / baskets). Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).
 export const OUTFITS = {
   M: [
-    { id: 'survet-gris', label: 'Survêtement gris', top: 0xb8b8bc, shorts: 0xc2c2c6, shoes: 0xf4f4f2 },
-    { id: 'hoodie-marine', label: 'Hoodie marine', top: 0x10172a, shorts: 0xa9acb2, shoes: 0xb8babd },
-    { id: 'hoodie-cosy', label: 'Hoodie cosy', top: 0x9b9b92, shorts: 0xa8a89e, shoes: 0xf2f0ec },
+    { id: 'noir', label: 'Noir et graphite', top: 0x23272f, shorts: 0x121316, shoes: 0xe8e8e6 },
+    { id: 'marine', label: 'Marine et gris', top: 0x10172a, shorts: 0x9a9da3, shoes: 0xb8babd },
+    { id: 'gris', label: 'Gris chiné', top: 0xa8a8ac, shorts: 0x6c6d72, shoes: 0xf4f4f2 },
   ],
   F: [
-    { id: 'zip-blanc', label: 'Col zippé blanc', top: 0xf5f4f0, shorts: 0x16161a, shoes: 0xe8e8e6 },
-    { id: 'crop-gris', label: 'Crop gris', top: 0x9c9ca0, shorts: 0xb7b7bb, shoes: 0xc3c5c8 },
-    { id: 'demizip-gris', label: 'Demi-zip gris', top: 0xd7d7d4, shorts: 0x54545a, shoes: 0xf2f0ec },
+    { id: 'noir', label: 'Noir et graphite', top: 0x23272f, shorts: 0x121316, shoes: 0xe8e8e6 },
+    { id: 'blanc', label: 'Blanc et noir', top: 0xf0efeb, shorts: 0x16161a, shoes: 0xe8e8e6 },
+    { id: 'gris', label: 'Gris chiné', top: 0xa8a8ac, shorts: 0x6c6d72, shoes: 0xf4f4f2 },
   ],
 };
 export const outfitsFor = (sex) => OUTFITS[sex === 'F' ? 'F' : 'M'];

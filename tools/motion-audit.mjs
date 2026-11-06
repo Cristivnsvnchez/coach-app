@@ -13,10 +13,21 @@ import { buildPoseClip } from '../js/poses.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const cache = new Map();
+// Sous Node il n'y a pas d'images : on retire les textures du glb (seule la géométrie compte ici).
+function withoutTextures(b) {
+  const len = b.readUInt32LE(12), j = JSON.parse(b.subarray(20, 20 + len).toString());
+  if (!j.textures) return b;
+  for (const m of j.materials || []) { delete m.pbrMetallicRoughness?.baseColorTexture; delete m.normalTexture; delete m.occlusionTexture; delete m.emissiveTexture; delete m.pbrMetallicRoughness?.metallicRoughnessTexture; }
+  delete j.textures; delete j.images; delete j.samplers;
+  j.extensionsUsed = (j.extensionsUsed || []).filter((e) => e !== 'EXT_texture_webp'); j.extensionsRequired = (j.extensionsRequired || []).filter((e) => e !== 'EXT_texture_webp');
+  let t = Buffer.from(JSON.stringify(j)); if (t.length % 4) t = Buffer.concat([t, Buffer.alloc(4 - t.length % 4, 0x20)]);
+  const rest = b.subarray(20 + len), head = Buffer.alloc(20); head.writeUInt32LE(0x46546C67, 0); head.writeUInt32LE(2, 4); head.writeUInt32LE(20 + t.length + rest.length, 8); head.writeUInt32LE(t.length, 12); head.writeUInt32LE(0x4E4F534A, 16);
+  return Buffer.concat([head, t, rest]);
+}
 const parse = (f) => {
   if (!cache.has(f)) cache.set(f, new Promise((res, rej) => {
-    const b = readFileSync(ROOT + f);
-    new GLTFLoader().parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '', res, rej);
+    const g = withoutTextures(readFileSync(ROOT + f));
+    new GLTFLoader().parse(g.buffer.slice(g.byteOffset, g.byteOffset + g.byteLength), '', res, rej);
   }));
   return cache.get(f);
 };

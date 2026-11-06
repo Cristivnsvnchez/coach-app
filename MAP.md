@@ -121,7 +121,7 @@ exports: PALETTES,VARIANTS SURFACES,palette variant,colors applyTheme,shape word
 Petits utilitaires DOM, composants iOS et graphiques SVG.
 exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop banner
 
-## js/viewer3d.js (274 l.)
+## js/viewer3d.js (279 l.)
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
 

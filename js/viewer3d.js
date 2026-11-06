@@ -4,6 +4,8 @@
 
 const cache = new Map(); // url → Promise<gltf> : un seul téléchargement par session
 
+// Tenue par défaut : sport sombre, sobre.
+const DEFAULT_CLOTH = { top: 0x23272f, shorts: 0x121316, shoes: 0xe8e8e6 };
 const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
@@ -78,30 +80,33 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     if (!o.isSkinnedMesh) return;
     const names = o.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ''));
     // Lueur par os et par face : [avant, arrière] (biceps devant / triceps derrière sur le même os).
-    const WF = new Array(64).fill(0), WB = new Array(64).fill(0);
-    names.forEach((n, i) => { if (i < 64 && muscles[n]) { WF[i] = muscles[n][0]; WB[i] = muscles[n][1]; } });
+    const WF = new Array(96).fill(0), WB = new Array(96).fill(0);
+    names.forEach((n, i) => { if (i < 96 && muscles[n]) { WF[i] = muscles[n][0]; WB[i] = muscles[n][1]; } });
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     o.material = mats.map((m) => {
-      // Peau : blanc mat + lueur. Haut : tissu sombre, la lueur passe à travers (pectoraux, dos). Short et chaussures : sans lueur.
-      const kind = /short|pantslong/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top|sleeve/i.test(m.name) ? 'top' : 'skin';
-      const sole = /sole/i.test(m.name); // semelle : jamais recolorée par la tenue, reste neutre
-      const skin = kind === 'skin', glows = kind === 'skin' || kind === 'top';
-      const tint = outfit && outfit[kind] && !sole ? outfit[kind] : m.color;
-      const mm = new THREE.MeshStandardMaterial({ color: skin ? 0xeceef2 : tint, roughness: skin ? 0.5 : 0.78, metalness: 0 });
-      if (!skin && !sole) (byKind[kind] ||= []).push(mm);
+      // Peau et cheveux : texture d'origine. Vêtements : texture passée en niveaux de gris × couleur de la tenue
+      // (le grain du tissu reste, la couleur change sans recharger). Le haut laisse passer la lueur des muscles.
+      const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : /sock/i.test(m.name) ? 'socks' : 'skin';
+      const skin = kind === 'skin', hair = kind === 'hair', sole = false, cloth = ['top', 'shorts', 'shoes'].includes(kind), glows = skin || kind === 'top';
+      const tint = cloth ? (outfit?.[kind] ?? DEFAULT_CLOTH[kind]) : 0xffffff;
+      const mm = new THREE.MeshStandardMaterial({ map: m.map, color: tint, roughness: skin ? 0.58 : 0.8, metalness: 0, transparent: false, alphaTest: hair ? 0.4 : 0, side: hair ? THREE.DoubleSide : THREE.FrontSide });
+      if (cloth) (byKind[kind] ||= []).push(mm);
       mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
       mm.onBeforeCompile = (sh) => {
         sh.uniforms.uWF = { value: WF }; sh.uniforms.uWB = { value: WB }; sh.uniforms.uTime = uTime; sh.uniforms.uHighlight = uHighlight;
-        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWF[64];\nuniform float uWB[64];\nvarying float vMask;')
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWF[96];\nuniform float uWB[96];\nvarying float vMask;')
           .replace('#include <skinning_vertex>', `#include <skinning_vertex>
-            float back = smoothstep(0.15, -0.35, objectNormal.z); // les corps regardent vers +Z : dos = -Z (0 devant, 1 derrière)
+            float back = smoothstep(0.55, -0.55, objectNormal.z); // les corps regardent vers +Z : dos = -Z (0 devant, 1 derrière)
             vMask = 0.0;
             for (int k = 0; k < 4; k++) { int ib = int(skinIndex[k]); vMask += mix(uWF[ib], uWB[ib], back) * skinWeight[k]; }`);
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHighlight;\nvarying float vMask;')
+          .replace('#include <map_fragment>', cloth ? `#include <map_fragment>
+            float grain = dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+            diffuseColor.rgb = diffuse * clamp(0.55 + grain * 0.9, 0.0, 1.25);` : '#include <map_fragment>')
           .replace('#include <dithering_fragment>', `
             float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.4);
-            gl_FragColor.rgb += vec3(0.32, 0.56, 1.0) * fres * ${skin ? '0.85' : '0.4'};
-            float m = smoothstep(0.12, 0.75, vMask) * ${glows ? '1.0' : '0.0'};
+            gl_FragColor.rgb += vec3(0.32, 0.56, 1.0) * fres * ${hair ? '0.1' : skin ? '0.55' : '0.3'};
+            float m = smoothstep(0.2, 0.7, vMask) * ${glows ? '1.0' : '0.0'};
             float pulse = 0.85 + 0.15 * sin(uTime * 2.6);
             // Lueur : cœur jaune chaud, bords orange plus lumineux (comme un muscle qui « chauffe »).
             vec3 glow = mix(vec3(1.0, 0.88, 0.42), vec3(1.0, 0.38, 0.06), clamp(fres * 1.6, 0.0, 1.0));

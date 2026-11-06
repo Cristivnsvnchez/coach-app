@@ -35,13 +35,16 @@ test('couverture : les 60 exercices sont animés en 3D, sans aucun accessoire', 
   assert.deepEqual(LIBRARY.filter((e) => model3D(e.name).prop).map((e) => e.name), []);
 });
 
-test('corps : homme et femme sont deux corps complets (surface + articulations), sans trous', () => {
+test('corps : homme et femme sont deux humains complets (peau, cheveux, haut, short, baskets)', () => {
+  const sizes = [];
   for (const f of ['models/trackme-human.glb', 'models/trackme-human-f.glb']) {
     const b = readFileSync(f), j = JSON.parse(b.slice(20, 20 + b.readUInt32LE(12)).toString());
-    assert.equal(j.meshes.length, 2, f + ' : surface + articulations');
+    const mats = j.materials.map((m) => m.name).join(' ');
+    for (const z of ['TM_Skin', 'TM_Hair', 'TM_Top', 'TM_Shorts', 'TM_Shoes']) assert.match(mats, new RegExp(z), f);
+    assert.ok(b.length < 3.5e6, f + ' trop lourd pour iPhone');
+    sizes.push(b.length);
   }
-  const size = (f) => readFileSync(f).length;
-  assert.notEqual(size('models/trackme-human.glb'), size('models/trackme-human-f.glb'));
+  assert.notEqual(sizes[0], sizes[1]);
 });
 
 test('poses : pieds et mains arrivent là où la pose le demande (IK), sans os étiré', async () => {

@@ -35,9 +35,10 @@ function dress(obj, outfit) {
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     // Matériaux opaques neufs, comme la visionneuse (ceux du glb peuvent être transparents → trous dans le corps).
     o.material = mats.map((m) => {
-      const kind = /short|pantslong/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) && !/sole/i.test(m.name) ? 'shoes' : /top|sleeve/i.test(m.name) ? 'top' : 'skin';
-      const color = kind === 'skin' ? 0xeceef2 : outfit[kind] ?? m.color;
-      return new THREE.MeshStandardMaterial({ color, roughness: kind === 'skin' ? 0.5 : 0.78, metalness: 0 });
+      const kind = /short/i.test(m.name) ? 'shorts' : /shoe/i.test(m.name) ? 'shoes' : /top/i.test(m.name) ? 'top' : /hair/i.test(m.name) ? 'hair' : 'skin';
+      const mm = new THREE.MeshStandardMaterial({ map: m.map, color: outfit[kind] ?? 0xffffff, roughness: 0.65, metalness: 0, alphaTest: kind === 'hair' ? 0.4 : 0, side: kind === 'hair' ? THREE.DoubleSide : THREE.FrontSide });
+      if (outfit[kind]) mm.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = diffuse * clamp(0.55 + dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11)) * 0.9, 0.0, 1.25);'); };
+      return mm;
     });
     if (o.material.length === 1) o.material = o.material[0];
     o.frustumCulled = false;
