@@ -1,5 +1,10 @@
 /* TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24. */
-.se-top { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 12px; }
+/* Barre Annuler/Terminer : sous la barre d'état (safe area) et collée en haut, sinon sur iPhone installé
+   les boutons passent sous l'heure/Dynamic Island, iOS capte le toucher et la séance reste bloquée. */
+.se-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+  margin: 0 calc(-1rem - var(--safe-r)) 12px calc(-1rem - var(--safe-l));
+  padding: calc(6px + var(--safe-t)) calc(1rem + var(--safe-r)) 6px calc(1rem + var(--safe-l));
+  background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--bar-edge); }
 .se-finish { min-height: 40px; border-radius: 20px; padding: 0 18px; }
 
 .se-hero { padding: 18px 20px 20px; margin-bottom: 14px; }

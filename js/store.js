@@ -1,6 +1,6 @@
 // État persistant dans localStorage (données uniquement sur le téléphone).
 import { isoDate } from './science.js';
-import { DEFAULT_HABITS } from './habits.js';
+import { DEFAULT_HABITS, cleanDayTasks } from './habits.js';
 import { migrateProgram } from './workout.js';
 import { DEFAULT_PROGRAM } from './exercises.js';
 
@@ -26,6 +26,7 @@ const empty = () => ({
   workouts: [],   // [{ id, date, dayName, exercises: [{ name, muscle, upper, repMin, repMax, sets: [{ kg, reps, rir, done }] }] }]
   habits: DEFAULT_HABITS.map((h) => ({ ...h })), // [{ id, auto?, name? }]
   habitLog: {},   // 'YYYY-MM-DD' -> { habitId: true } (cases cochées à la main)
+  dayTasks: {},   // 'YYYY-MM-DD' -> [{ id, name, done }] (tâches ponctuelles de ce jour seulement : courses, démarche…)
   routines: [],   // [{ id, name, folder, exercises: [{ name, muscle, secondary, type, sets, repMin, repMax, rest, upper }] }]
   customExercises: [], // [{ name, muscle, secondary, equipment, type, upper }]
   milestones: [], // étapes de poids estimées : [{ id, kg, date?, label?, done?, doneOn? }]
@@ -85,6 +86,7 @@ function sanitize(data) {
   out.settings = { ...base.settings, ...out.settings };
   delete out.chat; delete out.usage; delete out.settings.apiKey; delete out.settings.model; delete out.settings.budgetEur; // Coach IA retiré : on n'en garde aucune trace
   for (const k of ['foodGroups', 'mealPlan']) if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = base[k];
+  out.dayTasks = cleanDayTasks(out.dayTasks);
   if (!Array.isArray(out.shoppingList)) out.shoppingList = base.shoppingList;
   if (!Array.isArray(out.shoppingDone)) out.shoppingDone = base.shoppingDone;
   for (const d in out.mealPlan) {

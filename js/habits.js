@@ -32,6 +32,41 @@ export function dayStatus(habits, ctx, manualLog = {}) {
   });
 }
 
+// Tâches ponctuelles d'un seul jour (« aller au magasin », « poster le colis ») : byDay = { 'YYYY-MM-DD': [{ id, name, done }] }.
+// Elles s'affichent dans la checklist de ce jour mais ne comptent pas dans la série d'habitudes.
+export function addTask(byDay, date, name, id) {
+  const n = String(name ?? '').trim().slice(0, 80);
+  if (!n) return null;
+  const task = { id, name: n, done: false };
+  (byDay[date] ||= []).push(task);
+  return task;
+}
+export function toggleTask(byDay, date, id) {
+  const task = byDay[date]?.find((x) => x.id === id);
+  if (task) task.done = !task.done;
+  return task || null;
+}
+export function removeTask(byDay, date, id) {
+  const list = byDay[date], i = list ? list.findIndex((x) => x.id === id) : -1;
+  if (i < 0) return false;
+  list.splice(i, 1);
+  if (!list.length) delete byDay[date];
+  return true;
+}
+export const tasksLeft = (byDay, date) => (byDay[date] || []).filter((x) => !x.done).length;
+// Import / ancienne version : garde seulement des jours valides avec des tâches nommées.
+export function cleanDayTasks(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [d, list] of Object.entries(raw)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !Array.isArray(list)) continue;
+    const ok = list.filter((x) => x && typeof x === 'object' && String(x.name ?? '').trim())
+      .map((x) => ({ id: String(x.id ?? Math.random().toString(36).slice(2)), name: String(x.name).trim().slice(0, 80), done: !!x.done }));
+    if (ok.length) out[d] = ok;
+  }
+  return out;
+}
+
 // Taux de complétion d'un jour (0–1).
 export const completion = (status) => (status.length ? status.filter((s) => s.done).length / status.length : 0);
 

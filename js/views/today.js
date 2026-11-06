@@ -12,7 +12,7 @@ import { phaseOn } from '../cycle.js';
 import { GOALS, addPortion, getPortions, weekTotal, avg7 } from '../foodgroups.js';
 import { openAddFood, MEALS } from './addfood.js';
 import { countUp } from '../motion.js';
-import { habitsCells, handleHabitClick } from './habits.js';
+import { habitsCells, handleHabitClick, handleTaskSubmit } from './habits.js';
 
 register({
   en: {
@@ -146,6 +146,7 @@ export function render(root, go) {
   if (bigEl && lastShown?.date === date && lastShown.big != null && lastShown.big !== big) countUp(bigEl, lastShown.big, big);
   lastShown = { date, big, bars };
 
+  root.onsubmit = (e) => handleTaskSubmit(e, date, keep);
   root.onclick = (e) => {
     if (handleHabitClick(e, date, keep)) return;
     const pg = e.target.closest('[data-pg]');
