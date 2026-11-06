@@ -29,10 +29,22 @@ test('mouvements : les pieds ne glissent pas au sol (sauf course sur place, où 
   assert.deepEqual(bad, []);
 });
 
-test('couverture : les 60 exercices sont animés en 3D, sans aucun accessoire', () => {
+// Matériel réel visible (js/gear3d.js) pour chaque exercice à barre ou haltères. Exceptions, avec leur raison :
+// arraché et épaulé-jeté sont des clips Mixamo où les mains s'écartent de 25 à 45 cm : une barre rigide y serait fausse.
+const NO_GEAR = new Set(['Arraché', 'Épaulé-jeté']);
+test('couverture : les 60 exercices sont animés en 3D, avec le vrai matériel pour la barre et les haltères', () => {
   const missing = LIBRARY.filter((e) => !model3D(e.name)).map((e) => e.name);
   assert.deepEqual(missing, []);
-  assert.deepEqual(LIBRARY.filter((e) => model3D(e.name).prop).map((e) => e.name), []);
+  const noGear = LIBRARY.filter((e) => ['barre', 'haltères'].includes(e.equipment) && !NO_GEAR.has(e.name) && !model3D(e.name).gear).map((e) => e.name);
+  assert.deepEqual(noGear, []);
+  for (const n of ['Développé couché', 'Rowing haltère', 'Fentes bulgares']) assert.ok(model3D(n).gear.bench, n + ' : banc'); // les 4 gestes de référence
+  assert.equal(model3D('Squat').gear.hold, 'barBack');
+});
+
+test('matériel : le corps repose sur le banc et la barre reste rigide, posée là où il faut', () => {
+  const keys = ['banc', 'barre'];
+  const bad = rows.flatMap((r) => Object.entries(r.bio).filter(([k]) => keys.some((x) => k.startsWith(x))).map(([k, e]) => `${r.name} ${r.sex} — ${k} : ${e.value}`));
+  assert.deepEqual(bad, []);
 });
 
 test('corps : homme et femme sont deux corps complets (peau, short ; brassière pour la femme)', () => {

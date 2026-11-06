@@ -242,9 +242,11 @@ export async function auditOne(name, sex = 'M') {
   const Rx = bone(/RightArm$/).getWorldPosition(v()).sub(bone(/LeftArm$/).getWorldPosition(v())).setY(0).normalize(), Fz = v().crossVectors(new THREE.Vector3(0, 1, 0), Rx);
   const bench = m.gear?.bench, PAD = { flat: [0.14, 0.59], incline: [0.15, 0.17] }; // demi-largeur, demi-longueur du coussin (assise du banc incliné)
   const benchLow = () => { // point de peau le plus bas au-dessus du coussin (appelé après la déclaration de `skins`)
-    const [hx, hz] = PAD[bench.type], cz = bench.at[2] + (bench.type === 'incline' ? 0.17 : 0); let y = Infinity; const t = v();
+    const [hx, hz] = PAD[bench.type], yaw = ((bench.yaw || 0) * Math.PI) / 180, c = Math.cos(yaw), sn = Math.sin(yaw); let y = Infinity; const t = v();
+    const off = bench.type === 'incline' ? 0.17 : 0; // l'assise du banc incliné est devant son origine
     for (const sk of skins) for (let k = 0; k < sk.geometry.attributes.position.count; k += 7) { sk.getVertexPosition(k, t); t.applyMatrix4(sk.matrixWorld);
-      if (Math.abs(t.dot(Rx) - bench.at[0]) < hx && Math.abs(t.dot(Fz) - cz) < hz && t.y < y) y = t.y; }
+      const dx = t.dot(Rx) - bench.at[0], dz = t.dot(Fz) - bench.at[2], lx = dx * c - dz * sn, lz = dx * sn + dz * c - off; // repère du banc
+      if (Math.abs(lx) < hx && Math.abs(lz) < hz && t.y < y) y = t.y; }
     return y; };
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
   const feet = [/LeftToe_?End/, /RightToe_?End/, /LeftFoot$/, /RightFoot$/].map(bone).filter(Boolean);
