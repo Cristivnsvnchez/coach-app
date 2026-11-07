@@ -3,7 +3,8 @@
 // les vignettes et le banc d'essai : la position est recalculée à chaque image depuis les os (pas de matériel qui flotte).
 //
 // `gear` (voir model3D dans technique.js) : { hold, bench }
-// - hold : 'bar' (barre entre les deux mains), 'barBack' (barre sur les trapèzes, mains dessus), 'dumbbells' (une par main),
+// - hold : 'bar' (barre entre les deux mains), 'barBack' (barre sur les trapèzes, mains dessus), 'barFront' (barre posée
+//   sur l'avant des épaules, doigts dessous : squat avant), 'dumbbells' (une par main),
 //   'dumbbellR' / 'dumbbellL' (une seule main), 'kettlebell' (une, à deux mains) ;
 // - bench : { type: 'flat' | 'incline', at: [côté, hauteur, avant] } dans le repère des poses (js/poses.js, mètres pour 1,75 m),
 //   origine au sol sous le bassin au repos ; `yaw` en degrés (0 : banc dans l'axe du corps).
@@ -22,8 +23,23 @@ export function gripOf(THREE, B, S, out = { c: new THREE.Vector3(), axis: new TH
   if (palm.lengthSq() < 1e-8) palm.crossVectors(out.axis, out.dir);
   palm.normalize();
   const len = m1.distanceTo(h); // longueur de la paume (s'adapte à l'échelle du corps)
-  out.c.copy(m1).addScaledVector(out.dir, -0.18 * len).addScaledVector(palm, 0.42 * len);
+  // Poing fermé : la poignée est au centre du « tube » que forment les doigts repliés (cercle passant par les
+  // articulations de chaque doigt). Main ouverte (tube trop large) : point fixe dans la paume.
+  let n = 0; const sum = new THREE.Vector3();
+  for (const f of ['Index', 'Middle', 'Ring']) {
+    const t = tube(p('Hand' + f + '2'), p('Hand' + f + '3'), p('Hand' + f + '4'));
+    if (t && t.r < 0.45 * len) { sum.add(t.c); n++; }
+  }
+  if (n === 3) out.c.copy(sum.multiplyScalar(1 / n));
+  else out.c.copy(m1).addScaledVector(out.dir, -0.18 * len).addScaledVector(palm, 0.42 * len);
   return out;
+}
+// Cercle passant par trois points (centre, rayon) ; null s'ils sont presque alignés (doigt tendu).
+export function tube(a, b, c) {
+  const ab = b.clone().sub(a), ac = c.clone().sub(a), nrm = ab.clone().cross(ac), d = 2 * nrm.lengthSq();
+  if (d < 1e-12) return null;
+  const o = nrm.clone().cross(ab).multiplyScalar(ac.lengthSq()).add(ac.clone().cross(nrm).multiplyScalar(ab.lengthSq())).divideScalar(d);
+  return { c: a.clone().add(o), r: o.length() };
 }
 
 // Où la barre doit reposer au squat (sur les trapèzes, derrière la base du cou) : le banc d'essai vérifie que les poings
@@ -34,6 +50,14 @@ export function barOnBack(THREE, B) {
   const back = new THREE.Vector3().crossVectors(axis, up).normalize(); // épaule gauche → droite × haut = vers l'arrière
   const len = n.distanceTo(s2);
   return { c: n.addScaledVector(up, -0.1 * len).addScaledVector(back, 0.22 * len), axis, up };
+}
+
+// Où la barre repose au squat avant : sur l'avant des épaules (deltoïdes), devant la base du cou.
+export function barOnFront(THREE, B) {
+  const p = (n) => B[n].getWorldPosition(new THREE.Vector3());
+  const n = p('Neck'), s2 = p('Spine2'), axis = p('RightShoulder').sub(p('LeftShoulder')).normalize(), up = n.clone().sub(s2).normalize();
+  const fwd = new THREE.Vector3().crossVectors(up, axis).normalize(), len = n.distanceTo(s2);
+  return { c: n.addScaledVector(up, -0.15 * len).addScaledVector(fwd, 0.36 * len), axis, up };
 }
 
 export function attachGear(THREE, gearGltf, obj, gear, clip) {
@@ -47,7 +71,7 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   // transformation (coordonnées monde), recalculé à chaque image.
   const holder = new THREE.Group(); (obj.parent || obj).add(holder);
   const h = gear.hold;
-  if (h === 'bar' || h === 'barBack') items.push({ kind: h, mesh: add(NAMES.bar) });
+  if (h === 'bar' || h === 'barBack' || h === 'barFront') items.push({ kind: h, mesh: add(NAMES.bar) });
   if (h === 'dumbbells' || h === 'dumbbellR') items.push({ kind: 'db', S: 'Right', mesh: add(NAMES.dumbbell) });
   if (h === 'dumbbells' || h === 'dumbbellL') items.push({ kind: 'db', S: 'Left', mesh: add(NAMES.dumbbell) });
   if (h === 'kettlebell') items.push({ kind: 'kb', mesh: add(NAMES.kettlebell) });
@@ -80,6 +104,8 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
       if (it.kind === 'db') {
         const g = gripOf(THREE, B, it.S, gB);
         m.position.copy(g.c); orient(m, g.axis, g.dir.clone().negate());
+      } else if (it.kind === 'barFront') { // squat avant : posée sur l'avant des épaules, les doigts dessous
+        const { c, axis, up } = barOnFront(THREE, B); m.position.copy(c); orient(m, axis, up);
       } else if (it.kind === 'bar' || it.kind === 'barBack' || it.kind === 'kb') { // tenue par les deux poings (sur le dos : voir barOnBack)
         const a = gripOf(THREE, B, 'Left', gA), b = gripOf(THREE, B, 'Right', gB);
         const axis = tmp.subVectors(b.c, a.c);

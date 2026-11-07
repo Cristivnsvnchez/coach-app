@@ -11,7 +11,7 @@ import { LIBRARY } from '../js/exercises.js';
 import { prepareClip, landingBox } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
 import { limitJoints } from '../js/joint-limits.js';
-import { gripOf, barOnBack } from '../js/gear3d.js';
+import { gripOf, barOnBack, barOnFront, tube } from '../js/gear3d.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const cache = new Map();
@@ -252,6 +252,10 @@ function gearPoints(gear, B) {
       const g = gripOf(THREE, B, S); grips.push(g.c.clone());
       along(g.c, g.axis, [0.095, 0.122], 0.108); along(g.c, g.axis, [0.128, 0.148], 0.094);
     }
+  } else if (gear.hold === 'barFront') {
+    const { c, axis } = barOnFront(THREE, B);
+    for (let x = -0.98; x <= 0.98; x += 0.04) if (Math.abs(x) > 0.12) pts.push(c.clone().addScaledVector(axis, x)); // posée sur les épaules : le contact au cou est voulu
+    along(c, axis, [0.698, 0.722, 0.749], 0.225); along(c, axis, [0.757, 0.787], 0.165);
   } else if (gear.hold === 'bar' || gear.hold === 'barBack' || gear.hold === 'kettlebell') {
     const a = gripOf(THREE, B, 'Left'), b = gripOf(THREE, B, 'Right'), c = a.c.clone().add(b.c).multiplyScalar(0.5), axis = b.c.clone().sub(a.c).normalize();
     grips.push(a.c.clone(), b.c.clone());
@@ -304,7 +308,7 @@ export async function auditOne(name, sex = 'M') {
   const frames = [], seq = [];
   // Squat : la barre tenue par les poings doit reposer sur les trapèzes (pas devant ni au-dessus de la nuque).
   const HB = {}; obj.traverse((o) => { if (o.isBone) HB[o.name.replace(/^mixamorig:?/, '')] ||= o; });
-  let gripGap = 0; const barGrip = []; let clash = { d: 0, where: '' };
+  let gripGap = 0; const barGrip = []; let clash = { d: 0, where: '' }, rackGap = 0, openHand = 0;
   for (let i = 0; i <= N; i++) {
     // i = N : juste avant la fin (setTime(duration) retombe sur 0 en boucle) pour mesurer le raccord.
     mixer.setTime(i === N ? clip.duration - 1e-3 : (clip.duration * i) / N); obj.updateMatrixWorld(true);
@@ -313,6 +317,13 @@ export async function auditOne(name, sex = 'M') {
     seq.push(measure(BN, REST));
     if (m.gear?.hold) { const caps = capsules(HB); for (const q of gearPoints(m.gear, HB)) for (const c of caps) { const dd = depthIn(q, c); if (dd > clash.d) { clash = { d: dd, where: c.nm + ' @' + i }; } } }
     if (m.gear?.hold === 'bar' || m.gear?.hold === 'barBack') { const a = gripOf(THREE, HB, 'Left').c, b = gripOf(THREE, HB, 'Right').c; barGrip.push({ w: a.distanceTo(b), y: (a.y + b.y) / 2 }); }
+    // Prise : chaque main qui tient une poignée a les doigts enroulés autour (rayon du « tube » des doigts ≤ 3,5 cm,
+    // poignée Ø 3,3 cm + épaisseur du doigt), mesuré sur le majeur.
+    if (m.gear?.hold && m.gear.hold !== 'barFront') for (const S of (m.gear.hold === 'dumbbellR' ? ['Right'] : m.gear.hold === 'dumbbellL' ? ['Left'] : ['Left', 'Right'])) {
+      const t = tube(...[2, 3, 4].map((k) => HB[S + 'HandMiddle' + k].getWorldPosition(new THREE.Vector3())));
+      openHand = Math.max(openHand, t ? t.r : 1); }
+    if (m.gear?.hold === 'barFront') { // les doigts (2e phalange du majeur) sont sous la barre posée sur les épaules
+      const bar = barOnFront(THREE, HB); for (const S of ['Left', 'Right']) { const f = HB[S + 'HandMiddle2'].getWorldPosition(new THREE.Vector3()).sub(bar.c); rackGap = Math.max(rackGap, f.addScaledVector(bar.axis, -f.dot(bar.axis)).length()); } }
     if (m.gear?.hold === 'barBack') { // corps normé à 1,75 m : unités monde = mètres
       const mid = gripOf(THREE, HB, 'Left').c.add(gripOf(THREE, HB, 'Right').c).multiplyScalar(0.5);
       gripGap = Math.max(gripGap, mid.distanceTo(barOnBack(THREE, HB).c)); }
@@ -363,6 +374,8 @@ export async function auditOne(name, sex = 'M') {
     if (gy < 0.225 - 0.01) bio['barre : disques dans le sol (m)'] = { value: +(0.225 - gy).toFixed(3), limit: 0.01, n: 1 };
     if (m.gear.fromFloor && gy > 0.225 + 0.02) bio['barre : ne repart pas du sol (m)'] = { value: +(gy - 0.225).toFixed(3), limit: 0.02, n: 1 }; }
   if (clash.d > 0.01) bio['matériel dans le corps (' + clash.where + ') (m)'] = { value: +clash.d.toFixed(3), limit: 0.01, n: 1 };
+  if (openHand > 0.035) bio['prise : doigts pas refermés sur la poignée (m)'] = { value: +openHand.toFixed(3), limit: 0.035, n: 1 };
+  if (rackGap > 0.06) bio['squat avant : doigts loin de la barre (m)'] = { value: +rackGap.toFixed(3), limit: 0.06, n: 1 };
   if (gripGap > 0.04) bio['barre hors des trapèzes (m)'] = { value: +gripGap.toFixed(3), limit: 0.04, n: 1 };
   const r = (x, d = 2) => +x.toFixed(d);
   return { name, sex, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, gear: m.gear, duration: r(clip.duration),

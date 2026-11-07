@@ -23,6 +23,8 @@
 // `beats` : [pose clé à atteindre, secondes, enchaîner sans s'arrêter ?]. Durée = somme. Le clip part de la pose 0 et doit y revenir.
 // `F: { i: {…} }` : réglages de la pose clé i propres au corps féminin (appliqués par model3D dans technique.js).
 
+import { gripOf } from './gear3d.js'; // centre du poing, partagé avec l'accroche du matériel
+
 const flat = (x = 0.13, z = 0, yaw = 8, heel = 0) => ({ x, z, yaw, heel, lift: 0 });
 const STAND_H = 0.923; // bassin debout, genoux à peine déverrouillés
 const STAND = { hips: [0, STAND_H, 0], torso: [0, 1, 0.02], foot: flat(), arm: [0.07, -1, 0.02], fore: [0.03, -1, 0.14], grip: 0.25 };
@@ -99,6 +101,7 @@ const altCurl = { gear: { hold: 'dumbbells' }, beats: [[1, 0.9], [1, 0.2], [0, 1
   pose(STAND, { neck: 0, L: { ...DB_DOWN, palm: [-1, 0, 0.1] }, R: CURL_UP }),
   pose(STAND, { neck: 0, R: { ...DB_DOWN, palm: [-1, 0, 0.1] }, L: CURL_UP })] };
 // Élévations frontales : bras presque tendus montent devant jusqu'à l'horizontale, paumes vers le sol.
+const KB_FOOT = flat(0.2, 0, 15), KB_HANDS = { gripAt: 1, grip: 1 };
 const frontRaise = { gear: { hold: 'dumbbells' }, beats: [[1, 1.0], [1, 0.25], [0, 1.5], [0, 0.2]], keys: [
   pose(STAND, { neck: 0, arm: [0.28, -1, 0.06], fore: [0.32, -1, 0.12], elbowHint: [0.3, 0, -1], palm: [0, 0.1, -1], grip: 1 }),
   pose(STAND, { neck: 0, arm: [0.2, 0.02, 1], fore: [0.2, 0.0, 1], elbowHint: [0.4, -0.3, -0.6], palm: [0, -1, 0], grip: 1 })] };
@@ -113,14 +116,14 @@ const SQUAT_FOOT = flat(0.165, 0, 22);
 // repose sur les trapèzes en haut comme en bas (contrôlé par tools/motion-audit.mjs, homme et femme).
 const BAR_ON_BACK = { elbowHint: [0.45, -1, -0.9], palm: [0, 0.15, 1], grip: 1, wrist: -12 };
 const backSquat = { gear: { hold: 'barBack' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
-  pose(BAR_ON_BACK, { chest: [0.46, 0.25, -0.08], hips: [0, 0.915, 0], torso: [0, 1, 0.05], neck: 0, foot: SQUAT_FOOT }),
-  pose(BAR_ON_BACK, { chest: [0.46, 0.22, -0.05], hips: [0, 0.525, -0.2], torso: [0, 0.73, 0.68], neck: -26, foot: SQUAT_FOOT })] };
+  pose(BAR_ON_BACK, { chest: [0.46, 0.25, -0.04], hips: [0, 0.915, 0], torso: [0, 1, 0.05], neck: 0, foot: SQUAT_FOOT }),
+  pose(BAR_ON_BACK, { chest: [0.46, 0.22, -0.01], hips: [0, 0.525, -0.2], torso: [0, 0.73, 0.68], neck: -26, foot: SQUAT_FOOT })] };
 // Squat avant : barre posée sur l'avant des épaules, coudes hauts, doigts sous la barre ; buste presque droit.
 const FRONT_FOOT = flat(0.16, 0, 18);
-const FRONT_RACK = { gripAt: 1, elbowHint: [0.3, -1, 0.5], palm: [0, 0.5, 1], wrist: -30, grip: 0.6 };
-const frontSquat = { gear: { hold: 'bar' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
-  pose(FRONT_RACK, { chest: [0.27, 0.33, 0.28], hips: [0, 0.915, 0], torso: [0, 1, 0.02], neck: 0, foot: FRONT_FOOT }),
-  pose(FRONT_RACK, { chest: [0.27, 0.33, 0.28], hips: [0, 0.55, -0.2], torso: [0, 0.97, 0.24], neck: -6, foot: FRONT_FOOT })] };
+const FRONT_RACK = { elbowHint: [0.4, -0.6, 1], palm: [0, 1, 0.3], wrist: -60, grip: 0.45 }; // doigts sous la barre, coudes hauts
+const frontSquat = { gear: { hold: 'barFront' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
+  pose(FRONT_RACK, { chest: [0.33, 0.26, 0.18], hips: [0, 0.915, 0], torso: [0, 1, 0.02], neck: 0, foot: FRONT_FOOT }),
+  pose(FRONT_RACK, { chest: [0.33, 0.26, 0.18], hips: [0, 0.55, -0.2], torso: [0, 0.97, 0.24], neck: -6, foot: FRONT_FOOT })] };
 // Squat overhead : prise large, bras verrouillés au-dessus de la tête, la barre reste au-dessus du milieu du pied.
 const OH_FOOT = flat(0.18, 0, 22);
 const OVERHEAD = { gripAt: 1, elbowHint: [0.6, 0, -0.6], palm: [0, -0.3, 1], wrist: -45, grip: 1 };
@@ -135,7 +138,7 @@ const SUMO = { gripAt: 1, palm: [0, -0.2, -1], grip: 1 };
 const sumoHighPull = { gear: { hold: 'bar', fromFloor: true }, beats: [[1, 0.8], [2, 0.8], [2, 0.15], [1, 0.9], [0, 0.9], [0, 0.4]], keys: [
   pose(SUMO, { hips: [0, 0.53, -0.22], torso: [0, 0.66, 0.75], neck: -22, foot: SUMO_FOOT, hand: [0.16, 0.21, 0.24], elbowHint: [0.3, 0, -1] }),
   pose(SUMO, { hips: [0, 0.86, 0], torso: [0, 1, 0.05], neck: -2, foot: SUMO_FOOT, hand: [0.16, 0.78, 0.21], elbowHint: [0.6, 0.2, -0.8] }),
-  pose(SUMO, { hips: [0, 0.86, 0], torso: [0, 1, -0.02], neck: 0, foot: SUMO_FOOT, hand: [0.16, 1.34, 0.22], elbowHint: [0.85, 0.5, -0.2] })] };
+  pose(SUMO, { hips: [0, 0.86, 0], torso: [0, 1, -0.02], neck: 0, foot: SUMO_FOOT, hand: [0.17, 1.36, 0.26], elbowHint: [0.85, 0.5, -0.2] })] };
 // Couché sur le banc plat : dos et tête sur le coussin, pieds à plat au sol de part et d'autre du banc, léger cambré.
 const BENCH_LIE = { hips: [0, 0.545, 0], torso: [0, 0.06, -1], neck: 2, foot: flat(0.3, 0.44, 14) };
 const ON_FLAT_BENCH = { type: 'flat', at: [0, 0, -0.36] };
@@ -235,11 +238,16 @@ export const POSES = {
   // Le coude reste près du corps, seul l'avant-bras monte ; paumes face à face tout du long.
   'Curl marteau': { gear: { hold: 'dumbbells' }, beats: TEMPO_CURL, keys: curlKeys([0.06, 0.8, 0.6], 0.08, { palm: [-1, 0, 0] }) },
   'Curl haltères': altCurl,
+  // Kettlebell swing : charnière de hanche (pas un squat), la cloche passe entre les cuisses puis monte à hauteur
+  // d'épaules par l'extension des hanches, bras tendus et relâchés ; mains côte à côte sur la poignée.
+  'Kettlebell swing': { gear: { hold: 'kettlebell' }, beats: [[1, 0.55], [0, 0.6], [0, 0.1]], keys: [
+    pose(STAND, { ...KB_HANDS, hips: [0, 0.8, -0.2], torso: [0, 0.5, 0.87], neck: -30, foot: KB_FOOT, hand: [0.05, 0.66, -0.02], elbowHint: [0.3, 0, -1], palm: [0, 0, -1] }), // paumes vers l'arrière
+    pose(STAND, { ...KB_HANDS, hips: [0, 0.92, 0], torso: [0, 1, -0.04], neck: 0, foot: KB_FOOT, hand: [0.05, 1.32, 0.5], elbowHint: [0.3, -1, 0], palm: [0, -1, 0] })] }, // paumes vers le sol
   'Élévations frontales': frontRaise,
   // Barre : les deux bras ensemble, paumes vers l'avant.
   'Curl barre': { gear: { hold: 'bar' }, beats: TEMPO_CURL, keys: [
-    pose(STAND, { neck: 0, arm: [0.1, -1, 0.02], fore: [0.03, -1, 0.14], palm: [-0.25, 0, 1], grip: 1 }),
-    pose(STAND, { neck: 0, arm: [0.1, -1, 0.08], fore: [0.02, 0.8, 0.6], palm: [-0.25, 0.75, -0.65], grip: 1 })] },
+    pose(STAND, { neck: 0, gripAt: 1, hand: [0.22, 0.8, 0.13], elbowHint: [0.1, 0, -1], palm: [0, 0, 1], grip: 1 }),
+    pose(STAND, { neck: 0, gripAt: 1, hand: [0.22, 1.22, 0.28], elbowHint: [0.1, -0.3, -1], palm: [-0.25, 0.75, -0.65], grip: 1 })] },
   'Extensions triceps': { beats: [[1, 0.8], [1, 0.25], [0, 1.2], [0, 0.15]], keys: [
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 0.97, 0.22], neck: -10, arm: [0.1, -1, 0.08], fore: [0.06, 0.05, 1], palm: [0, -1, 0.05], grip: 1 }),
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 0.97, 0.22], neck: -10, arm: [0.1, -1, 0.08], fore: [0.05, -1, 0.1], palm: [0, 0, -1], grip: 1 })] },
@@ -267,6 +275,9 @@ export const POSES = {
     pose(STAND, { hips: [0, 0.64, -0.16], torso: [0, 0.76, 0.65], neck: -25, foot: flat(0.14, 0, 8), arm: [0.15, -0.5, 0.85], fore: [0.1, -0.5, 0.85] })] },
 };
 
+// Flexion des phalanges (radians) poing fermé, réglée pour que les doigts s'enroulent autour d'une poignée de Ø 3,3 cm
+// (tests/motion.test.mjs mesure le rayon du « tube » formé par les doigts). Pouce : il se replie par-dessus l'index.
+export const FINGER_CURL = { finger: [1.3, 1.65, 1.4], thumb: [0.45, 0.45, 0.45] };
 const SPINE = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head'];
 const LIMB = ['Shoulder', 'Arm', 'ForeArm', 'Hand', 'UpLeg', 'Leg', 'Foot', 'ToeBase'];
 const FINGERS = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
@@ -330,11 +341,22 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
   const ankleH = restP.LeftFoot.y;
   // Centre du poing fermé par rapport au poignet, au repos (même règle que gripOf dans js/gear3d.js) : sert aux cibles
   // `gripAt` (barre tenue à écart fixe). Au repos la paume regarde vers le bas.
-  const gripOff = {};
-  for (const S of ['Left', 'Right']) {
-    const m1 = wp(bones[S + 'HandMiddle1']).sub(origin).multiplyScalar(s), h = restP[S + 'Hand'], dir = chainDir(S + 'ForeArm', S + 'Hand'), len = m1.distanceTo(h);
-    gripOff[S] = m1.sub(h).addScaledVector(dir, -0.18 * len).addScaledVector(U, -0.42 * len);
+  // Doigts : axe de flexion de chaque phalange, mesuré au repos (perpendiculaire à l'os et à la paume, tournée vers le bas).
+  const fingerCurl = [];
+  for (const S of ['Left', 'Right']) for (const fg of FINGERS) for (const j of [1, 2, 3]) {
+    const b = bones[`${S}Hand${fg}${j}`]; if (!b) continue;
+    const q0 = wq(b).invert(), child = b.children.find((c) => c.isBone); if (!child) continue;
+    const dir = wp(child).sub(wp(b)).normalize(), toward = U.clone().negate();
+    fingerCurl.push({ b, S, axisL: V().crossVectors(dir, toward).normalize().applyQuaternion(q0), amount: fg === 'Thumb' ? FINGER_CURL.thumb[j - 1] : FINGER_CURL.finger[j - 1] });
   }
+  // Centre du poing fermé par rapport au poignet, au repos (même règle que gripOf dans js/gear3d.js, doigts repliés) :
+  // sert aux cibles `gripAt` (barre tenue à écart fixe).
+  const gripOff = {};
+  for (const { b, axisL, amount } of fingerCurl) b.quaternion.multiply(Q().setFromAxisAngle(axisL, amount));
+  obj.updateMatrixWorld(true);
+  for (const S of ['Left', 'Right']) gripOff[S] = gripOf(THREE, bones, S).c.sub(wp(bones[S + 'Hand'])).multiplyScalar(s);
+  for (const [b, q, p] of saved) { b.quaternion.copy(q); b.position.copy(p); }
+  obj.updateMatrixWorld(true);
 
   // Orientation qui amène le repère de repos du segment (axe long + axe de charnière) sur son repère en pose.
   const basis = (dir, axis) => { const x = axis.clone().addScaledVector(dir, -axis.dot(dir)).normalize(), z = V().crossVectors(x, dir).normalize(); return new THREE.Matrix4().makeBasis(x, dir, z); };
@@ -465,12 +487,7 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
   const list = Object.entries(tracks).map(([b, v]) => new THREE.QuaternionKeyframeTrack(safe(bones[b]) + '.quaternion', times, v));
   list.push(new THREE.VectorKeyframeTrack(safe(bones.Hips) + '.position', times, hipPos.flatMap((p) => [p.x, p.y, p.z])));
   // Doigts : refermés autour de la prise (axe : perpendiculaire à l'os et à la paume, mesuré au repos).
-  for (const S of ['Left', 'Right']) for (const fg of FINGERS) for (const j of [1, 2, 3]) {
-    const b = bones[`${S}Hand${fg}${j}`]; if (!b) continue;
-    const q0 = wq(b).invert(), child = b.children.find((c) => c.isBone); if (!child) continue;
-    const dir = wp(child).sub(wp(b)).normalize(), toward = U.clone().negate();
-    const axisL = V().crossVectors(dir, toward).normalize().applyQuaternion(q0);
-    const amount = (fg === 'Thumb' ? 0.45 : j === 1 ? 1.2 : 1.0);
+  for (const { b, axisL, amount, S } of fingerCurl) {
     const vals = frames.flatMap((r) => { const q = b.quaternion.clone().multiply(Q().setFromAxisAngle(axisL, r.d[S + 'Grip'] * amount)); return [q.x, q.y, q.z, q.w]; });
     list.push(new THREE.QuaternionKeyframeTrack(safe(b) + '.quaternion', times, vals));
   }

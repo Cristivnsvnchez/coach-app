@@ -41,8 +41,8 @@ test('couverture : les 60 exercices sont animés en 3D, avec le vrai matériel p
   assert.equal(model3D('Squat').gear.hold, 'barBack');
 });
 
-test('matériel : rien ne traverse le corps, le corps repose sur le banc, la barre reste rigide et bien posée', () => {
-  const keys = ['banc', 'barre', 'matériel'];
+test('matériel : bien tenu (doigts refermés), rien ne traverse le corps, le corps repose sur le banc, barre rigide et bien posée', () => {
+  const keys = ['banc', 'barre', 'matériel', 'prise', 'squat avant'];
   const bad = rows.flatMap((r) => Object.entries(r.bio).filter(([k]) => keys.some((x) => k.startsWith(x))).map(([k, e]) => `${r.name} ${r.sex} — ${k} : ${e.value}`));
   assert.deepEqual(bad, []);
 });
