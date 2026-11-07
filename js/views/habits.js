@@ -126,7 +126,7 @@ function editHabits(rerender) {
     const autos = Object.keys(AUTO).map((id) => ({ id, auto: true }));
     const customs = state.habits.filter((h) => !h.auto);
     s.querySelector('.body').innerHTML = group(t('Automatiques'), `<ul class="cells">${autos.map((h) => `<li class="cell toggle-row"><span class="grow">${esc(t(habitName(h)))}</span>
-        <label class="switch"><input type="checkbox" data-auto="${h.id}" ${active.has(h.id) ? 'checked' : ''} aria-label="${esc(t(habitName(h)))}"><span></span></label></li>`).join('')}</ul>`,
+        <label class="switch"><input type="checkbox" data-auto="${esc(h.id)}" ${active.has(h.id) ? 'checked' : ''} aria-label="${esc(t(habitName(h)))}"><span></span></label></li>`).join('')}</ul>`,
       t("Cochées d'après ton journal, tes pesées et tes séances."))
       + group(t('Personnelles'), `<ul class="cells">${customs.map((h) => `<li class="cell"><span class="grow">${esc(t(h.name))}</span>
         <button class="icon-btn" data-del="${esc(h.id)}" aria-label="${t('Supprimer')}">${icon('trash')}</button></li>`).join('')}

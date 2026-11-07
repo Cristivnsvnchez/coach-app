@@ -131,7 +131,7 @@ export function render(root, go) {
 // Modifier ses objectifs : champs vides = valeur calculée ; glucides vides = reste des kcal.
 function editNeeds(auto, done) {
   const c = state.profile.custom || {};
-  const f = (k, label, unit) => `<label class="cell field"><span>${label}</span><input name="${k}" type="number" inputmode="numeric" value="${c.enabled && c[k] ? c[k] : ''}" placeholder="${fmt(auto[k])} ${unit}"></label>`;
+  const f = (k, label, unit) => `<label class="cell field"><span>${label}</span><input name="${k}" type="number" inputmode="numeric" value="${esc(c.enabled && c[k] ? c[k] : '')}" placeholder="${fmt(auto[k])} ${unit}"></label>`;
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Mes objectifs')}</h3></div>
     <form>${group('', `<div class="cells">${f('kcal', t('Calories'), 'kcal')}${f('protein', t('Protéines'), 'g')}${f('fat', t('Lipides'), 'g')}${f('carbs', t('Glucides'), 'g')}</div>`,
       t('Laisse un champ vide pour garder la valeur calculée (en gris). Glucides vides = le reste de tes calories. Par sécurité, les calories ne descendent jamais sous 1200 (femme) / 1500 (homme).'))}

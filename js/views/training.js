@@ -53,9 +53,9 @@ export function render(root, go) {
     <button class="btn large" data-a="empty" style="margin-bottom:1.75rem">${icon('plus')} ${t('Démarrer une séance vide')}</button>
     ${folders.map((f) => group(esc(t(f || 'Mes routines')), `<ul class="cells">${state.routines.filter((r) => (r.folder || '') === f).map((r) => `
       <li class="cell with-icon"><span class="badge bg-blue">${icon('dumbbell')}</span>
-        <button class="grow routine-open" data-edit="${r.id}"><span class="t headline">${esc(t(r.name))}</span>
+        <button class="grow routine-open" data-edit="${esc(r.id)}"><span class="t headline">${esc(t(r.name))}</span>
         <span class="s" style="white-space:normal">${r.exercises.map((e) => esc(t(e.name))).join(' · ') || '—'}</span></button>
-        <button class="btn filled pill" data-start="${r.id}">${t('Démarrer')}</button></li>`).join('')}</ul>`)).join('')}
+        <button class="btn filled pill" data-start="${esc(r.id)}">${t('Démarrer')}</button></li>`).join('')}</ul>`)).join('')}
     ${group('', `<div class="cells"><div class="cell action" data-a="new-routine">${icon('plus')} ${t('Nouvelle routine')}</div></div>`)}
     ${calendar()}
     ${musclesCard(ws, msets)}
@@ -223,9 +223,9 @@ function editRoutine(r, back, { isNew = false } = {}) {
         <label class="cell field"><span>${t('Nom')}</span><input data-f="name" value="${esc(t(r.name))}"></label>
         <label class="cell field"><span>${t('Dossier')}</span><input data-f="folder" value="${esc(t(r.folder || ''))}" placeholder="${t('Mes routines')}"></label></div>`)}
       ${r.exercises.map((ex, i) => group(esc(t(ex.name)), `<div class="cells">
-        <label class="cell field"><span>${t('Séries')}</span><input type="number" inputmode="numeric" data-i="${i}" data-k="sets" value="${ex.sets}"></label>
-        <label class="cell field"><span>${t('Reps min – max')}</span><span class="row" style="justify-content:flex-end"><input type="number" inputmode="numeric" data-i="${i}" data-k="repMin" value="${ex.repMin}" style="width:3rem">–<input type="number" inputmode="numeric" data-i="${i}" data-k="repMax" value="${ex.repMax}" style="width:3rem"></span></label>
-        <label class="cell field"><span>${t('Repos (s)')}</span><input type="number" inputmode="numeric" data-i="${i}" data-k="rest" value="${ex.rest ?? 90}"></label>
+        <label class="cell field"><span>${t('Séries')}</span><input type="number" inputmode="numeric" data-i="${i}" data-k="sets" value="${esc(ex.sets)}"></label>
+        <label class="cell field"><span>${t('Reps min – max')}</span><span class="row" style="justify-content:flex-end"><input type="number" inputmode="numeric" data-i="${i}" data-k="repMin" value="${esc(ex.repMin)}" style="width:3rem">–<input type="number" inputmode="numeric" data-i="${i}" data-k="repMax" value="${esc(ex.repMax)}" style="width:3rem"></span></label>
+        <label class="cell field"><span>${t('Repos (s)')}</span><input type="number" inputmode="numeric" data-i="${i}" data-k="rest" value="${esc(ex.rest ?? 90)}"></label>
         <div class="cell row" style="justify-content:space-between"><span class="row"><button class="icon-btn" data-up="${i}" aria-label="${t('Monter')}">${icon('arrowUp')}</button><button class="icon-btn" data-down="${i}" aria-label="${t('Descendre')}">${icon('arrowDown')}</button></span>
           <button class="btn destructive" data-rm="${i}">${t('Retirer')}</button></div></div>`)).join('')}
       ${group('', `<div class="cells"><div class="cell action" data-a="add">${icon('plus')} ${t('Ajouter un exercice')}</div></div>`)}

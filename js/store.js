@@ -106,7 +106,49 @@ function sanitize(data) {
   }
   // Ancien « programme » (ou premier lancement) → routines rangées dans un dossier.
   if (!out.routines.length) out.routines = migrateProgram(out.program || DEFAULT_PROGRAM);
+  cleanFields(out);
   return out;
+}
+
+// Sécurité (sauvegarde importée) : ids, types et nombres sont insérés tels quels dans le HTML (data-*, value="", classes).
+// On n'y laisse que des caractères sûrs ; les textes libres (noms, notes) restent intacts et passent par esc() à l'affichage.
+const ID = (x) => (x == null ? x : String(x).replace(/[^\w:.-]/g, ''));
+const NUM = (x) => (x == null || typeof x === 'number' || typeof x === 'boolean' ? x
+  : typeof x === 'string' && (x.trim() === '' || Number.isFinite(+x)) ? x : null);
+const objs = (a) => (Array.isArray(a) ? a.filter((x) => x && typeof x === 'object' && !Array.isArray(x)) : []);
+function fix(o, ids, nums) {
+  for (const k of ids) if (k in o) o[k] = ID(o[k]);
+  for (const k of nums) if (k in o) o[k] = NUM(o[k]);
+  return o;
+}
+const MACROS = ['grams', 'kcal', 'p', 'c', 'f', 'fib'];
+function fixExercise(e) {
+  fix(e, ['type', 'supersetId'], ['repMin', 'repMax', 'rest']);
+  if (Array.isArray(e.sets)) e.sets = objs(e.sets).map((s) => fix(s, ['type'], ['kg', 'reps', 'rir']));
+  else if ('sets' in e) e.sets = NUM(e.sets);
+  return e;
+}
+function cleanFields(out) {
+  const meals = (a) => objs(a).map((m) => fix(m, ['foodId', 'id'], MACROS));
+  out.routines = objs(out.routines).map((r) => { fix(r, ['id'], []); r.exercises = objs(r.exercises).map(fixExercise); return r; });
+  out.workouts = objs(out.workouts).map((w) => { fix(w, ['id', 'routineId'], ['minutes']); w.exercises = objs(w.exercises).map(fixExercise); return w; });
+  out.habits = objs(out.habits).map((h) => fix(h, ['id'], []));
+  out.milestones = objs(out.milestones).map((m) => fix(m, ['id'], ['kg']));
+  out.weights = objs(out.weights).map((w) => fix(w, [], ['kg']));
+  out.shoppingList = objs(out.shoppingList).map((s) => fix(s, ['id', 'foodId'], ['grams']));
+  out.favorites = out.favorites.map(ID);
+  out.shoppingDone = out.shoppingDone.map(ID);
+  for (const d in out.logs) { const l = out.logs[d]; l.meals = meals(l.meals); l.water = NUM(l.water); }
+  for (const d in out.mealPlan) for (const k of ['dej', 'midi', 'diner', 'snack']) out.mealPlan[d][k] = meals(out.mealPlan[d][k]);
+  for (const id in out.foods) {
+    const f = out.foods[id];
+    if (!f || typeof f !== 'object') { delete out.foods[id]; continue; }
+    fix(f, ['id'], ['serving']);
+    if (f.per100 && typeof f.per100 === 'object') fix(f.per100, [], MACROS);
+  }
+  if (out.plan) { fix(out.plan, ['id'], []); out.plan.routineIds = out.plan.routineIds.map(ID); out.plan.weekdays = out.plan.weekdays.map(NUM); }
+  const c = out.profile.custom;
+  if (c && typeof c === 'object') for (const k in c) if (k !== 'enabled') c[k] = NUM(c[k]);
 }
 
 export function replace(data) {

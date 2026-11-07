@@ -186,7 +186,7 @@ function exerciseCard(ex, i, ssIndex) {
       <div class="ex-head">
         <span class="se-num" aria-hidden="true">${complete ? icon('check') : i + 1}</span>
         <button class="ex-name" data-a="info" data-i="${i}"><span class="headline">${esc(t(ex.name))}</span>
-          <span class="footnote secondary">${ex.repMin}–${ex.repMax} ${t('reps')} · ${esc(t(ex.muscle))}${color ? ` · <span style="color:${color}">${t('Superset')}</span>` : ''}</span></button>
+          <span class="footnote secondary">${esc(ex.repMin)}–${esc(ex.repMax)} ${t('reps')} · ${esc(t(ex.muscle))}${color ? ` · <span style="color:${color}">${t('Superset')}</span>` : ''}</span></button>
         <span class="se-count num">${nDone}/${ex.sets.length}</span>
         <button class="icon-btn" data-a="menu" data-i="${i}" aria-label="${t('Options')}">${icon('more')}</button>
       </div>
@@ -199,12 +199,12 @@ function exerciseCard(ex, i, ssIndex) {
           const p = prevFor(prev, ex.sets, j);
           const prs = s.done ? W.setPRs(pr, ex, s, bw()) : [];
           const prevTxt = p ? (isDur ? `${p.reps} s` : hasKg ? `${fmt(p.kg, p.kg % 1 ? 1 : 0)}×${p.reps}` : `×${p.reps}`) : '—';
-          return `<div class="set ${s.done ? 'done' : ''} t-${s.type}">
+          return `<div class="set ${s.done ? 'done' : ''} t-${esc(s.type)}">
             <button class="set-type" data-a="type" data-i="${i}" data-j="${j}" aria-label="${t('Type de série')}">${label}</button>
             <button class="prev" data-a="prev" data-i="${i}" data-j="${j}" ${p ? '' : 'disabled'}>${prevTxt}</button>
-            ${hasKg ? `<input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${s.kg}" aria-label="kg">` : '<span></span>'}
-            <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${s.reps}" aria-label="${isDur ? 's' : t('reps')}">
-            ${rir ? `<input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${s.rir ?? ''}" aria-label="${t('RIR')}">` : ''}
+            ${hasKg ? `<input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${esc(s.kg)}" aria-label="kg">` : '<span></span>'}
+            <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${esc(s.reps)}" aria-label="${isDur ? 's' : t('reps')}">
+            ${rir ? `<input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${esc(s.rir)}" aria-label="${t('RIR')}">` : ''}
             <button class="check" data-a="done" data-i="${i}" data-j="${j}" aria-label="${t('Série faite')}" aria-pressed="${s.done}"><span class="ring-o">${s.done ? icon('check') : ''}</span></button>
             ${prs.length ? `<span class="pr-badge">${icon('trophy')} PR</span>` : ''}
           </div>`;

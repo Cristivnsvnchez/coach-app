@@ -57,7 +57,7 @@ export function openAddFood(meal, date, done, { target = 'log', pick = null, tit
     res.innerHTML = group(esc(t(food.source)), `<div class="cells">
       <div class="cell"><div class="grow"><span class="t headline">${esc(food.name)}</span><span class="s num">${fmt(food.per100.kcal)} kcal /100 g</span></div>
         <button class="icon-btn" data-a="fav" aria-label="${t('Favori')}" aria-pressed="${fav}">${icon('star', { filled: fav })}</button></div>
-      <label class="cell field"><span>${t('Quantité (g)')}</span><input type="number" inputmode="decimal" name="g" value="${food.serving || 100}" min="1"></label>
+      <label class="cell field"><span>${t('Quantité (g)')}</span><input type="number" inputmode="decimal" name="g" value="${esc(food.serving || 100)}" min="1"></label>
       <div class="preview num"></div></div>`)
       + `<button class="btn filled large" data-a="add">${t('Ajouter')}</button>`;
     const g = res.querySelector('[name=g]'), pv = res.querySelector('.preview');

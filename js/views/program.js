@@ -99,7 +99,7 @@ export function planCard() {
     <li class="cell" style="display:block"><div class="bar-head"><span>${td < plan.start ? t('Commence {d}', { d: fmtDate(plan.start, { weekday: 'long', day: 'numeric', month: 'short' }) }) + ' · ' + t('{n} semaines', { n: plan.weeks }) : t('Semaine {w} sur {n}', { w: week, n: plan.weeks }) + ' · ' + t(phase.name)}</span><span>${fmtDate(plan.end, { day: 'numeric', month: 'short' })}</span></div>
       <div class="bar-track"><div class="bar-fill" style="width:${td < plan.start ? 0 : pct}%"></div></div>
       <p class="footnote secondary" style="margin:.4rem 0 0">${t(phase.focus)}${P.isDeload(plan, week) ? ' · ' + t('Semaine de décharge : volume réduit (~60 %).') : ''}</p></li>
-    ${upcoming.map((e) => `<li class="cell ${e.date === td ? 'tap' : ''}" ${e.date === td && !doneDates.has(td) ? `data-start-plan="${e.routineId}"` : ''}>
+    ${upcoming.map((e) => `<li class="cell ${e.date === td ? 'tap' : ''}" ${e.date === td && !doneDates.has(td) ? `data-start-plan="${esc(e.routineId)}"` : ''}>
       <div class="grow"><span class="t">${esc(t(rname(e.routineId)))}${e.deload ? ` · <span class="secondary">${t('décharge')}</span>` : ''}</span>
       <span class="s">${e.date === td ? t("Aujourd'hui") : fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
       ${e.date === td && !doneDates.has(td) ? `<span class="btn filled pill">${t('Démarrer')}</span>` : ''}</li>`).join('') || `<li class="empty">${t('Programme terminé')}</li>`}

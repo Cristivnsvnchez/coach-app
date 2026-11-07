@@ -181,7 +181,7 @@ function editItem(log, id, done) {
   if (!m) return;
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(m.name)}</h3></div>
     ${group('', `<div class="cells">
-      ${m.grams ? `<label class="cell field"><span>${t('Quantité (g)')}</span><input name="g" type="number" inputmode="decimal" value="${m.grams}"></label>` : ''}
+      ${m.grams ? `<label class="cell field"><span>${t('Quantité (g)')}</span><input name="g" type="number" inputmode="decimal" value="${esc(m.grams)}"></label>` : ''}
       <div class="cell"><span class="grow secondary preview-line num"></span></div></div>`)}
     ${m.grams ? `<button class="btn filled large" data-a="save">${t('Enregistrer')}</button>` : ''}
     ${group('', `<div class="cells"><div class="cell action destructive" data-a="del" role="button">${t('Supprimer')}</div></div>`)}`, done);
