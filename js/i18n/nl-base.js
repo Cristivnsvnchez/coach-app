@@ -167,9 +167,8 @@ register({ nl: {
   "Programme créé": "Programma aangemaakt", "Mon programme": "Mijn programma",
   "Crée un programme daté : le coach le découpe en phases jusqu'à ta date cible et le cale sur tes jours.": "Maak een programma met einddatum: de coach verdeelt het in fases tot je streefdatum en stemt het af op jouw dagen.",
   "Semaine {w} sur {n}": "Week {w} van {n}", "Commence {d}": "Begint {d}", "{n} semaines": "{n} weken", "Semaine de décharge : volume réduit (~60 %).": "Deload-week: verminderd volume (~60%).", "décharge": "deload", "Programme terminé": "Programma voltooid",
-  "Ajouter au calendrier de l'iPhone": "Toevoegen aan iPhone-agenda", "Calendrier de l'iPhone": "iPhone-agenda", "Heure de séance": "Tijdstip van training", "Durée (min)": "Duur (min)", "Rappel avant (min)": "Herinnering vooraf (min)",
-  "Crée un fichier calendrier avec toutes tes séances prévues. Sur iPhone : touche « Ajouter tout » dans l'aperçu, ou choisis Calendrier dans la feuille de partage.": "Maakt een agendabestand met al je geplande trainingen. Op iPhone: tik op “Voeg alles toe” in het voorbeeld, of kies Agenda in het deelmenu.",
-  "Exporter {n} séances": "{n} trainingen exporteren", "Programme": "Programma", "Fait": "Gedaan", "Prévu": "Gepland", "Manqué": "Gemist",
+  
+  "Programme": "Programma", "Fait": "Gedaan", "Prévu": "Gepland", "Manqué": "Gemist",
   "débutant": "beginner", "intermédiaire": "gemiddeld", "avancé": "gevorderd", "débutant → intermédiaire": "beginner → gemiddeld", "intermédiaire → avancé": "gemiddeld → gevorderd", "tous niveaux": "alle niveaus",
   "Prendre du muscle": "Spieren opbouwen", "Devenir plus fort": "Sterker worden", "Perdre du gras en gardant le muscle": "Vet verliezen met behoud van spiermassa", "Remise en forme / santé": "Fitter worden / gezondheid", "Préparer une date précise": "Voorbereiden op een vaste datum",
   "Haut / Bas": "Boven / onder", "Force — 3 jours": "Kracht — 3 dagen", "Maison / poids du corps": "Thuis / lichaamsgewicht",

@@ -8,7 +8,7 @@ import { icon } from '../icons.js';
 import { t, locale, register } from '../i18n.js';
 import { active, startWorkout, renderSession } from './session.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
-import { openWizard, planCard, plannedDays, exportCalendar } from './program.js';
+import { openWizard, planCard, plannedDays } from './program.js';
 import { isDeload, weekOf } from '../planner.js';
 
 register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements',
@@ -73,7 +73,6 @@ export function render(root, go) {
     if (a === 'empty') { startWorkout(null); return render(root, go); }
     if (a === 'learn') return go('learn', 'training');
     if (a === 'wizard') return openWizard(back);
-    if (a === 'ics') return exportCalendar();
     if (a === 'plates') return platesSheet();
     if (a === 'new-routine') {
       const r = { id: uid(), name: t('Nouvelle routine'), folder: '', exercises: [] };

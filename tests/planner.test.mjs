@@ -31,12 +31,3 @@ test('programme daté : semaines, phases, décharges, rotation sur les jours cho
   // Force : gros mouvements en 3–5/6 reps
   assert.equal(routines[0].exercises[0].repMin, 3);
 });
-
-test('export .ics : événements, heure locale, rappel', () => {
-  const ics = P.toICS([{ date: '2026-01-05', routineId: 'r1', title: 'Full body A, semaine 1' }], { time: '07:30', minutes: 45, alarm: 15 });
-  assert.match(ics, /BEGIN:VCALENDAR\r\n/);
-  assert.match(ics, /DTSTART:20260105T073000\r\n/);
-  assert.match(ics, /DTEND:20260105T081500\r\n/);
-  assert.match(ics, /SUMMARY:Full body A\\, semaine 1/);
-  assert.match(ics, /TRIGGER:-PT15M/);
-});

@@ -83,7 +83,7 @@ export function openWizard(done) {
   step1();
 }
 
-// Carte « Mon programme » : semaine, phase, prochaines séances, export calendrier.
+// Carte « Mon programme » : semaine, phase, prochaines séances.
 export function planCard() {
   const plan = state.plan;
   if (!plan) return group(t('Mon programme'), `<div class="cells"><div class="cell" style="display:block"><p class="t" style="white-space:normal;margin:.25rem 0">${t('Crée un programme daté : le coach le découpe en phases jusqu\'à ta date cible et le cale sur tes jours.')}</p></div>
@@ -103,7 +103,6 @@ export function planCard() {
       <div class="grow"><span class="t">${esc(t(rname(e.routineId)))}${e.deload ? ` · <span class="secondary">${t('décharge')}</span>` : ''}</span>
       <span class="s">${e.date === td ? t("Aujourd'hui") : fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
       ${e.date === td && !doneDates.has(td) ? `<span class="btn filled pill">${t('Démarrer')}</span>` : ''}</li>`).join('') || `<li class="empty">${t('Programme terminé')}</li>`}
-    <li class="cell action" data-a="ics" role="button">${icon('calendar')} ${t('Ajouter au calendrier de l\'iPhone')}</li>
     <li class="cell action" data-a="wizard" role="button">${t('Nouveau programme')}</li>
     </ul>`, plan.rationale ? esc(plan.rationale) : '');
 }
@@ -113,30 +112,5 @@ export function plannedDays(month) {
   if (!state.plan) return new Map();
   const from = `${month}-01`, to = `${month}-31`;
   return new Map(P.schedule(state.plan, from, to).map((e) => [e.date, e]));
-}
-
-// Export .ics : réglages (heure, durée, rappel) puis feuille de partage / ouverture dans Calendrier.
-export function exportCalendar() {
-  const plan = state.plan; if (!plan) return;
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Calendrier de l\'iPhone')}</h3></div>
-    ${group('', `<div class="cells">
-      <label class="cell field"><span>${t('Heure de séance')}</span><input type="time" name="time" value="18:00"></label>
-      <label class="cell field"><span>${t('Durée (min)')}</span><input type="number" name="min" value="60" inputmode="numeric"></label>
-      <label class="cell field"><span>${t('Rappel avant (min)')}</span><input type="number" name="alarm" value="30" inputmode="numeric"></label></div>`,
-      t('Crée un fichier calendrier avec toutes tes séances prévues. Sur iPhone : touche « Ajouter tout » dans l\'aperçu, ou choisis Calendrier dans la feuille de partage.'))}
-    <button class="btn filled large" data-a="go">${icon('calendar')} ${t('Exporter {n} séances', { n: P.schedule(plan, today(), plan.end).length })}</button>`);
-  s.querySelector('[data-a=go]').onclick = async () => {
-    const v = (n) => s.querySelector(`[name=${n}]`).value;
-    const rname = (id) => t(state.routines.find((r) => r.id === id)?.name || 'Séance');
-    const events = P.schedule(plan, today(), plan.end).map((e) => ({ ...e, uid: `${plan.id}-${e.date}`,
-      title: `${rname(e.routineId)}${e.deload ? ' (' + t('décharge') + ')' : ''}`,
-      description: `${t(plan.name)} — ${t('Semaine {w} sur {n}', { w: e.week, n: plan.weeks })}. ${t(P.phaseOf(plan, e.week).focus)}` }));
-    const ics = P.toICS(events, { time: v('time'), minutes: +v('min') || 60, alarm: +v('alarm') || 0, calName: 'TrackMe' });
-    const file = new File([ics], 'trackme-seances.ics', { type: 'text/calendar' });
-    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: 'TrackMe' }); s.close(); return; } catch {} }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 4000); s.close();
-  };
 }
 

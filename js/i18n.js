@@ -168,9 +168,8 @@ const EN = {
   'Programme créé': 'Program created', 'Mon programme': 'My program',
   "Crée un programme daté : le coach le découpe en phases jusqu'à ta date cible et le cale sur tes jours.": 'Create a dated program: your coach splits it into phases up to your target date and fits it to your days.',
   'Semaine {w} sur {n}': 'Week {w} of {n}', 'Commence {d}': 'Starts {d}', '{n} semaines': '{n} weeks', 'Semaine de décharge : volume réduit (~60 %).': 'Deload week: reduced volume (~60%).', 'décharge': 'deload', 'Programme terminé': 'Program complete',
-  "Ajouter au calendrier de l'iPhone": 'Add to iPhone Calendar', "Calendrier de l'iPhone": 'iPhone Calendar', 'Heure de séance': 'Session time', 'Durée (min)': 'Duration (min)', 'Rappel avant (min)': 'Reminder before (min)',
-  "Crée un fichier calendrier avec toutes tes séances prévues. Sur iPhone : touche « Ajouter tout » dans l'aperçu, ou choisis Calendrier dans la feuille de partage.": 'Creates a calendar file with all your planned sessions. On iPhone: tap “Add All” in the preview, or pick Calendar in the share sheet.',
-  'Exporter {n} séances': 'Export {n} sessions', 'Programme': 'Program', 'Fait': 'Done', 'Prévu': 'Planned', 'Manqué': 'Missed',
+  
+  'Programme': 'Program', 'Fait': 'Done', 'Prévu': 'Planned', 'Manqué': 'Missed',
   'débutant': 'beginner', 'intermédiaire': 'intermediate', 'avancé': 'advanced', 'débutant → intermédiaire': 'beginner → intermediate', 'intermédiaire → avancé': 'intermediate → advanced', 'tous niveaux': 'all levels',
   'Prendre du muscle': 'Build muscle', 'Devenir plus fort': 'Get stronger', 'Perdre du gras en gardant le muscle': 'Lose fat, keep muscle', 'Remise en forme / santé': 'Fitness / health', 'Préparer une date précise': 'Prepare for a specific date',
   'Haut / Bas': 'Upper / Lower', 'Force — 3 jours': 'Strength — 3 days', 'Maison / poids du corps': 'Home / bodyweight',

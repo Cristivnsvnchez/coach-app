@@ -1,5 +1,5 @@
 // Planification (pure, testée sous Node) : modèles de programmes, programme daté (phases + décharges),
-// répartition des séances sur les jours choisis, export iCalendar (.ics) vers le calendrier du téléphone.
+// répartition des séances sur les jours choisis.
 // Conventions (pas de consensus chiffré) : décharge 1 semaine sur 4 (1 sur 6 pour débutant), volume ×0,6 en décharge.
 import { isoDate, parseDate } from './science.js';
 
@@ -119,25 +119,4 @@ export function schedule(plan, from = plan.start, to = plan.end) {
     if (d >= from && d <= to) out.push(ev);
   }
   return out;
-}
-
-// --- Export iCalendar (RFC 5545) ---
-const icsEsc = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-const stamp = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-
-export function toICS(events, { time = '18:00', minutes = 60, alarm = 30, calName = 'Coach' } = {}) {
-  const [hh, mm] = time.split(':').map(Number);
-  const now = stamp(new Date());
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Coach PWA//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${icsEsc(calName)}`];
-  for (const e of events) {
-    const start = parseDate(e.date); start.setHours(hh, mm, 0, 0);
-    const end = new Date(start.getTime() + minutes * 60000);
-    const local = (d) => `${isoDate(d).replace(/-/g, '')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
-    lines.push('BEGIN:VEVENT', `UID:${e.uid || e.date + '-' + e.routineId}@coach-pwa`, `DTSTAMP:${now}`,
-      `DTSTART:${local(start)}`, `DTEND:${local(end)}`, `SUMMARY:${icsEsc(e.title)}`, `DESCRIPTION:${icsEsc(e.description || '')}`);
-    if (alarm > 0) lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(e.title)}`, `TRIGGER:-PT${alarm}M`, 'END:VALARM');
-    lines.push('END:VEVENT');
-  }
-  lines.push('END:VCALENDAR');
-  return lines.join('\r\n') + '\r\n';
 }

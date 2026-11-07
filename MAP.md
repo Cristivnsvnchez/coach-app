@@ -61,7 +61,7 @@ exports: BASE_FOODS
 Checklist quotidienne : habitudes auto-cochées d'après les données du jour + habitudes manuelles, et série de jours.
 exports: AUTO,DEFAULT_HABITS habitName,dayStatus migrateHabits,suggestTasks addTask,toggleTask removeTask,tasksLeft cleanDayTasks,completion streak
 
-## js/i18n.js (237 l.)
+## js/i18n.js (236 l.)
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
 exports: register,hasTranslation LANGS,getLang locale,setLang t
 
@@ -89,9 +89,9 @@ exports: reducedMotion,countUp
 Réseau résilient pour toutes les API externes (Claude, Open Food Facts) :
 exports: retryDelay,shouldRetry fetchRetry
 
-## js/planner.js (143 l.)
+## js/planner.js (122 l.)
 Planification (pure, testée sous Node) : modèles de programmes, programme daté (phases + décharges),
-exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildPlan weekOf,isDeload phaseOf,schedule toICS
+exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildPlan weekOf,isDeload phaseOf,schedule 
 
 ## js/poses.js (389 l.)
 Mouvements 3D décrits par poses clés (exercices absents de Mixamo : soulevé de terre, développé couché, fentes…).
@@ -132,7 +132,7 @@ exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume wor
 ## js/i18n/extra.js (64 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
 
-## js/i18n/nl-base.js (205 l.)
+## js/i18n/nl-base.js (204 l.)
 NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 
 ## js/views/addfood.js (157 l.)
@@ -171,9 +171,9 @@ exports: render
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
-## js/views/program.js (142 l.)
+## js/views/program.js (116 l.)
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
-exports: openWizard,planCard plannedDays,exportCalendar
+exports: openWizard,planCard plannedDays
 
 ## js/views/session.js (380 l.)
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
@@ -183,7 +183,7 @@ exports: active,clearActive addToActive,persist startWorkout,renderSession
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
-## js/views/training.js (182 l.)
+## js/views/training.js (181 l.)
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render
 
