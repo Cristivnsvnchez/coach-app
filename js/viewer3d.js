@@ -302,5 +302,9 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     azimuth(deg) { controls.autoRotate = false; const r = camera.position.clone().sub(controls.target), a = THREE.MathUtils.degToRad(deg);
       const h = Math.hypot(r.x, r.z); camera.position.set(controls.target.x + h * Math.sin(a), camera.position.y, controls.target.z + h * Math.cos(a)); controls.update(); },
   };
+  // Gros plan sur un os (contrôle visuel de la prise) : focus('RightHand', 0.35).
+  dev.focus = (re, dist = 0.4) => { const b = findBone(new RegExp(re + '$')); if (!b) return; controls.autoRotate = false;
+    const p = b.getWorldPosition(new THREE.Vector3()), dir = camera.position.clone().sub(controls.target).normalize();
+    controls.minDistance = 0.05; controls.target.copy(p); camera.position.copy(p).addScaledVector(dir, dist); controls.update(); };
   return { dispose, setOutfit, setMode, dev };
 }

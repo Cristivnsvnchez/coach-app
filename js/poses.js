@@ -277,7 +277,7 @@ export const POSES = {
 
 // Flexion des phalanges (radians) poing fermé, réglée pour que les doigts s'enroulent autour d'une poignée de Ø 3,3 cm
 // (tests/motion.test.mjs mesure le rayon du « tube » formé par les doigts). Pouce : il se replie par-dessus l'index.
-export const FINGER_CURL = { finger: [1.3, 1.65, 1.4], thumb: [0.45, 0.45, 0.45] };
+export const FINGER_CURL = { finger: [1.3, 1.65, 1.4], thumb: [-0.45, -0.45, -0.45] }; // pouce : sens opposé, il se rabat sur la poignée
 const SPINE = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head'];
 const LIMB = ['Shoulder', 'Arm', 'ForeArm', 'Hand', 'UpLeg', 'Leg', 'Foot', 'ToeBase'];
 const FINGERS = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
