@@ -18,7 +18,7 @@ TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 ## css/motion.css (51 l.)
 TrackMe : motion design sobre et natif iOS (ressort au toucher, entrée des écrans, feuilles, coche).
 
-## css/onboarding.css (138 l.)
+## css/onboarding.css (125 l.)
 TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 
 ## css/planning.css (18 l.)
@@ -113,9 +113,9 @@ exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intak
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
 exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure combineMuscles,model3D OUTFITS,outfitsFor pictogram,getTechnique allTechniques,missingTechniques
 
-## js/theme.js (80 l.)
-Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
-exports: PALETTES,VARIANTS SURFACES,palette variant,colors applyTheme,shape wordmark,SCHEMES applyScheme
+## js/theme.js (74 l.)
+Palette TrackMe (fixe : Océan) : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
+exports: PALETTES,SURFACES palette,variant colors,applyTheme shape,wordmark SCHEMES,applyScheme
 
 ## js/ui.js (172 l.)
 Petits utilitaires DOM, composants iOS et graphiques SVG.
@@ -155,12 +155,12 @@ exports: toggleHabits,habitsCells handleHabitClick,handleTaskSubmit
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise leave,render openTechnique
 
-## js/views/onboarding.js (224 l.)
+## js/views/onboarding.js (219 l.)
 Onboarding : accueil, puis une question par écran, surtout par sélection (cartes, pastilles, stepper).
 exports: needsOnboarding,openOnboarding
 
-## js/views/palette.js (60 l.)
-Choix de la palette (6 couleurs) et de la forme (3 variantes), avec aperçu en direct.
+## js/views/palette.js (36 l.)
+Section « Apparence » du Profil : mode (auto / clair / sombre) et matière (Papier / Brume).
 exports: paletteSection,handlePaletteClick
 
 ## js/views/planning.js (247 l.)

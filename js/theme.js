@@ -1,16 +1,9 @@
-// Palette TrackMe choisie par l'utilisateur : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
+// Palette TrackMe (fixe : Océan) : variables CSS (--p-deep, --p-mid, --p-warm, --p-tint) et formes
 // en dégradé granuleux (SVG flou + grain) réutilisables par toutes les vues. Voir DESIGN.md.
+// L'utilisateur ne choisit plus ni la palette ni la forme : réglages enregistrés ignorés, tout le monde sur Océan + Vague.
 
 // [nom, principale (boutons, progression ; contraste ≥ 4,5:1 avec le blanc), moyenne, chaude, teinte]
-export const PALETTES = {
-  ocean: ['Océan', '#1b3fd1', '#2f7bff', '#ff8a3d', '#e6ecff'],
-  aurore: ['Aurore', '#5b2bd6', '#e8365b', '#f7a23b', '#efe8ff'],
-  lagune: ['Lagune', '#0e6e6a', '#2aa7a0', '#f2c94c', '#e0f2f0'],
-  braise: ['Braise', '#a62e10', '#e8471c', '#f5a83a', '#fde9e1'],
-  prairie: ['Prairie', '#3d5bd9', '#8fb8f0', '#e6d54a', '#e9eefc'],
-  encre: ['Encre', '#141418', '#5a5a66', '#e9a93b', '#ecebef'],
-};
-export const VARIANTS = ['flow', 'orb', 'swirl'];
+export const PALETTES = { ocean: ['Océan', '#1b3fd1', '#2f7bff', '#ff8a3d', '#e6ecff'] };
 // Matière du fond : papier crème mat, ou brume (fond flou à dégradé neutre + contrôles en verre givré).
 export const SURFACES = ['papier', 'brume'];
 
@@ -19,10 +12,11 @@ export const palette = () => current;
 export const variant = () => currentVariant;
 export const colors = (key = current) => { const [name, deep, mid, warm, tint] = PALETTES[key] || PALETTES.ocean; return { name, deep, mid, warm, tint }; };
 
-export function applyTheme(key = 'ocean', v = 'flow', surface) {
+// key / v (anciens choix de palette et de forme) sont ignorés : seule la matière reste au choix.
+export function applyTheme(key, v, surface) {
   if (surface !== undefined) document.documentElement.dataset.surface = SURFACES.includes(surface) ? surface : 'papier';
-  current = PALETTES[key] ? key : 'ocean';
-  currentVariant = VARIANTS.includes(v) ? v : 'flow';
+  current = 'ocean';
+  currentVariant = 'flow';
   const c = colors();
   const r = document.documentElement.style;
   r.setProperty('--p-deep', c.deep); r.setProperty('--p-mid', c.mid); r.setProperty('--p-warm', c.warm); r.setProperty('--p-tint', c.tint);

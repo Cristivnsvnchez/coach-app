@@ -69,20 +69,8 @@
 @media (prefers-color-scheme: dark) { .onb-tiles div { background: var(--fill); } .onb-tiles b { color: var(--label); } .onb-kcal b { color: var(--label); } }
 .onb-note { margin: 14px 4px 0; font-size: .85rem; line-height: 1.4; }
 
-/* Palette + forme (partagé avec Profil) */
+/* Apparence du Profil : mode + matière */
 .pal { display: grid; gap: 4px; width: 100%; }
-.pal-preview { position: relative; height: 150px; border-radius: 28px; overflow: hidden; background: var(--bg); margin-bottom: 4px; }
-.pal-preview .tm-shape { position: absolute; left: -10%; top: -30%; width: 120%; height: 180%; }
-.pal-chip { position: absolute; left: 14px; bottom: 14px; padding: 8px 14px; border-radius: 999px; background: var(--p-deep); color: #fff; font-weight: 700; font-size: .9rem; }
-.pal-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.pal-sw { display: grid; justify-items: center; gap: 6px; padding: 10px 4px; min-height: 44px; border-radius: 24px; border: 2px solid transparent; background: var(--cell); color: var(--label); font: inherit; font-size: .8rem; font-weight: 600; }
-.pal-sw i { width: 44px; height: 44px; border-radius: 22px; }
-.pal-sw.on, .pal-shape.on { background: var(--p-tint); border-color: var(--p-deep); }
-@media (prefers-color-scheme: dark) { .pal-sw.on, .pal-shape.on { background: color-mix(in srgb, var(--p-deep) 28%, var(--cell)); } }
-.pal-shapes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.pal-shape { position: relative; display: grid; gap: 6px; justify-items: center; padding: 8px 6px 10px; border-radius: 24px; border: 2px solid transparent; background: var(--cell); color: var(--label); font: inherit; font-size: .8rem; font-weight: 600; }
-.pal-shape .ic { position: absolute; right: 8px; top: 8px; width: 16px; height: 16px; color: var(--p-deep); background: var(--cell); border-radius: 8px; }
-.pal-thumb { width: 100%; aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: var(--bg); }
 .pal-cell { display: block !important; padding: 12px; }
 .pal-cell .onb-label { margin-top: 14px; }
 
@@ -116,7 +104,6 @@
 /* Logotype en grand sur la forme (esprit affiche) */
 .onb-brand { position: absolute; left: 22px; top: calc(84px + env(safe-area-inset-top, 0px)); z-index: 1; color: #fff; font-size: clamp(3rem, 15vw, 4.6rem); text-shadow: 0 2px 24px rgba(0, 0, 0, .12); }
 .onb-brand i { background: #fff; }
-.pal-chip .tm-wordmark i { background: #fff; }
 .pal-scheme { margin-bottom: 4px; } .pal-scheme button { flex: 1; }
 
 /* Forme décorative des étapes : bords fondus en rond (pas de découpe droite ni de carré de grain visible) */

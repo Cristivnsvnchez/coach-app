@@ -7,11 +7,9 @@ import { icon } from '../icons.js';
 import { t, getLang, setLang, register, LANGS } from '../i18n.js';
 import { shape, wordmark } from '../theme.js';
 import { exportBackup } from '../install.js';
-import { paletteSection, handlePaletteClick } from './palette.js';
 
 register({
   en: { 'Ton corps, tes chiffres, ton rythme.': 'Your body, your numbers, your rhythm.', "J'ai déjà mes données": 'I already have my data',
-    'Ta palette': 'Your palette', 'Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.': 'Pick your colour and shape. You can change them later in Profile.',
     'Tes calories': 'Your calories', 'Proposition : {k} kcal': 'Suggested: {k} kcal', 'Revenir à la proposition': 'Back to the suggestion',
     'Modifiable par pas de 50 kcal. Les macros se recalculent.': 'Adjust in steps of 50 kcal. Macros are recalculated.',
     'Baisser de 50 kcal': 'Lower by 50 kcal', 'Monter de 50 kcal': 'Raise by 50 kcal', 'Étape {i} sur {n}': 'Step {i} of {n}',
@@ -20,7 +18,6 @@ register({
     'TrackMe te rappelle de refaire une copie.': 'TrackMe reminds you to make a new copy.', 'Sauvegardé · refaire une copie': 'Backed up · make a new copy', 'Sauvegarder dans iCloud Drive': 'Back up to iCloud Drive',
     'Me le rappeler': 'Remind me', 'Chaque semaine': 'Every week', 'Chaque mois': 'Every month', 'Jamais': 'Never' },
   nl: { 'Ton corps, tes chiffres, ton rythme.': 'Jouw lichaam, jouw cijfers, jouw ritme.', "J'ai déjà mes données": 'Ik heb al gegevens',
-    'Ta palette': 'Jouw palet', 'Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.': 'Kies je kleur en vorm. Je kunt ze later wijzigen in Profiel.',
     'Tes calories': 'Jouw calorieën', 'Proposition : {k} kcal': 'Voorstel: {k} kcal', 'Revenir à la proposition': 'Terug naar het voorstel',
     'Modifiable par pas de 50 kcal. Les macros se recalculent.': "Aanpasbaar in stappen van 50 kcal. De macro's worden herberekend.",
     'Baisser de 50 kcal': '50 kcal minder', 'Monter de 50 kcal': '50 kcal meer', 'Étape {i} sur {n}': 'Stap {i} van {n}',
@@ -74,7 +71,6 @@ const STEPS = [
         + stepper('cycleLen', t('Durée habituelle du cycle'), state.cycle.cycleLen ?? 28, 18, 45, 1, t('jours'))
         + stepper('periodLen', t('Durée des règles'), state.cycle.periodLen ?? 5, 2, 10, 1, t('jours'))
         + `<p class="onb-label">${t('Contraception hormonale (pilule, stérilet hormonal, implant…)')}</p>` + choice('hormonal', { no: t('Non'), yes: t('Oui') }, state.cycle.hormonal ? 'yes' : 'no') : '') },
-  { id: 'palette', title: () => t('Ta palette'), why: () => t('Choisis ta couleur et ta forme. Tu pourras les changer dans Profil.'), body: paletteSection },
   { id: 'calories', title: () => t('Tes calories'), why: () => t('Modifiable par pas de 50 kcal. Les macros se recalculent.'), body: summary, skip: blocked },
   { id: 'safe', title: () => t('Protège tes données'), why: () => t("Tes données restent sur ton iPhone. Une copie dans iCloud Drive te protège si tu changes de téléphone ou supprimes l'app."), body: safeBody },
 ];
@@ -158,7 +154,6 @@ export function openOnboarding(done) {
   };
 
   el.addEventListener('click', (e) => {
-    if (handlePaletteClick(e, draw)) return;
     const b = e.target.closest('[data-a],[data-set],[data-chip],[data-step-dir],[data-kc]');
     if (!b) return;
     if (b.dataset.kc) {

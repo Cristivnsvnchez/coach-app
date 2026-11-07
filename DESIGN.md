@@ -4,21 +4,17 @@ Monde : « précision calme ». Fond clair légèrement froid, cartes blanches, 
 couleur réservée aux données. Une seule voix typographique (Geist). Verre uniquement sur la couche de contrôle
 (barre d'onglets, minuteur, feuilles).
 
-## Palette choisie par l'utilisateur (prépondérante)
-Une seule palette domine l'app. L'utilisateur la choisit à l'onboarding (« Ta couleur préférée ») et la change dans
-Profil → Apparence, avec une forme (Vague, Halo, Spirale). Fond papier crème #F3F0EA ; formes en dégradés organiques
-flous avec grain (SVG feGaussianBlur + feTurbulence).
+## Palette fixe : Océan (prépondérante)
+Une seule palette domine l'app : Océan, avec la forme Vague. L'utilisateur ne choisit plus ni la palette ni la forme
+(étape retirée de l'onboarding et de Profil → Apparence, qui ne garde que le mode clair/sombre et la matière).
+Les anciens choix enregistrés sont ignorés. Fond papier crème #F3F0EA ; formes en dégradés organiques flous avec
+grain (SVG feGaussianBlur + feTurbulence).
 
 | Palette | Principale (boutons, progression) | Moyenne | Chaude | Teinte (bouton secondaire) |
 |---|---|---|---|---|
 | Océan | #1B3FD1 | #2F7BFF | #FF8A3D | #E6ECFF |
-| Aurore | #5B2BD6 | #E8365B | #F7A23B | #EFE8FF |
-| Lagune | #0E6E6A | #2AA7A0 | #F2C94C | #E0F2F0 |
-| Braise | #A62E10 | #E8471C | #F5A83A | #FDE9E1 |
-| Prairie | #3D5BD9 | #8FB8F0 | #E6D54A | #E9EEFC |
-| Encre | #141418 | #5A5A66 | #E9A93B | #ECEBEF |
 
-La couleur principale de chaque palette garde un contraste ≥ 4,5:1 avec le blanc. Elle remplace `--ink` pour
+La couleur principale garde un contraste ≥ 4,5:1 avec le blanc. Elle remplace `--ink` pour
 les boutons principaux et `--brand` pour la progression. Restent fixes pour garder leur sens : cycle (rose),
 alerte et erreur.
 
