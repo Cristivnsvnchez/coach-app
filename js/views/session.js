@@ -7,8 +7,9 @@ import { findExercise } from '../exercises.js';
 import { esc, fmt, toast, sheet, group } from '../ui.js';
 import { shape } from '../theme.js';
 import { icon } from '../icons.js';
-import { t, register } from '../i18n.js';
+import { t, register, locale } from '../i18n.js';
 import { trainingNote } from '../cycle.js';
+import { schedule } from '../planner.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 
 register({
@@ -18,14 +19,16 @@ register({
     'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed',
     'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?', 'Abandonner sans enregistrer': 'Discard without saving',
     'Abandonner': 'Discard', 'Terminer la séance': 'Finish workout', 'Temps de repos': 'Rest time', 'Aucun': 'None',
-    'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Workout started {h} h ago. Did you forget it?', 'Continuer': 'Continue' },
+    'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Workout started {h} h ago. Did you forget it?', 'Continuer': 'Continue',
+    'Séance enregistrée': 'Workout saved', 'Séance enregistrée · prochaine : {n}, {d}': 'Workout saved · next: {n}, {d}' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
     'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd',
     'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?', 'Abandonner sans enregistrer': 'Verwerpen zonder op te slaan',
     'Abandonner': 'Afbreken', 'Terminer la séance': 'Training afronden', 'Temps de repos': 'Rusttijd', 'Aucun': 'Geen',
-    'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Training {h} u geleden gestart. Vergeten?', 'Continuer': 'Doorgaan' },
+    'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Training {h} u geleden gestart. Vergeten?', 'Continuer': 'Doorgaan',
+    'Séance enregistrée': 'Training opgeslagen', 'Séance enregistrée · prochaine : {n}, {d}': 'Training opgeslagen · volgende: {n}, {d}' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -333,6 +336,16 @@ function exerciseMenu(i, keep) {
 }
 
 // Ferme la séance en cours sans l'enregistrer.
+// Après l'enregistrement : la prochaine séance du programme (dans les 14 jours), pour savoir quoi faire ensuite.
+function nextSessionText() {
+  const plan = state.plan; if (!plan) return '';
+  const from = S.isoDate(new Date(Date.now() + 86400000)), to = S.isoDate(new Date(Date.now() + 14 * 86400000));
+  const ev = schedule(plan, from, to)[0]; if (!ev) return '';
+  const r = state.routines.find((x) => x.id === ev.routineId); if (!r) return '';
+  const day = new Date(ev.date + 'T12:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short' });
+  return t('Séance enregistrée · prochaine : {n}, {d}', { n: t(r.name), d: day });
+}
+
 function endSession(back) { active = null; persist(); restEnd = 0; prevRecords = {}; back(); }
 
 function finish(root, go, back) {
@@ -376,5 +389,6 @@ function finish(root, go, back) {
     state.workouts.push(w); save();
     active = null; persist(); restEnd = 0; prevRecords = {};
     s.close(); back();
+    toast(nextSessionText() || t('Séance enregistrée'), { ms: 4000 });
   };
 }

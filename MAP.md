@@ -34,7 +34,7 @@ TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pa
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
 ## js/app.js (121 l.)
-Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
+Point d'entrée TrackMe : menu (capsule + « + » central qui ouvre 4 actions rapides : repas, pesée, séance, eau), routes, thème, onboarding, service worker.
 exports: go
 
 ## js/cycle.js (102 l.)
@@ -189,5 +189,6 @@ exports: render
 
 ## js/views/weight.js (187 l.)
 Onglet Poids : pesée, courbe (pesées, tendance, projection, cible, étapes), poids de référence,
-exports: render
+feuille de pesée (−/+ 0,1 kg, appui long) et écran « Étape atteinte ».
+exports: render,openWeigh
 

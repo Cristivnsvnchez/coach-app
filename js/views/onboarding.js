@@ -126,7 +126,7 @@ export function openOnboarding(done) {
     const list = steps(), st = list[i];
     el.innerHTML = `<div class="onb-step">${shape({ cls: 'onb-orb', grain: 0.4 })}
       <div class="onb-top"><button class="icon-btn" data-a="back" aria-label="${t('Retour')}">${icon('chevronLeft')}</button>
-        <div class="onb-progress" role="progressbar" aria-label="${t('Étape {i} sur {n}', { i: i + 1, n: list.length })}" aria-valuenow="${i + 1}" aria-valuemin="1" aria-valuemax="${list.length}"><i style="width:${((i + 1) / list.length) * 100}%"></i></div>
+        <div class="onb-progress seg-prog" role="progressbar" aria-label="${t('Étape {i} sur {n}', { i: i + 1, n: list.length })}" aria-valuenow="${i + 1}" aria-valuemin="1" aria-valuemax="${list.length}">${list.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
         <button class="btn plain" data-a="skip">${t('Passer')}</button></div>
       <div class="onb-body"><h2>${st.title()}</h2>${st.why ? `<p class="onb-why">${st.why()}</p>` : ''}<div class="onb-content">${st.body()}</div></div>
       <div class="onb-foot">${cta('next', st.id === 'safe' ? t('Aller à mon tableau de bord') : t('Continuer'))}</div></div>`;

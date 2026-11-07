@@ -1,9 +1,9 @@
 // Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
-import { load, state, flush, today as todayIso } from './store.js';
+import { load, state, flush, save, dayLog, today as todayIso } from './store.js';
 import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { applyTheme, applyScheme, wordmark } from './theme.js';
-import { banner, sheetPop } from './ui.js';
+import { banner, sheetPop, sheet, toast, fmt } from './ui.js';
 import './i18n/nl-base.js'; // traductions néerlandaises des textes existants
 import './i18n/extra.js'; // compléments EN + NL (tests/i18n-scan.mjs)
 import * as today from './views/today.js';
@@ -15,6 +15,8 @@ import * as learn from './views/learn.js';
 import * as planning from './views/planning.js';
 import { needsOnboarding, openOnboarding } from './views/onboarding.js';
 import { openAddFood } from './views/addfood.js';
+import { openWeigh } from './views/weight.js';
+import { current } from './metrics.js';
 import { startupNudges } from './install.js';
 
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
@@ -78,10 +80,32 @@ addEventListener('load', () => applyScheme(state.settings.scheme)); // feuilles 
 tabbar.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');
   if (!b) return;
-  if (b.dataset.tab === 'add') return openAddFood(mealNow(), todayIso(), () => { if (tab === 'today') go('today'); });
+  if (b.dataset.tab === 'add') return quickAdd();
   if (b.dataset.tab === tab) main.scrollTo({ top: 0, behavior: 'smooth' });
   else go(b.dataset.tab);
 });
+// « + » central : quatre actions rapides, la plus fréquente (repas) en premier.
+const MEAL_LABEL = { dej: 'Petit-déjeuner', midi: 'Déjeuner', diner: 'Dîner', snack: 'Collation' };
+function quickAdd() {
+  const log = dayLog(todayIso()), goal = (current().targets?.waterL ?? 2);
+  const card = (a, ic, title, sub) => `<button class="qa-card" data-q="${a}"><span class="qa-ic">${icon(ic)}</span><span><b>${title}</b><br><small>${sub}</small></span></button>`;
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Ajouter')}</h3></div>
+    <div class="qa-grid">${card('meal', 'meal', t('Un repas'), t(MEAL_LABEL[mealNow()]))}${card('weigh', 'weight', t('Une pesée'), t('Poids du jour'))}
+      ${card('train', 'training', t('Une séance'), t('Démarrer ou reprendre'))}${card('water', 'drop', t('De l\'eau'), `+250 ml · ${fmt(log.water / 1000, 2)} / ${fmt(goal, 1)} L`)}</div>`);
+  s.addEventListener('click', (e) => {
+    const q = e.target.closest('[data-q]')?.dataset.q; if (!q) return;
+    s.close();
+    // La fermeture recule l'historique (asynchrone) : on attend ce recul, sinon il refermerait la feuille suivante.
+    let fired = false;
+    const after = (fn) => { const run = () => { if (fired) return; fired = true; removeEventListener('popstate', run); setTimeout(fn, 0); }; addEventListener('popstate', run); setTimeout(run, 450); };
+    const refresh = () => { if (tab === 'today' || tab === 'weight') go(tab); };
+    if (q === 'meal') return after(() => openAddFood(mealNow(), todayIso(), refresh));
+    if (q === 'weigh') return after(() => openWeigh(refresh));
+    if (q === 'train') return after(() => go('training'));
+    if (q === 'water') { const l = dayLog(todayIso()); l.water += 250; save(); refresh(); toast(t('+250 ml d\'eau · {v} L', { v: fmt(l.water / 1000, 2) })); }
+  });
+}
+
 let saved = location.hash.slice(1) in VIEWS ? location.hash.slice(1) : null;
 // Onglet mémorisé : seulement s'il existe encore (ex. « coach » retiré → sinon écran vide sans menu).
 try { const s = sessionStorage.getItem('tab'); if (!saved && s in VIEWS) saved = s; } catch {}

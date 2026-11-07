@@ -294,3 +294,30 @@ html.tm .inst-why { margin: 0 .25rem 1rem; color: var(--label-2); }
 /* Toast avec « Annuler » (suppression réversible 5 s) : cliquable, contrairement au toast simple. */
 .toast.with-undo { display: flex; align-items: center; gap: 14px; padding: .45rem .5rem .45rem 1.1rem; pointer-events: auto; }
 .toast-undo { flex: none; min-height: 44px; border: 0; border-radius: 999px; padding: 0 1rem; background: var(--p-deep); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Menu « + » : quatre actions rapides (repas, pesée, séance, eau). */
+.qa-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .625rem; margin-bottom: .5rem; }
+.qa-card { display: grid; gap: .625rem; justify-items: start; text-align: left; padding: 1rem; border-radius: 22px; background: var(--cell); border: 0; color: var(--label); font: inherit; min-height: 44px; cursor: pointer; }
+.qa-card:active { transform: scale(.97); }
+.qa-ic { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; background: var(--p-tint); color: var(--p-deep); }
+.qa-card b { font-weight: 600; font-size: 1rem; }
+.qa-card small { color: var(--label-2); font-size: .8125rem; }
+
+/* Feuille de pesée : grand chiffre, −/+ par 0,1 kg (appui long = défilement). */
+.wg-pick { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.25rem .25rem .5rem; }
+.wg-pick .wg-btn { width: 56px; height: 56px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.wg-val { margin: 0; display: flex; align-items: baseline; gap: .35rem; }
+.wg-val b { font-family: var(--display); font-size: 64px; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
+.wg-val span { color: var(--label-2); font-weight: 600; }
+.wg-note { margin: .75rem 0 1rem; }
+
+/* Étape atteinte. */
+.wg-win { display: grid; justify-items: center; text-align: center; gap: .75rem; padding: .5rem 0; }
+.wg-win .btn { width: 100%; margin-top: .5rem; }
+.wg-ring { width: 140px; height: 140px; border-radius: 50%; border: 10px solid var(--p-deep); display: grid; place-content: center; font-family: var(--display); font-size: 36px; font-weight: 600; line-height: 1; }
+.wg-ring small { font-family: inherit; font-size: 13px; font-weight: 500; color: var(--label-2); margin-top: .25rem; }
+
+/* Onboarding : progression segmentée (un segment par étape). */
+.onb-progress.seg-prog { display: flex; gap: 4px; background: none; height: 4px; overflow: visible; }
+.onb-progress.seg-prog i { flex: 1; width: auto !important; height: 4px; border-radius: 2px; background: var(--fill-2); }
+.onb-progress.seg-prog i.on { background: var(--p-deep); }

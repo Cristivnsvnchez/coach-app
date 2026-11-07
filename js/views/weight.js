@@ -8,8 +8,12 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import * as Cy from '../cycle.js';
 import { register } from '../i18n.js';
-register({ en: { 'rétention d\'eau probable': 'water retention likely', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Pink dots: weigh-ins with likely water retention (cycle). ', 'Étape supprimée': 'Milestone removed' },
-  nl: { 'rétention d\'eau probable': 'waarschijnlijk vochtretentie', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Roze stippen: wegingen met waarschijnlijke vochtretentie (cyclus). ', 'Étape supprimée': 'Tussendoel verwijderd' } });
+register({ en: { 'rétention d\'eau probable': 'water retention likely', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Pink dots: weigh-ins with likely water retention (cycle). ', 'Étape supprimée': 'Milestone removed',
+  'Pesée du jour': 'Today\'s weigh-in', 'Dernière pesée : {kg} kg': 'Last weigh-in: {kg} kg', 'Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).': 'A ± 1 kg swing from one day to the next is normal (water, salt, cycle).',
+  'Étape atteinte': 'Milestone reached', 'Prochaine étape : {kg} kg.': 'Next milestone: {kg} kg.', 'Tu as atteint ta cible.': 'You reached your target.' },
+  nl: { 'rétention d\'eau probable': 'waarschijnlijk vochtretentie', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Roze stippen: wegingen met waarschijnlijke vochtretentie (cyclus). ', 'Étape supprimée': 'Tussendoel verwijderd',
+  'Pesée du jour': 'Weging van vandaag', 'Dernière pesée : {kg} kg': 'Laatste weging: {kg} kg', 'Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).': 'Een verschil van ± 1 kg van dag tot dag is normaal (vocht, zout, cyclus).',
+  'Étape atteinte': 'Tussendoel bereikt', 'Prochaine étape : {kg} kg.': 'Volgend tussendoel: {kg} kg.', 'Tu as atteint ta cible.': 'Je hebt je doel bereikt.' } });
 
 let range = 90;
 
@@ -107,14 +111,7 @@ export function render(root, go) {
     e.preventDefault();
     const kg = parseFloat(String(e.target.kg.value).replace(',', '.'));
     if (!(kg > 20 && kg < 400)) return toast(t('Poids invalide'));
-    state.weights = state.weights.filter((w) => w.date !== today()).concat({ date: today(), kg });
-    if (!state.profile.weight) state.profile.weight = kg;
-    const before = steps.filter((m) => S.milestoneStatus(m, trend, speed, today(), down).reached).length;
-    save();
-    // Félicitations si la nouvelle pesée fait franchir une étape.
-    const tr2 = S.emaTrend(state.weights);
-    const after = steps.filter((m) => S.milestoneStatus(m, tr2, speed, today(), down).reached).length;
-    toast(after > before ? t('Étape atteinte !') : t('Pesée enregistrée'));
+    saveWeight(kg, { steps, speed, down });
     keep();
   };
   const tf = root.querySelector('[data-f=target]');
@@ -184,4 +181,68 @@ function editMilestone(m, { last, target, keep, preset }) {
     state.milestones = state.milestones.filter((x) => x.id !== m.id); save(); s.close();
     toast(t('Étape supprimée'), { undo: () => { state.milestones = before; save(); keep?.(); } });
   });
+}
+
+// Enregistre la pesée du jour. Si elle fait franchir une étape : écran de félicitations, sinon simple toast.
+function saveWeight(kg, { steps, speed, down }) {
+  const trend = S.emaTrend(state.weights);
+  const reached = (tr) => steps.filter((m) => S.milestoneStatus(m, tr, speed, today(), down).reached);
+  const before = reached(trend).length;
+  state.weights = state.weights.filter((w) => w.date !== today()).concat({ date: today(), kg });
+  if (!state.profile.weight) state.profile.weight = kg;
+  save();
+  const now = reached(S.emaTrend(state.weights));
+  if (now.length > before) celebrate(now[now.length - 1], steps);
+  else toast(t('Pesée enregistrée'));
+}
+
+// Étapes du moment (auto 25/50/75/100 % + celles de l'utilisateur), même calcul que l'onglet Poids.
+function milestoneCtx() {
+  const p = state.profile, trend = S.emaTrend(state.weights);
+  const last = trend[trend.length - 1], start = trend[0];
+  const target = Number(p.targetWeight) || null;
+  const down = target && last ? target < (start?.kg ?? last.trend) : true;
+  const obs = observedKgPerWeek(), { targets } = current();
+  const speed = obs && target && Math.sign(target - (last?.trend ?? 0)) === Math.sign(obs) ? obs : targets?.weeklyChangeKg;
+  const custom = state.milestones || [];
+  const auto = target && start ? S.milestones(start.kg, target, speed, today()).map((m) => ({ id: 'auto-' + m.pct, kg: +m.kg.toFixed(1), label: m.pct === 100 ? t('Cible') : `${m.pct} %`, auto: true })) : [];
+  const steps = [...auto.filter((a) => !custom.some((c) => Math.abs(c.kg - a.kg) < 0.25)), ...custom].sort((a, b) => (down ? b.kg - a.kg : a.kg - b.kg));
+  return { steps, speed, down, target };
+}
+
+// Feuille de pesée (menu « + ») : grand chiffre, −/+ par 0,1 kg, appui long = défilement rapide.
+export function openWeigh(onDone) {
+  const last = [...state.weights].sort((a, b) => (a.date < b.date ? -1 : 1)).pop();
+  let v = state.weights.find((w) => w.date === today())?.kg ?? last?.kg ?? Number(state.profile.weight) ?? 70;
+  v = Math.round((Number(v) || 70) * 10) / 10;
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Pesée du jour')}</h3></div>
+    <div class="wg-pick"><button class="icon-btn round wg-btn" data-d="-1" aria-label="−0,1 kg">${icon('minus')}</button>
+      <p class="wg-val" aria-live="polite"><b class="num"></b><span>kg</span></p>
+      <button class="icon-btn round wg-btn" data-d="1" aria-label="+0,1 kg">${icon('plus')}</button></div>
+    <p class="footnote secondary center">${last ? t('Dernière pesée : {kg} kg', { kg: fmt(last.kg, 1) }) : ''}</p>
+    <p class="footnote secondary wg-note">${t('Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).')}</p>
+    <button class="btn filled large" data-a="ok">${t('Enregistrer')}</button>`);
+  const out = s.querySelector('.wg-val b');
+  const draw = () => { out.textContent = fmt(v, 1); };
+  draw();
+  let hold = 0, rep = 0;
+  const stop = () => { clearTimeout(hold); clearInterval(rep); };
+  const bump = (d) => { v = Math.min(399, Math.max(21, Math.round((v + d * 0.1) * 10) / 10)); draw(); };
+  s.querySelectorAll('[data-d]').forEach((b) => {
+    const d = +b.dataset.d;
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); bump(d); stop(); hold = setTimeout(() => { rep = setInterval(() => bump(d), 70); }, 380); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bump(d); } });
+  });
+  s.querySelector('[data-a=ok]').onclick = () => { stop(); s.close(); saveWeight(v, milestoneCtx()); onDone?.(); };
+}
+
+// Étape franchie : un moment sobre, avec la suite.
+function celebrate(m, steps) {
+  const i = steps.indexOf(m), next = steps[i + 1];
+  const s = sheet(`<div class="wg-win"><span class="wg-ring num">${fmt(m.kg, 1)}<small>kg</small></span>
+    <h3 class="title2">${t('Étape atteinte')}</h3>
+    <p class="secondary">${next ? t('Prochaine étape : {kg} kg.', { kg: fmt(next.kg, 1) }) : t('Tu as atteint ta cible.')}</p>
+    <button class="btn filled large" data-a="ok">${t('Continuer')}</button></div>`);
+  s.querySelector('[data-a=ok]').onclick = () => s.close();
 }
