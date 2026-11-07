@@ -51,7 +51,7 @@ const dips = { beats: [[1, 1.6], [1, 0.2], [0, 1.0], [0, 0.3]], keys: [
   pose(HANG_LEGS, { hips: [0, 0.69, -0.13], torso: [0, 0.93, 0.37], neck: -8, hand: [0.28, 0.88, 0.05], elbowHint: [0.35, 0.05, -1], palm: [-0.95, -0.1, 0.3], grip: 1 })] };
 
 // Charnière de hanche : bras tendus à la verticale, les mains suivent les épaules (une barre reste au-dessus du milieu du pied).
-const HANGING = { arm: [0.07, -1, 0], fore: [0.03, -1, 0.015], elbowHint: [0.25, 0, -1], palm: [0, 0.1, -1], grip: 1 };
+const HANGING = { arm: [0.07, -1, 0.2], fore: [0.03, -1, 0.2], elbowHint: [0.25, 0, -1], palm: [0, 0.1, -1], grip: 1 };
 const HANG_BAR = { gripAt: 1 }; // barre : les poings à écart fixe
 const deadlift = { beats: [[1, 0.9, true], [2, 1.0], [2, 0.5], [1, 0.9, true], [0, 1.0], [0, 0.4]], keys: [
   pose(STAND, HANGING, { hips: [0, 0.585, -0.24], torso: [0, 0.57, 0.82], neck: -22, foot: flat(0.13, 0, 6) }),
@@ -67,7 +67,7 @@ const rowTop = { elbowHint: [0.16, 0.5, -0.85], palm: [0, -0.3, -1], grip: 1, gr
 // Fente : pied avant à plat, pied arrière sur la pointe (talon levé, cheville en flexion plantaire), bassin de face.
 const LUNGE_FRONT = { x: 0.13, z: 0.36, yaw: 5, heel: 0, lift: 0 };
 const LUNGE_REAR = (heel) => ({ x: 0.12, z: -0.52, yaw: 2, heel, lift: 0 });
-const LUNGE_ARMS = { arm: [0.13, -1, 0.04], fore: [0.08, -1, 0.1], grip: 1 };
+const LUNGE_ARMS = { arm: [0.3, -1, 0.02], fore: [0.26, -1, 0.06], palm: [-1, 0, 0.1], grip: 1 }; // haltères le long des cuisses, sans les traverser
 const bulgarian = { beats: [[1, 1.6], [1, 0.25], [0, 1.1], [0, 0.35]], keys: [
   pose(LUNGE_ARMS, { hips: [0, 0.79, 0.0], torso: [0, 1, 0.1], neck: -4, R: { foot: LUNGE_FRONT }, L: { foot: LUNGE_REAR(50) } }),
   pose(LUNGE_ARMS, { hips: [0, 0.53, 0.09], torso: [0, 1, 0.2], neck: -8, R: { foot: LUNGE_FRONT }, L: { foot: LUNGE_REAR(82) } })] };
@@ -87,9 +87,21 @@ const walkLunge = (() => {
 })();
 
 const SEAT_ON_HANDS = { hips: [0, 0.13, 0], torso: [0, 0.9, -0.42], neck: 10, hand: [0.3, 0.05, -0.3], elbowHint: [0.25, 0, -1], palm: [0, -1, 0], wrist: -55, grip: 0 };
+// Curl aux haltères : bras légèrement écartés pour que l'haltère longe la cuisse sans la traverser ; seul l'avant-bras monte.
+const DB_DOWN = { arm: [0.2, -1, 0.02], fore: [0.25, -1, 0.08], grip: 1 };
 const curlKeys = (top, elbowFront = 0.07, extra = {}) => [
-  pose(STAND, { neck: 0, arm: [0.1, -1, 0.02], fore: [0.07, -1, 0.13], grip: 1 }, extra),
-  pose(STAND, { neck: 0, arm: [0.1, -1, elbowFront], fore: top, grip: 1 }, extra)];
+  pose(STAND, { neck: 0, ...DB_DOWN }, extra),
+  pose(STAND, { neck: 0, arm: [0.2, -1, elbowFront], fore: top, grip: 1 }, extra)];
+// Curl alterné, paume vers le haut (supination) : un bras puis l'autre.
+const CURL_UP = { arm: [0.2, -1, 0.08], fore: [0.06, 0.8, 0.6], palm: [-0.25, 0.75, -0.65], grip: 1 };
+const altCurl = { gear: { hold: 'dumbbells' }, beats: [[1, 0.9], [1, 0.2], [0, 1.3], [0, 0.2], [2, 0.9], [2, 0.2], [0, 1.3], [0, 0.2]], keys: [
+  pose(STAND, { neck: 0, ...DB_DOWN, palm: [-1, 0, 0.1] }), // paumes face aux cuisses en bas, supination en montant
+  pose(STAND, { neck: 0, L: { ...DB_DOWN, palm: [-1, 0, 0.1] }, R: CURL_UP }),
+  pose(STAND, { neck: 0, R: { ...DB_DOWN, palm: [-1, 0, 0.1] }, L: CURL_UP })] };
+// Élévations frontales : bras presque tendus montent devant jusqu'à l'horizontale, paumes vers le sol.
+const frontRaise = { gear: { hold: 'dumbbells' }, beats: [[1, 1.0], [1, 0.25], [0, 1.5], [0, 0.2]], keys: [
+  pose(STAND, { neck: 0, arm: [0.28, -1, 0.06], fore: [0.32, -1, 0.12], elbowHint: [0.3, 0, -1], palm: [0, 0.1, -1], grip: 1 }),
+  pose(STAND, { neck: 0, arm: [0.2, 0.02, 1], fore: [0.2, 0.0, 1], elbowHint: [0.4, -0.3, -0.6], palm: [0, -1, 0], grip: 1 })] };
 const TEMPO_CURL = [[1, 0.9], [1, 0.2], [0, 1.4], [0, 0.3]];
 const incline = pose(SUPINE, { hips: [0, 0.12, -0.02], torso: [0, 0.62, -0.78], neck: 6, foot: flat(0.17, 0.55, 6) });
 
@@ -117,12 +129,13 @@ const overheadSquat = { gear: { hold: 'bar' }, beats: [[1, 1.6], [1, 0.25], [0, 
   pose(OVERHEAD, { chest: [0.54, 0.7, 0], hips: [0, 0.58, -0.19], torso: [0, 0.92, 0.38], neck: -8, foot: OH_FOOT })] };
 // Tirage sumo (sumo deadlift high pull) : pieds très écartés, pointes ouvertes, prise serrée ; la barre part du sol,
 // monte le long du corps jusqu'au menton, coudes plus hauts que les mains.
-const SUMO_FOOT = flat(0.33, 0, 32);
+const SUMO_FOOT = { x: 0.36, z: 0.1, yaw: 35, heel: 0, lift: 0 }; // pieds devant le bassin : tibias verticaux, genoux ouverts hors du trajet de la barre
+const SUMO_FOOT_F = { x: 0.4, z: 0.12, yaw: 38, heel: 0, lift: 0 };
 const SUMO = { gripAt: 1, palm: [0, -0.2, -1], grip: 1 };
-const sumoHighPull = { gear: { hold: 'bar', fromFloor: true }, beats: [[1, 0.8], [2, 0.7], [2, 0.15], [1, 0.75, true], [0, 0.85], [0, 0.4]], keys: [
-  pose(SUMO, { hips: [0, 0.48, -0.18], torso: [0, 0.7, 0.71], neck: -22, foot: SUMO_FOOT, hand: [0.16, 0.21, 0.08], elbowHint: [0.3, 0, -1] }),
-  pose(SUMO, { hips: [0, 0.9, 0], torso: [0, 1, 0.05], neck: -2, foot: SUMO_FOOT, hand: [0.16, 0.78, 0.11], elbowHint: [0.6, 0.2, -0.8] }),
-  pose(SUMO, { hips: [0, 0.91, 0], torso: [0, 1, -0.02], neck: 0, foot: SUMO_FOOT, hand: [0.16, 1.37, 0.2], elbowHint: [0.85, 0.5, -0.2] })] };
+const sumoHighPull = { gear: { hold: 'bar', fromFloor: true }, beats: [[1, 0.8], [2, 0.8], [2, 0.15], [1, 0.9], [0, 0.9], [0, 0.4]], keys: [
+  pose(SUMO, { hips: [0, 0.53, -0.22], torso: [0, 0.66, 0.75], neck: -22, foot: SUMO_FOOT, hand: [0.16, 0.21, 0.24], elbowHint: [0.3, 0, -1] }),
+  pose(SUMO, { hips: [0, 0.86, 0], torso: [0, 1, 0.05], neck: -2, foot: SUMO_FOOT, hand: [0.16, 0.78, 0.21], elbowHint: [0.6, 0.2, -0.8] }),
+  pose(SUMO, { hips: [0, 0.86, 0], torso: [0, 1, -0.02], neck: 0, foot: SUMO_FOOT, hand: [0.16, 1.34, 0.22], elbowHint: [0.85, 0.5, -0.2] })] };
 // Couché sur le banc plat : dos et tête sur le coussin, pieds à plat au sol de part et d'autre du banc, léger cambré.
 const BENCH_LIE = { hips: [0, 0.545, 0], torso: [0, 0.06, -1], neck: 2, foot: flat(0.3, 0.44, 14) };
 const ON_FLAT_BENCH = { type: 'flat', at: [0, 0, -0.36] };
@@ -131,17 +144,17 @@ const BENCH_INCLINE = { hips: [0, 0.56, 0.07], torso: [0, 0.64, -0.77], neck: -6
 // Fente bulgare : dessus du pied arrière posé sur le banc, pied avant à plat ; en bas le genou arrière frôle le sol.
 const BSS_FRONT = { x: 0.13, z: 0.27, yaw: 6, heel: 0, lift: 0 };
 const BSS_REAR = { x: 0.11, y: 0.53, z: -0.73, free: 1, toe: 1, plantar: 46 }; // base des orteils sur le coussin
-const BSS_ARMS = { arm: [0.12, -1, 0.02], fore: [0.08, -1, 0.06], elbowHint: [0.3, 0, -1], palm: [-1, 0, 0.1], grip: 1 };
+const BSS_ARMS = { arm: [0.28, -1, 0], fore: [0.24, -1, 0.06], elbowHint: [0.3, 0, -1], palm: [-1, 0, 0.1], grip: 1 };
 const bulgarianBench = { gear: { hold: 'dumbbells', bench: { type: 'flat', at: [-0.01, 0, -1.12] } }, beats: [[1, 1.6], [1, 0.25], [0, 1.1], [0, 0.4]], keys: [
   pose(BSS_ARMS, { hips: [0, 0.84, 0.0], torso: [0, 1, 0.16], neck: -6, R: { foot: BSS_FRONT }, L: { foot: BSS_REAR, kneeHint: [0, -0.6, 1] } }),
   pose(BSS_ARMS, { hips: [0, 0.535, -0.02], torso: [0, 1, 0.34], neck: -12, R: { foot: BSS_FRONT }, L: { foot: BSS_REAR, kneeHint: [0, -1, 0.15] } })] };
 // Rowing haltère : genou et main gauches sur le banc, pied droit au sol, dos à plat ; l'haltère monte vers la hanche.
 const ROW_BENCH_L = { foot: { x: 0.11, y: 0.52, z: -0.42, free: 1, plantar: 40 }, kneeHint: [0, -1, 0.2], hand: [0.15, 0.535, 0.5], elbowHint: [0.4, 0, -1], palm: [-0.5, -1, 0], wrist: -55, grip: 0.15 };
 const rowBench = (hand, elbowHint, twist = 0) => pose(STAND, { hips: [0, 0.905, -0.02], torso: [0, 0.18, 0.98], neck: -26, twist, grip: 1,
-  L: ROW_BENCH_L, R: { foot: flat(0.21, 0.02, 10), hand, elbowHint, palm: [-1, 0, 0.05] } });
+  L: ROW_BENCH_L, R: { foot: flat(0.24, -0.2, 10), hand, elbowHint, palm: [-1, 0, 0.05] } }); // pied droit en arrière : la cuisse s'écarte du trajet de l'haltère
 const dumbbellRow = { gear: { hold: 'dumbbellR', bench: { type: 'flat', at: [-0.13, 0, 0.02] } }, beats: [[1, 0.8], [1, 0.35], [0, 1.4], [0, 0.25]], keys: [
-  rowBench([0.21, 0.48, 0.42], [0.25, 0.2, -1]),
-  rowBench([0.22, 0.8, 0.16], [0.12, 1, -0.35], -6)] };
+  rowBench([0.27, 0.48, 0.42], [0.25, 0.2, -1]),
+  rowBench([0.27, 0.8, 0.18], [0.12, 1, -0.35], -6)] };
 
 const HIP_THRUST = { foot: flat(0.17, 0.36, 10), gripAt: 1, elbowHint: [0.7, 0.6, 0.3], palm: [0, -1, 0.2], grip: 1 };
 
@@ -150,10 +163,11 @@ export const POSES = {
   'Presse à cuisses': { beats: [[1, 1.0], [1, 0.15], [0, 1.7], [0, 0.25]], keys: [
     pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.56, z: 0.24, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] }),
     pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.67, z: 0.52, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] })] },
-  Squat: backSquat,
+  Squat: { ...backSquat, F: { 0: { chest: [0.46, 0.25, -0.1] }, 1: { chest: [0.46, 0.22, -0.08] } } }, // femme : barre un peu plus en arrière sur les trapèzes
   'Squat avant': frontSquat,
   'Squat overhead': overheadSquat,
-  'Tirage sumo': { ...sumoHighPull, F: { 0: { hips: [0, 0.46, -0.18] } } }, // femme : bras plus courts, bassin un peu plus bas
+  // Femme (bras plus courts) : pieds un peu plus écartés, bassin un peu plus bas, barre plus près du corps au départ.
+  'Tirage sumo': { ...sumoHighPull, F: { 0: { hips: [0, 0.5, -0.21], torso: [0, 0.64, 0.77], hand: [0.16, 0.21, 0.2], foot: SUMO_FOOT_F }, 1: { foot: SUMO_FOOT_F }, 2: { foot: SUMO_FOOT_F } } },
   'Fentes bulgares': bulgarianBench,
   'Fentes marchées': { ...walkLunge, gear: { hold: 'dumbbells' } },
   // Assis au sol, en appui sur les mains : seule la jambe bouge, la cuisse reste fixe.
@@ -170,7 +184,7 @@ export const POSES = {
   // Hip thrust : haut du dos sur le banc (en travers), pieds à plat, barre sur le pli des hanches. En haut, tibias
   // verticaux et épaules-hanches-genoux alignés ; le bassin redescend en pivotant autour des omoplates posées.
   'Hip thrust': { gear: { hold: 'bar', bench: { type: 'flat', at: [0, 0, -0.6], yaw: 90 } }, beats: [[1, 0.9], [1, 0.6], [0, 1.3], [0, 0.25]], keys: [
-    { ...HIP_THRUST, hips: [0, 0.26, -0.15], torso: [0, 0.71, -0.7], pelvis: [0, 0.71, -0.7], neck: 12, hand: [0.3, 0.36, -0.05] },
+    { ...HIP_THRUST, hips: [0, 0.26, -0.15], torso: [0, 0.71, -0.7], pelvis: [0, 0.71, -0.7], neck: 12, hand: [0.3, 0.4, -0.08] },
     { ...HIP_THRUST, hips: [0, 0.55, -0.07], torso: [0, 0.08, -1], pelvis: [0, 0.08, -1], neck: 28, hand: [0.3, 0.69, 0.0] }] },
   'Mollets debout': { beats: [[1, 0.8], [1, 0.8], [0, 1.2], [0, 0.2]], keys: [
     pose(STAND, { hips: [0, STAND_H, 0], foot: flat(0.13, 0, 5) }),
@@ -213,13 +227,15 @@ export const POSES = {
     pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, 0], neck: 0, hand: [0.4, 1.4, 0.07], elbowHint: [0.8, -0.6, 0.15], palm: [0, 0, 1], wrist: -10, grip: 1 }),
     pose(STAND, { hips: [0, 0.92, 0], torso: [0, 1, 0], neck: 0, hand: [0.19, 1.93, 0.02], elbowHint: [0.85, -0.5, 0.1], palm: [0, 0, 1], wrist: -8, grip: 1 })] },
   'Élévations latérales': { gear: { hold: 'dumbbells' }, beats: [[1, 1.0], [1, 0.25], [0, 1.5], [0, 0.15]], keys: [
-    pose(STAND, { hips: [0, 0.915, 0], neck: 0, arm: [0.17, -1, 0.03], fore: [0.1, -1, 0.14], elbowHint: [0.3, 0, -1], palm: [-1, 0, 0.05], grip: 1 }),
+    pose(STAND, { hips: [0, 0.915, 0], neck: 0, arm: [0.17, -1, 0.03], fore: [0.26, -1, 0.1], elbowHint: [0.3, 0, -1], palm: [-1, 0, 0.05], grip: 1 }),
     pose(STAND, { hips: [0, 0.915, 0], neck: 0, arm: [1, 0.02, 0.2], fore: [1, -0.1, 0.34], elbowHint: [0.3, 0, -1], palm: [0, -1, 0.05], grip: 1 })] },
   'Face pull': { F: { 0: { hand: [0.1, 1.42, 0.46] } }, beats: [[1, 0.9], [1, 0.3], [0, 1.2], [0, 0.2]], keys: [
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 1, -0.05], neck: 0, foot: flat(0.15, 0, 8), hand: [0.1, 1.42, 0.5], elbowHint: [0.8, 0.1, -0.6], palm: [-0.7, -0.7, 0], grip: 1 }),
     pose(STAND, { hips: [0, 0.91, -0.03], torso: [0, 1, -0.05], neck: 0, foot: flat(0.15, 0, 8), hand: [0.27, 1.56, 0.1], elbowHint: [0.95, 0.15, -0.25], palm: [-0.7, -0.7, 0], grip: 1 })] },
   // Le coude reste près du corps, seul l'avant-bras monte ; paumes face à face tout du long.
   'Curl marteau': { gear: { hold: 'dumbbells' }, beats: TEMPO_CURL, keys: curlKeys([0.06, 0.8, 0.6], 0.08, { palm: [-1, 0, 0] }) },
+  'Curl haltères': altCurl,
+  'Élévations frontales': frontRaise,
   // Barre : les deux bras ensemble, paumes vers l'avant.
   'Curl barre': { gear: { hold: 'bar' }, beats: TEMPO_CURL, keys: [
     pose(STAND, { neck: 0, arm: [0.1, -1, 0.02], fore: [0.03, -1, 0.14], palm: [-0.25, 0, 1], grip: 1 }),

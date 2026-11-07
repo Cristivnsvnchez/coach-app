@@ -223,6 +223,49 @@ function biomech(name, seq, dt) {
   return v2;
 }
 
+
+// ───────────── Contact matériel / corps ─────────────
+// Le corps est approché par des capsules effilées un peu plus fines que la peau (une traversée signalée est donc réelle) ;
+// le matériel par des points sur ses surfaces (bords et faces des disques, barre, boule du kettlebell), aux mesures de
+// tools/build-gear.py. Un point dans une capsule = le matériel traverse le corps. La poignée est dans le poing : on ne
+// teste pas les points de barre à moins de 7 cm d'un poing.
+const CAPS = [['UpLeg', 'Leg', 0.075, 0.048, 'cuisse'], ['Leg', 'Foot', 0.046, 0.03, 'tibia'], ['Arm', 'ForeArm', 0.042, 0.033, 'bras'], ['ForeArm', 'Hand', 0.032, 0.024, 'avant-bras']];
+const TRUNK = [['Hips', 'Spine1', 0.1, 0.1, 'bassin'], ['Spine1', 'Spine2', 0.1, 0.105, 'ventre'], ['Spine2', 'Neck', 0.1, 0.055, 'thorax']];
+function capsules(B) {
+  const p = (n) => B[n].getWorldPosition(new THREE.Vector3()), out = [];
+  for (const [a, b, r0, r1, nm] of TRUNK) out.push({ a: p(a), b: p(b), r0, r1, nm });
+  for (const S of ['Left', 'Right']) for (const [a, b, r0, r1, nm] of CAPS) out.push({ a: p(S + a), b: p(S + b), r0, r1, nm: nm + (S === 'Left' ? ' G' : ' D') });
+  return out;
+}
+const depthIn = (q, c) => { const ab = c.b.clone().sub(c.a), t = Math.min(1, Math.max(0, q.clone().sub(c.a).dot(ab) / ab.lengthSq())); return c.r0 + (c.r1 - c.r0) * t - c.a.clone().addScaledVector(ab, t).distanceTo(q); };
+function disc(c, axis, r, out) { // centre + 16 points du bord d'un disque perpendiculaire à `axis`
+  const u = new THREE.Vector3(0, 1, 0); if (Math.abs(u.dot(axis)) > 0.9) u.set(1, 0, 0);
+  const e1 = u.clone().addScaledVector(axis, -u.dot(axis)).normalize(), e2 = new THREE.Vector3().crossVectors(axis, e1);
+  out.push(c.clone()); for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; out.push(c.clone().addScaledVector(e1, r * Math.cos(a)).addScaledVector(e2, r * Math.sin(a))); }
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(c.clone().addScaledVector(e1, 0.5 * r * Math.cos(a)).addScaledVector(e2, 0.5 * r * Math.sin(a))); }
+}
+function gearPoints(gear, B) {
+  const pts = [], grips = [];
+  const along = (c, axis, list, r) => { for (const x of list) for (const sg of [1, -1]) disc(c.clone().addScaledVector(axis, sg * x), axis, r, pts); };
+  if (gear.hold === 'dumbbells' || gear.hold === 'dumbbellR' || gear.hold === 'dumbbellL') {
+    for (const S of gear.hold === 'dumbbells' ? ['Left', 'Right'] : [gear.hold === 'dumbbellR' ? 'Right' : 'Left']) {
+      const g = gripOf(THREE, B, S); grips.push(g.c.clone());
+      along(g.c, g.axis, [0.095, 0.122], 0.108); along(g.c, g.axis, [0.128, 0.148], 0.094);
+    }
+  } else if (gear.hold === 'bar' || gear.hold === 'barBack' || gear.hold === 'kettlebell') {
+    const a = gripOf(THREE, B, 'Left'), b = gripOf(THREE, B, 'Right'), c = a.c.clone().add(b.c).multiplyScalar(0.5), axis = b.c.clone().sub(a.c).normalize();
+    grips.push(a.c.clone(), b.c.clone());
+    if (gear.hold === 'kettlebell') {
+      const down = a.dir.clone().add(b.dir).normalize(), ctr = c.clone().addScaledVector(down, 0.165);
+      for (let i = 0; i < 40; i++) { const y = 1 - (2 * (i + 0.5)) / 40, r = Math.sqrt(1 - y * y), t = i * 2.39996; pts.push(ctr.clone().add(new THREE.Vector3(r * Math.cos(t), y, r * Math.sin(t)).multiplyScalar(0.105))); }
+    } else {
+      for (let x = -0.98; x <= 0.98; x += 0.04) pts.push(c.clone().addScaledVector(axis, x));
+      along(c, axis, [0.698, 0.722, 0.749], 0.225); along(c, axis, [0.757, 0.787], 0.165);
+    }
+  }
+  return pts.filter((q) => grips.every((g) => g.distanceTo(q) > 0.07));
+}
+
 export async function auditOne(name, sex = 'M') {
   const m = model3D(name, sex); if (!m) return null;
   const body = await parse(m.url), anim = m.anim ? await parse(m.anim) : null;
@@ -261,13 +304,14 @@ export async function auditOne(name, sex = 'M') {
   const frames = [], seq = [];
   // Squat : la barre tenue par les poings doit reposer sur les trapèzes (pas devant ni au-dessus de la nuque).
   const HB = {}; obj.traverse((o) => { if (o.isBone) HB[o.name.replace(/^mixamorig:?/, '')] ||= o; });
-  let gripGap = 0; const barGrip = [];
+  let gripGap = 0; const barGrip = []; let clash = { d: 0, where: '' };
   for (let i = 0; i <= N; i++) {
     // i = N : juste avant la fin (setTime(duration) retombe sur 0 en boucle) pour mesurer le raccord.
     mixer.setTime(i === N ? clip.duration - 1e-3 : (clip.duration * i) / N); obj.updateMatrixWorld(true);
     const p = (b) => b.getWorldPosition(v());
     frames.push({ all: bones.map(p), feet: feet.map(p), hips: p(hips), lh: p(lh), rh: p(rh), ls: p(ls), rs: p(rs), skin: skinMin(), bench: bench ? benchLow() : null });
     seq.push(measure(BN, REST));
+    if (m.gear?.hold) { const caps = capsules(HB); for (const q of gearPoints(m.gear, HB)) for (const c of caps) { const dd = depthIn(q, c); if (dd > clash.d) { clash = { d: dd, where: c.nm + ' @' + i }; } } }
     if (m.gear?.hold === 'bar' || m.gear?.hold === 'barBack') { const a = gripOf(THREE, HB, 'Left').c, b = gripOf(THREE, HB, 'Right').c; barGrip.push({ w: a.distanceTo(b), y: (a.y + b.y) / 2 }); }
     if (m.gear?.hold === 'barBack') { // corps normé à 1,75 m : unités monde = mètres
       const mid = gripOf(THREE, HB, 'Left').c.add(gripOf(THREE, HB, 'Right').c).multiplyScalar(0.5);
@@ -318,6 +362,7 @@ export async function auditOne(name, sex = 'M') {
     if (Math.max(...gw) - Math.min(...gw) > 0.03) bio['barre : écart des mains qui change (m)'] = { value: +(Math.max(...gw) - Math.min(...gw)).toFixed(3), limit: 0.03, n: 1 };
     if (gy < 0.225 - 0.01) bio['barre : disques dans le sol (m)'] = { value: +(0.225 - gy).toFixed(3), limit: 0.01, n: 1 };
     if (m.gear.fromFloor && gy > 0.225 + 0.02) bio['barre : ne repart pas du sol (m)'] = { value: +(gy - 0.225).toFixed(3), limit: 0.02, n: 1 }; }
+  if (clash.d > 0.01) bio['matériel dans le corps (' + clash.where + ') (m)'] = { value: +clash.d.toFixed(3), limit: 0.01, n: 1 };
   if (gripGap > 0.04) bio['barre hors des trapèzes (m)'] = { value: +gripGap.toFixed(3), limit: 0.04, n: 1 };
   const r = (x, d = 2) => +x.toFixed(d);
   return { name, sex, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, gear: m.gear, duration: r(clip.duration),
