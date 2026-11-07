@@ -41,7 +41,7 @@ register({
 let date = null;
 
 export function render(root, go) {
-  if (!date) date = todayIso();
+  if (!date || date < todayIso()) date = todayIso(); // le lendemain, on revient à aujourd'hui (jours passés absents du bandeau)
   const day = planDay(date);
   const keep = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
 

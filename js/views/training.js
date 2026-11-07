@@ -3,7 +3,7 @@ import * as S from '../science.js';
 import * as W from '../workout.js';
 import { state, save, today, uid, latestWeight } from '../store.js';
 import { findExercise } from '../exercises.js';
-import { esc, fmt, fmtDate, sheet, nav, group } from '../ui.js';
+import { esc, fmt, fmtDate, sheet, nav, group, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, locale, register } from '../i18n.js';
 import { active, startWorkout, renderSession } from './session.js';
@@ -11,8 +11,10 @@ import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 import { openWizard, planCard, plannedDays, exportCalendar } from './program.js';
 import { isDeload, weekOf } from '../planner.js';
 
-register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements' },
-  nl: { 'Apprendre les mouvements': 'Bewegingen leren', 'Apprends les bons mouvements': 'Leer de juiste bewegingen' } });
+register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements',
+    'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'This routine is part of your program: its planned sessions will be removed. Delete it?' },
+  nl: { 'Apprendre les mouvements': 'Bewegingen leren', 'Apprends les bons mouvements': 'Leer de juiste bewegingen',
+    'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'Deze routine hoort bij je programma: de geplande trainingen worden verwijderd. Verwijderen?' } });
 
 let month = null; // mois affiché dans le calendrier ('YYYY-MM')
 
@@ -69,7 +71,7 @@ export function render(root, go) {
     if (el.dataset.cal) { month = el.dataset.cal; return render(root, go); }
     const a = el.dataset.a;
     if (a === 'empty') { startWorkout(null); return render(root, go); }
-    if (a === 'learn') return go('learn');
+    if (a === 'learn') return go('learn', 'training');
     if (a === 'wizard') return openWizard(back);
     if (a === 'ics') return exportCalendar();
     if (a === 'plates') return platesSheet();
@@ -154,7 +156,10 @@ function editRoutine(r, back, { isNew = false } = {}) {
     const L = r.exercises;
     if (el.dataset.up) { const i = +el.dataset.up; if (i > 0) [L[i - 1], L[i]] = [L[i], L[i - 1]]; }
     if (el.dataset.down) { const i = +el.dataset.down; if (i < L.length - 1) [L[i + 1], L[i]] = [L[i], L[i + 1]]; }
-    if (el.dataset.rm) L.splice(+el.dataset.rm, 1);
+    if (el.dataset.rm) {
+      const k = +el.dataset.rm, [gone] = L.splice(k, 1);
+      toast(t('Exercice retiré'), { undo: () => { L.splice(k, 0, gone); save(); if (s.isConnected) draw(); } });
+    }
     if (el.dataset.a === 'add') {
       return pickExercise((name) => {
         const info = findExercise(name, state.customExercises) || {};
@@ -163,8 +168,12 @@ function editRoutine(r, back, { isNew = false } = {}) {
       });
     }
     if (el.dataset.a === 'delr') {
-      if (!confirm(t('Supprimer cette routine ?'))) return;
-      state.routines = state.routines.filter((x) => x.id !== r.id); save(); s.close(); return;
+      // Routine du programme daté : on prévient, puis on la retire aussi du programme (sinon ses jours affichaient « — »).
+      const inPlan = state.plan?.routineIds?.includes(r.id);
+      if (!confirm(t(inPlan ? 'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?' : 'Supprimer cette routine ?'))) return;
+      state.routines = state.routines.filter((x) => x.id !== r.id);
+      if (inPlan) { state.plan.routineIds = state.plan.routineIds.filter((id) => id !== r.id); if (!state.plan.routineIds.length) state.plan = null; }
+      save(); s.close(); return;
     }
     save(); draw();
   });

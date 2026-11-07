@@ -1,6 +1,6 @@
 // Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 import * as S from '../science.js';
-import { state, save, replace, recordWeight, latestWeight } from '../store.js';
+import { state, save, flush, replace, recordWeight, latestWeight } from '../store.js';
 import { applyTheme, applyScheme } from '../theme.js';
 import { current } from '../metrics.js';
 import { esc, fmt, fmtDate, toast, nav, group, sheet } from '../ui.js';
@@ -29,7 +29,7 @@ export function render(root, go) {
   const txt = (name, label, val, ph = '') => `<label class="cell field"><span>${label}</span><input name="${name}" value="${esc(val ?? '')}" placeholder="${esc(ph)}"></label>`;
 
   root.innerHTML = `
-    ${nav(t('Profil'))}
+    ${nav(t('Profil'), { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Journal')}</button>` })}
     ${group(t('Apparence'), `<div class="cells"><div class="cell pal-cell">${paletteSection()}</div></div>`)}
     ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">${Object.entries(LANGS).map(([k, l]) => `<button type="button" data-lang="${k}" class="${getLang() === k ? 'on' : ''}" aria-selected="${getLang() === k}">${l}</button>`).join('')}</div></div></div>`)}
     ${targets ? group(targets.custom ? t('Mes objectifs (personnalisés)') : t('Tes besoins calculés'), `<div class="cells"><div class="stats">
@@ -106,13 +106,14 @@ export function render(root, go) {
   root.querySelector('[data-backup-every]')?.addEventListener('change', (e) => { state.settings.backupEvery = +e.target.value; save(); });
   root.onclick = (e) => {
     if (handlePaletteClick(e, () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; })) return;
+    if (e.target.closest('[data-back]')) return go('today');
     const lg = e.target.closest('[data-lang]');
     if (lg) { setLang(lg.dataset.lang); return go('profile'); }
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'edit-needs') return editNeeds(auto, () => render(root, go));
     if (a === 'export') return exportBackup();
     if (a === 'cycle') return go('cycle');
-    if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { resetAfterReplace({}); render(root, go); }
+    if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { resetAfterReplace({}); flush(); return location.reload(); } // repart sur l'onboarding
   };
   root.querySelector('[data-a=import]').onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;

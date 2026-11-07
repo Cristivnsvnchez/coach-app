@@ -7,9 +7,8 @@ import { LIBRARY, findExercise, CATEGORIES, CATEGORY_LABEL } from '../exercises.
 import { getTechnique, pictogram, model3D, outfitsFor, LEVELS, LEVEL_LABEL } from '../technique.js';
 import { mount3D } from '../viewer3d.js';
 import { shape } from '../theme.js';
-import { active, persist } from './session.js';
+import { active, addToActive } from './session.js';
 import { openExercise } from './exsheets.js';
-import * as W from '../workout.js';
 
 register({
   en: { 'Apprends les bons mouvements': 'Learn the right movements', 'Glisse pour tourner': 'Swipe to rotate', 'Apprendre les mouvements': 'Learn the movements', 'Rechercher un mouvement': 'Search a movement',
@@ -71,7 +70,7 @@ function pickShowcase() {
 // Appelé par app.js quand on quitte Apprendre : la visionneuse de la carte ne doit pas rester en vie.
 export function leave() { showcase?.dispose(); showcase = null; }
 
-export function render(root, go) {
+export function render(root, go, from) {
   leave();
   const day = pickShowcase();
   const sex = state.profile?.sex === 'F' ? 'F' : 'M';
@@ -88,7 +87,8 @@ export function render(root, go) {
       return g.length ? `<li class="lrn-group-head">${esc(t(CATEGORY_LABEL[c]))}</li>${g.map(card).join('')}` : '';
     }).join('');
   };
-  root.innerHTML = `${nav(t('Apprends les bons mouvements'), { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Sport')}</button>` })}
+  // Onglet du menu : pas de retour ; ouvert depuis Sport (« Apprendre les mouvements ») : « ‹ Sport ».
+  root.innerHTML = `${nav(t('Apprends les bons mouvements'), from === 'training' ? { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Sport')}</button>` } : {})}
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
     <section class="lrn-day tm-hero">${shape({ cls: 'lrn-day-shape' })}
       <span class="lrn-day-3d">${pictogram(day.name, '', sex)}</span>
@@ -152,20 +152,14 @@ export function openTechnique(name, go) {
       ${f ? `<div class="seg lrn-tabs" role="tablist">${[['steps', 'Étapes'], ['mistakes', 'Erreurs'], ['tips', 'Conseils']].map(([k, l]) =>
         `<button role="tab" aria-selected="${k === tab}" data-tab="${k}" class="${k === tab ? 'on' : ''}">${t(l)}</button>`).join('')}</div>
         <ol class="lrn-steps">${tr(f[tab]).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : `<p class="empty">${t('Fiche à venir pour cet exercice.')}</p>`}
-      <div class="lrn-actions">${active ? `<button class="btn filled large" data-add>${icon('plus')} ${t('Ajouter à ma séance')}</button>` : ''}
+      <div class="lrn-actions">${active && !active.exercises.some((x) => x.name === name) ? `<button class="btn filled large" data-add>${icon('plus')} ${t('Ajouter à ma séance')}</button>` : ''}
         <button class="btn large" data-rec>${t('Voir mes records')}</button></div>`;
   };
   s.addEventListener('click', (e) => {
     if (e.target.closest('[data-dress]')) return openDress();
     const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; setMode(tab); return draw(); }
     if (e.target.closest('[data-rec]')) { s.close(); return openExercise(name); }
-    if (e.target.closest('[data-add]') && active) {
-      const up = info.upper ?? true, prev = W.previousSets(state.workouts, name).filter((x) => x.type !== 'warmup');
-      const load = prev[0]?.kg ?? 0, reps = 8;
-      active.exercises.push({ name, muscle: info.muscle || 'Abdos', secondary: info.secondary || [], type: info.type || 'weight_reps', upper: up, repMin: 8, repMax: 12,
-        rest: up ? 90 : 150, note: '', supersetId: null, sets: Array.from({ length: 3 }, () => ({ kg: load, reps, rir: 2, type: 'normal', done: false })) });
-      persist(); toast(t('Ajouté à ta séance')); s.close(); go?.('training');
-    }
+    if (e.target.closest('[data-add]') && addToActive(name)) { toast(t('Ajouté à ta séance')); s.close(); go?.('training'); }
   });
   draw();
 }

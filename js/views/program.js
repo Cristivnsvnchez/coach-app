@@ -78,7 +78,7 @@ export function openWizard(done) {
     state.routines = state.routines.filter((r) => !old.has(r.id)).concat(routines);
     state.plan = plan;
     save(); s.close();
-    toast(t('Programme créé ✓'), prev.plan ? { undo: () => { state.plan = prev.plan; state.routines = prev.routines; save(); done?.(); } } : {});
+    toast(t('Programme créé'), prev.plan ? { undo: () => { state.plan = prev.plan; state.routines = prev.routines; save(); done?.(); } } : {});
   };
   step1();
 }
@@ -102,7 +102,7 @@ export function planCard() {
     ${upcoming.map((e) => `<li class="cell ${e.date === td ? 'tap' : ''}" ${e.date === td && !doneDates.has(td) ? `data-start-plan="${e.routineId}"` : ''}>
       <div class="grow"><span class="t">${esc(t(rname(e.routineId)))}${e.deload ? ` · <span class="secondary">${t('décharge')}</span>` : ''}</span>
       <span class="s">${e.date === td ? t("Aujourd'hui") : fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
-      ${e.date === td && !doneDates.has(td) ? `<span class="btn filled pill">${t('Démarrer')}</span>` : ''}</li>`).join('') || `<li class="empty">${t('Programme terminé 🎉')}</li>`}
+      ${e.date === td && !doneDates.has(td) ? `<span class="btn filled pill">${t('Démarrer')}</span>` : ''}</li>`).join('') || `<li class="empty">${t('Programme terminé')}</li>`}
     <li class="cell action" data-a="ics" role="button">${icon('calendar')} ${t('Ajouter au calendrier de l\'iPhone')}</li>
     <li class="cell action" data-a="wizard" role="button">${t('Nouveau programme')}</li>
     </ul>`, plan.rationale ? esc(plan.rationale) : '');

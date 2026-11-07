@@ -8,8 +8,8 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import * as Cy from '../cycle.js';
 import { register } from '../i18n.js';
-register({ en: { 'rétention d\'eau probable': 'water retention likely', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Pink dots: weigh-ins with likely water retention (cycle). ' },
-  nl: { 'rétention d\'eau probable': 'waarschijnlijk vochtretentie', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Roze stippen: wegingen met waarschijnlijke vochtretentie (cyclus). ' } });
+register({ en: { 'rétention d\'eau probable': 'water retention likely', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Pink dots: weigh-ins with likely water retention (cycle). ', 'Étape supprimée': 'Milestone removed' },
+  nl: { 'rétention d\'eau probable': 'waarschijnlijk vochtretentie', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Roze stippen: wegingen met waarschijnlijke vochtretentie (cyclus). ', 'Étape supprimée': 'Tussendoel verwijderd' } });
 
 let range = 90;
 
@@ -114,7 +114,7 @@ export function render(root, go) {
     // Félicitations si la nouvelle pesée fait franchir une étape.
     const tr2 = S.emaTrend(state.weights);
     const after = steps.filter((m) => S.milestoneStatus(m, tr2, speed, today(), down).reached).length;
-    toast(after > before ? t('Étape atteinte ! 🎉') : t('Pesée enregistrée'));
+    toast(after > before ? t('Étape atteinte !') : t('Pesée enregistrée'));
     keep();
   };
   const tf = root.querySelector('[data-f=target]');
@@ -179,5 +179,9 @@ function editMilestone(m, { last, target, keep, preset }) {
     else Object.assign(m, v, f.done ? { done: f.done.checked, doneOn: f.done.checked ? (m.doneOn || today()) : null } : {});
     save(); s.close();
   };
-  s.querySelector('[data-a=del]')?.addEventListener('click', () => { state.milestones = state.milestones.filter((x) => x.id !== m.id); save(); s.close(); });
+  s.querySelector('[data-a=del]')?.addEventListener('click', () => {
+    const before = state.milestones.slice();
+    state.milestones = state.milestones.filter((x) => x.id !== m.id); save(); s.close();
+    toast(t('Étape supprimée'), { undo: () => { state.milestones = before; save(); keep?.(); } });
+  });
 }

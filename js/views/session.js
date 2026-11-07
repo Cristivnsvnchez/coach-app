@@ -17,13 +17,15 @@ register({
     'Voir mon cycle': 'See my cycle', 'Séries retirées': 'Sets removed',
     'Séance en cours': 'Workout in progress', 'kg soulevés': 'kg lifted', 'séries faites': 'sets done', 'Exercice retiré': 'Exercise removed', 'Série supprimée': 'Set removed',
     'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?', 'Abandonner sans enregistrer': 'Discard without saving',
-    'Abandonner': 'Discard', 'Terminer la séance': 'Finish workout' },
+    'Abandonner': 'Discard', 'Terminer la séance': 'Finish workout', 'Temps de repos': 'Rest time', 'Aucun': 'None',
+    'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Workout started {h} h ago. Did you forget it?', 'Continuer': 'Continue' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
     'Séance en cours': 'Training bezig', 'kg soulevés': 'kg getild', 'séries faites': 'sets gedaan', 'Exercice retiré': 'Oefening verwijderd', 'Série supprimée': 'Set verwijderd',
     'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?', 'Abandonner sans enregistrer': 'Verwerpen zonder op te slaan',
-    'Abandonner': 'Afbreken', 'Terminer la séance': 'Training afronden' },
+    'Abandonner': 'Afbreken', 'Terminer la séance': 'Training afronden', 'Temps de repos': 'Rusttijd', 'Aucun': 'Geen',
+    'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Training {h} u geleden gestart. Vergeten?', 'Continuer': 'Doorgaan' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -65,6 +67,13 @@ export function startWorkout(routine = null, { deload = false } = {}) {
   persist();
 }
 
+// Ajoute un exercice à la séance en cours (fiche Apprendre). false si pas de séance ou déjà présent.
+export function addToActive(name) {
+  if (!active || active.exercises.some((e) => e.name === name)) return false;
+  active.exercises.push(sessionExercise({ name })); loadRecords(); persist();
+  return true;
+}
+
 function loadRecords() {
   prevRecords = {};
   for (const ex of active.exercises) prevRecords[ex.name] = W.exerciseRecords(state.workouts, ex.name, bw());
@@ -87,7 +96,7 @@ function tick() {
       rest.querySelector('.rest-bar').style.width = `${(left / restTotal) * 100}%`;
     }
   }
-  if (restEnd && left <= 0) { restEnd = 0; navigator.vibrate?.([200, 100, 200]); toast(t('Repos terminé 💪')); }
+  if (restEnd && left <= 0) { restEnd = 0; navigator.vibrate?.([200, 100, 200]); toast(t('Repos terminé')); }
 }
 
 function startRest(sec) { restTotal = sec; restEnd = Date.now() + sec * 1000; tick(); }
@@ -114,6 +123,8 @@ export function renderSession(root, go, back) {
       <div class="se-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${t('séries faites')}"><i style="width:${pct}%"></i></div>
     </section>
     ${active.deload ? `<p class="footnote tint se-note">${t('Semaine de décharge : volume réduit (~60 %).')}</p>` : ''}
+    ${Date.now() - active.start > 12 * 3600000 && !active.staleOk ? `<div class="cy-banner" role="note"><span>${t('Séance commencée il y a {h} h. Tu l\'as oubliée ?', { h: Math.floor((Date.now() - active.start) / 3600000) })}</span>
+      <div class="row"><button class="btn pill" data-a="discard">${t('Abandonner')}</button><button class="link" data-a="stale-ok">${t('Continuer')}</button></div></div>` : ''}
     ${cycleBanner()}
     <div class="rest" hidden role="timer"><div class="rest-bar"></div>
       <button class="icon-btn" data-a="rest-" aria-label="−15 s">−15</button>
@@ -229,18 +240,15 @@ function onClick(e, root, go, back) {
   if (a === 'type') { const s = ex.sets[j]; s.type = W.SET_TYPES[(W.SET_TYPES.indexOf(s.type || 'normal') + 1) % W.SET_TYPES.length]; return keep(); }
   if (a === 'prev') { const p = prevFor(W.previousSets(state.workouts, ex.name), ex.sets, j); if (p) { Object.assign(ex.sets[j], { kg: p.kg, reps: p.reps }); keep(); } return; }
   if (a === 'add-set') { const last = ex.sets[ex.sets.length - 1] || { kg: 0, reps: ex.repMin, rir: 2 }; ex.sets.push({ ...last, type: 'normal', done: false }); return keep(); }
-  if (a === 'rest-cfg') {
-    const v = prompt(t('Temps de repos pour cet exercice (secondes)'), ex.rest);
-    if (v !== null && +v >= 0) { ex.rest = Math.round(+v); keep(); }
-    return;
-  }
+  if (a === 'rest-cfg') return restSheet(ex, keep);
+  if (a === 'stale-ok') { active.staleOk = true; return keep(); }
   if (a === 'done') {
     const s = ex.sets[j];
     s.done = !s.done;
     keep();
     if (s.done) {
       const prs = W.setPRs(prevRecords[ex.name] || {}, ex, s, bw());
-      if (prs.length) { toast(t('Nouveau record ! 🏆')); navigator.vibrate?.([30, 50, 30]); }
+      if (prs.length) { toast(t('Nouveau record !')); navigator.vibrate?.([30, 50, 30]); }
       // Pas de repos avant un drop set ; en superset, repos seulement après le dernier exercice du groupe.
       const next = ex.sets[j + 1];
       const lastOfSuperset = !ex.supersetId || active.exercises[i + 1]?.supersetId !== ex.supersetId;
@@ -249,6 +257,26 @@ function onClick(e, root, go, back) {
     return;
   }
   if (a === 'menu') return exerciseMenu(i, keep);
+}
+
+// Repos d'un exercice : −15 / +15 s et valeurs courantes ; 0 = pas de minuteur.
+function restSheet(ex, keep) {
+  let v = ex.rest;
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Temps de repos')}</h3></div>
+    <p class="footnote secondary" style="margin:-.5rem 0 1rem">${esc(t(ex.name))}</p>
+    <div class="se-rest-pick"><button class="icon-btn round" data-r="-15" aria-label="−15 s">${icon('minus')}</button>
+      <b class="num" aria-live="polite"></b><button class="icon-btn round" data-r="15" aria-label="+15 s">${icon('plus')}</button></div>
+    <div class="chips wrap se-rest-chips">${[0, 60, 90, 120, 150, 180].map((x) => `<button class="chip" data-set="${x}">${x ? mmss(x) : t('Aucun')}</button>`).join('')}</div>
+    <button class="btn filled large" data-a="ok">${t('Enregistrer')}</button>`);
+  const draw = () => { s.querySelector('.se-rest-pick b').textContent = v ? mmss(v) : t('Aucun'); s.querySelectorAll('[data-set]').forEach((b) => b.classList.toggle('on', +b.dataset.set === v)); };
+  s.addEventListener('click', (e) => {
+    const r = e.target.closest('[data-r]'), p = e.target.closest('[data-set]');
+    if (r) v = Math.max(0, Math.min(600, v + +r.dataset.r));
+    if (p) v = +p.dataset.set;
+    if (e.target.closest('[data-a=ok]')) { ex.rest = v; s.close(); return keep(); }
+    draw();
+  });
+  draw();
 }
 
 function exerciseMenu(i, keep) {

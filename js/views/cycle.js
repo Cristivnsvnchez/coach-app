@@ -49,7 +49,7 @@ register({
     'Flux': 'Flow', 'Spotting': 'Spotting', 'Léger': 'Light', 'Moyen': 'Medium', 'Abondant': 'Heavy',
     'Symptômes': 'Symptoms',
     'Enregistrer': 'Save',
-    'Règles enregistrées': 'Period saved', 'Supprimer ces règles': 'Delete this period', 'Règles supprimées': 'Period deleted',
+    'Règles enregistrées': 'Period saved', 'Supprimer ces règles': 'Delete this period', 'Règles supprimées': 'Period deleted', 'Journal du cycle mis à jour': 'Cycle log updated',
     'Mois précédent': 'Previous month', 'Mois suivant': 'Next month',
     'Crampes': 'Cramps', 'Fatigue': 'Fatigue', 'Ballonnements': 'Bloating', 'Maux de tête': 'Headache', 'Humeur basse': 'Low mood',
     'Seins sensibles': 'Breast tenderness', 'Fringales': 'Cravings', 'Sommeil perturbé': 'Poor sleep', 'Acné': 'Acne',
@@ -99,7 +99,7 @@ register({
     'Flux': 'Bloeding', 'Spotting': 'Spotting', 'Léger': 'Licht', 'Moyen': 'Matig', 'Abondant': 'Hevig',
     'Symptômes': 'Symptomen',
     'Enregistrer': 'Opslaan',
-    'Règles enregistrées': 'Menstruatie opgeslagen', 'Supprimer ces règles': 'Deze menstruatie verwijderen', 'Règles supprimées': 'Menstruatie verwijderd',
+    'Règles enregistrées': 'Menstruatie opgeslagen', 'Supprimer ces règles': 'Deze menstruatie verwijderen', 'Règles supprimées': 'Menstruatie verwijderd', 'Journal du cycle mis à jour': 'Cyclusdagboek bijgewerkt',
     'Mois précédent': 'Vorige maand', 'Mois suivant': 'Volgende maand',
     'Crampes': 'Krampen', 'Fatigue': 'Vermoeidheid', 'Ballonnements': 'Opgeblazen gevoel', 'Maux de tête': 'Hoofdpijn', 'Humeur basse': 'Sombere stemming',
     'Seins sensibles': 'Gevoelige borsten', 'Fringales': 'Trek', 'Sommeil perturbé': 'Slecht slapen', 'Acné': 'Acne',
@@ -301,6 +301,6 @@ function openLog(day, done) {
     const symptoms = [...f.querySelectorAll('[name=sym]:checked')].map((x) => x.value);
     (c.logs ||= {});
     if (flow || symptoms.length) c.logs[d] = { ...(flow ? { flow } : {}), symptoms }; else delete c.logs[d];
-    save(); s.close(); toast(t('Règles enregistrées'));
+    save(); s.close(); toast(t(start ? 'Règles enregistrées' : 'Journal du cycle mis à jour'));
   };
 }

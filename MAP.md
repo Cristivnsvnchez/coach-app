@@ -24,7 +24,7 @@ TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 ## css/planning.css (18 l.)
 TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.md, css/trackme.css).
 
-## css/session.css (42 l.)
+## css/session.css (48 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
 ## css/today.css (112 l.)
@@ -147,11 +147,11 @@ exports: render
 Feuilles liées aux exercices : sélection (bibliothèque + perso), fiche (graphique, records, historique), disques.
 exports: pickExercise,openExercise platesSheet
 
-## js/views/habits.js (152 l.)
+## js/views/habits.js (154 l.)
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick,handleTaskSubmit
 
-## js/views/learn.js (171 l.)
+## js/views/learn.js (165 l.)
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise leave,render openTechnique
 
@@ -167,7 +167,7 @@ exports: paletteSection,handlePaletteClick
 Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
 exports: render
 
-## js/views/profile.js (155 l.)
+## js/views/profile.js (156 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
@@ -175,19 +175,19 @@ exports: render
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
 exports: openWizard,planCard plannedDays,exportCalendar
 
-## js/views/session.js (352 l.)
+## js/views/session.js (380 l.)
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
-exports: active,clearActive persist,startWorkout renderSession
+exports: active,clearActive addToActive,persist startWorkout,renderSession
 
 ## js/views/today.js (207 l.)
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
-## js/views/training.js (173 l.)
+## js/views/training.js (182 l.)
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render
 
-## js/views/weight.js (183 l.)
+## js/views/weight.js (187 l.)
 Onglet Poids : pesée, courbe (pesées, tendance, projection, cible, étapes), poids de référence,
 exports: render
 

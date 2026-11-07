@@ -14,13 +14,13 @@ register({
     'Idées': 'Ideas', 'Suivi automatique': 'Auto-tracked', 'Se coche avec ton journal': 'Ticks itself from your log', 'Coche-le si tu as fait du repos actif': 'Tick it if you did active rest',
     'Aller au sport': 'Go to the gym', 'Aller au sport : {r}': 'Go to the gym: {r}', 'Faire les courses pour la semaine prochaine': 'Do the shopping for next week',
     'Préparer mes repas de demain': "Prep tomorrow's meals", 'Au lit avant 23 h': 'In bed before 11 pm', '10 min d\'étirements': '10 min of stretching',
-    'Faire 10 000 pas': 'Walk 10,000 steps', 'Dormir au moins 7 h': 'Sleep at least 7 h' },
+    'Faire 10 000 pas': 'Walk 10,000 steps', 'Dormir au moins 7 h': 'Sleep at least 7 h', 'Habitude supprimée': 'Habit removed' },
   nl: { 'Tâche supprimée': 'Taak verwijderd', 'Ajouter une tâche pour ce jour': 'Taak toevoegen voor deze dag',
     'À faire aujourd\'hui': 'Vandaag te doen', 'Aujourd\'hui seulement': 'Alleen vandaag', 'Chaque jour': 'Elke dag', 'Ajouter une action pour aujourd\'hui…': 'Iets toevoegen voor vandaag…',
     'Idées': 'Ideeën', 'Suivi automatique': 'Automatisch gevolgd', 'Se coche avec ton journal': 'Wordt afgevinkt via je dagboek', 'Coche-le si tu as fait du repos actif': 'Vink aan als je actief hebt gerust',
     'Aller au sport': 'Naar de sportschool', 'Aller au sport : {r}': 'Naar de sportschool: {r}', 'Faire les courses pour la semaine prochaine': 'Boodschappen doen voor volgende week',
     'Préparer mes repas de demain': 'Maaltijden voor morgen voorbereiden', 'Au lit avant 23 h': 'Voor 23 u in bed', '10 min d\'étirements': '10 min stretchen',
-    'Faire 10 000 pas': '10.000 stappen zetten', 'Dormir au moins 7 h': 'Minstens 7 u slapen' },
+    'Faire 10 000 pas': '10.000 stappen zetten', 'Dormir au moins 7 h': 'Minstens 7 u slapen', 'Habitude supprimée': 'Gewoonte verwijderd' },
 });
 
 // Une action à cocher : habitude quotidienne (« Chaque jour ») ou tâche de ce jour seulement (supprimable).
@@ -146,7 +146,9 @@ function editHabits(rerender) {
   });
   s.addEventListener('click', (e) => {
     const d = e.target.closest('[data-del]'); if (!d) return;
+    const before = state.habits.slice();
     state.habits = state.habits.filter((h) => h.id !== d.dataset.del); save(); draw();
+    toast(t('Habitude supprimée'), { undo: () => { state.habits = before; save(); if (s.isConnected) draw(); rerender(); } });
   });
   draw();
 }

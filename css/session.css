@@ -40,3 +40,9 @@
   .se-num, .se-ex.complete .se-count { background: color-mix(in srgb, var(--p-mid) 24%, transparent); color: var(--label); }
   .se-count { background: var(--fill-2, var(--fill)); }
 }
+
+/* Feuille « Temps de repos » : valeur au centre, pas de 15 s, valeurs courantes. */
+.se-rest-pick { display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin: .25rem 0 1rem; }
+.se-rest-pick b { font-size: 2.6rem; font-weight: 700; letter-spacing: -.03em; min-width: 5ch; text-align: center; }
+.se-rest-chips { justify-content: center; margin-bottom: 1.25rem; }
+.se-rest-chips .chip { min-height: 40px; padding: 0 14px; }
