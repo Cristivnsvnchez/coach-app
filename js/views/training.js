@@ -10,11 +10,22 @@ import { active, startWorkout, renderSession } from './session.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 import { openWizard, planCard, plannedDays } from './program.js';
 import { isDeload, weekOf } from '../planner.js';
+import { recoveryMap, editedWorkout } from '../recovery.js';
 
 register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements',
-    'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'This routine is part of your program: its planned sessions will be removed. Delete it?' },
+    'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'This routine is part of your program: its planned sessions will be removed. Delete it?',
+    'Muscles · récupération': 'Muscles · recovery', 'Récupère': 'Recovering', 'Prêt': 'Ready', 'À reprendre': 'Train again', 'il y a {n} j': '{n} d ago', "aujourd'hui": 'today',
+    'Prêts aujourd\'hui : {list}': 'Ready today: {list}', 'À travailler en priorité : {list}': 'Train first: {list}', 'Tous tes muscles récupèrent : jour de repos conseillé.': 'All your muscles are recovering: a rest day is advised.',
+    'Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).': 'Recovering: trained under 48 h ago. Ready: recovered, trained this week. Train again: nothing for over 7 days. Bar: sets over the last 7 days (secondary = 0.5), target 10–20 per week (Schoenfeld 2016, 2017).',
+    'Modifier la séance': 'Edit workout', 'Saisir une séance passée': 'Log a past workout', 'Séance passée': 'Past workout', 'Séance modifiée': 'Workout updated', 'Séance ajoutée': 'Workout added',
+    'Ajoute au moins une série avec des répétitions, à une date passée.': 'Add at least one set with reps, on a past date.', 'Date': 'Date', 'Retirer la série': 'Remove set' },
   nl: { 'Apprendre les mouvements': 'Bewegingen leren', 'Apprends les bons mouvements': 'Leer de juiste bewegingen',
-    'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'Deze routine hoort bij je programma: de geplande trainingen worden verwijderd. Verwijderen?' } });
+    'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'Deze routine hoort bij je programma: de geplande trainingen worden verwijderd. Verwijderen?',
+    'Muscles · récupération': 'Spieren · herstel', 'Récupère': 'Herstelt', 'Prêt': 'Klaar', 'À reprendre': 'Weer trainen', 'il y a {n} j': '{n} d geleden', "aujourd'hui": 'vandaag',
+    'Prêts aujourd\'hui : {list}': 'Vandaag klaar: {list}', 'À travailler en priorité : {list}': 'Eerst trainen: {list}', 'Tous tes muscles récupèrent : jour de repos conseillé.': 'Al je spieren herstellen: een rustdag is aangeraden.',
+    'Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).': 'Herstelt: minder dan 48 u geleden getraind. Klaar: hersteld, deze week getraind. Weer trainen: niets in meer dan 7 dagen. Balk: sets van de laatste 7 dagen (secundair = 0,5), doel 10–20 per week (Schoenfeld 2016, 2017).',
+    'Modifier la séance': 'Training bewerken', 'Saisir une séance passée': 'Eerdere training invoeren', 'Séance passée': 'Eerdere training', 'Séance modifiée': 'Training bijgewerkt', 'Séance ajoutée': 'Training toegevoegd',
+    'Ajoute au moins une série avec des répétitions, à une date passée.': 'Voeg minstens één set met herhalingen toe, op een eerdere datum.', 'Date': 'Datum', 'Retirer la série': 'Set verwijderen' } });
 
 let month = null; // mois affiché dans le calendrier ('YYYY-MM')
 
@@ -47,13 +58,12 @@ export function render(root, go) {
         <button class="btn filled pill" data-start="${r.id}">${t('Démarrer')}</button></li>`).join('')}</ul>`)).join('')}
     ${group('', `<div class="cells"><div class="cell action" data-a="new-routine">${icon('plus')} ${t('Nouvelle routine')}</div></div>`)}
     ${calendar()}
-    ${group(t('Muscles — 7 derniers jours'), `<div class="cells"><div class="vol">${S.MUSCLES.map((m) => { const n = msets[m] || 0;
-      return `<div class="vol-row"><span>${t(m)}</span><div class="bar-track"><div class="bar-fill ${n >= 10 ? 'ok' : ''}" style="width:${Math.min(100, (n / 20) * 100)}%"></div></div><span>${fmt(n, n % 1 ? 1 : 0)}</span></div>`; }).join('')}</div></div>`,
-      t('Séries validées hors échauffement : muscle principal = 1, secondaires = 0,5. Cible 10–20 séries/muscle/semaine (Schoenfeld 2017).'))}
+    ${musclesCard(ws, msets)}
     ${doneNames.length ? group(t('Exercices'), `<ul class="cells">${doneNames.map((n) => { const r = W.exerciseRecords(ws, n, bw);
       return `<li class="cell tap" data-ex="${esc(n)}"><div class="grow"><span class="t">${esc(t(n))}</span><span class="s num">${t('1RM estimé')} ${fmt(r.e1rm, 1)} kg · ${r.sessions} ${t('séances')}</span></div>${icon('chevronRight', { cls: 'chev' })}</li>`; }).join('')}</ul>`) : ''}
     ${group(t('Historique'), `<ul class="cells">${[...ws].reverse().slice(0, 20).map((w) => `<li class="cell tap" data-w="${esc(w.id)}"><div class="grow"><span class="t">${esc(t(w.name || w.dayName))}</span>
       <span class="s num">${fmtDate(w.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${fmt(w.minutes || 0)} min · ${fmt(w.volume ?? W.workoutVolume(w, bw))} kg · ${W.doneSets(w)} ${t('séries')}</span></div>${icon('chevronRight', { cls: 'chev' })}</li>`).join('') || `<li class="empty">${t('Aucune séance.')}</li>`}</ul>`)}
+    ${group('', `<div class="cells"><div class="cell action" data-a="log-past" role="button">${icon('plus')} ${t('Saisir une séance passée')}</div></div>`)}
     ${group(t('Outils'), `<div class="cells"><div class="cell tap with-icon" data-a="plates"><span class="badge bg-teal">${icon('dumbbell')}</span><span class="grow">${t('Calculateur de disques')}</span>${icon('chevronRight', { cls: 'chev' })}</div></div>`,
       t("OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem."))}`;
 
@@ -74,11 +84,32 @@ export function render(root, go) {
     if (a === 'learn') return go('learn', 'training');
     if (a === 'wizard') return openWizard(back);
     if (a === 'plates') return platesSheet();
+    if (a === 'log-past') return editWorkout(null, back);
     if (a === 'new-routine') {
       const r = { id: uid(), name: t('Nouvelle routine'), folder: '', exercises: [] };
       state.routines.push(r); save(); return editRoutine(r, back, { isNew: true });
     }
   };
+}
+
+// Carte Muscles : état de récupération (couleur + texte) et séries des 7 derniers jours, muscles prêts en tête.
+const REC = { recup: 'Récupère', pret: 'Prêt', reprendre: 'À reprendre' };
+function musclesCard(ws, msets) {
+  const rec = recoveryMap(ws, today(), (n) => findExercise(n, state.customExercises));
+  // En tête : d'abord les muscles délaissés (> 7 j), sinon ceux qui sont prêts, sinon conseil de repos.
+  const of = (st) => S.MUSCLES.filter((m) => rec[m].status === st).map((m) => t(m)).join(', ');
+  const todo = of('reprendre'), ready = of('pret');
+  const head = ws.length ? `<p class="rc-head">${todo ? t('À travailler en priorité : {list}', { list: todo }) : ready ? t('Prêts aujourd\'hui : {list}', { list: ready }) : t('Tous tes muscles récupèrent : jour de repos conseillé.')}</p>` : '';
+  const rows = S.MUSCLES.map((m) => {
+    const r = rec[m], n = msets[m] || 0;
+    const when = r.days === null ? '' : ' · ' + (r.days === 0 ? t("aujourd'hui") : t('il y a {n} j', { n: r.days }));
+    return `<div class="rc-row"><span class="rc-dot rc-${r.status}" aria-hidden="true"></span>
+      <span class="rc-name"><b>${t(m)}</b><small class="rc-${r.status}-t">${t(REC[r.status])}${when}</small></span>
+      <div class="bar-track" role="img" aria-label="${fmt(n, n % 1 ? 1 : 0)} ${t('séries')}"><div class="bar-fill ${n >= 10 ? 'ok' : ''}" style="width:${Math.min(100, (n / 20) * 100)}%"></div></div>
+      <span class="num">${fmt(n, n % 1 ? 1 : 0)}</span></div>`;
+  }).join('');
+  return group(t('Muscles · récupération'), `<div class="cells"><div class="vol rc">${head}${rows}</div></div>`,
+    t('Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).'));
 }
 
 // Calendrier du mois : jours d'entraînement marqués.
@@ -115,11 +146,67 @@ function workoutDetail(id, back) {
       <div><small>${t('Volume')}</small><b>${fmt(W.workoutVolume(w, bw))} <span class="u">kg</span></b></div><div><small>${t('Séries')}</small><b>${W.doneSets(w)}</b></div></div>
     ${w.exercises.map((ex) => group(esc(t(ex.name)), `<ul class="cells">${ex.sets.filter((x) => x.done).map((x, j) => `<li class="cell"><span class="set-type static">${W.SET_LABEL[x.type] || j + 1}</span>
       <span class="grow num">${x.kg ? fmt(x.kg, 1) + ' kg × ' : ''}${x.reps}${x.rir != null && x.rir !== '' ? ` · RIR ${x.rir}` : ''}</span></li>`).join('')}</ul>`, ex.note ? esc(ex.note) : '')).join('')}
+    ${group('', `<div class="cells"><div class="cell action" data-a="edit" role="button">${icon('pencil')} ${t('Modifier la séance')}</div></div>`)}
     ${group('', `<div class="cells"><div class="cell action destructive" data-a="del">${t('Supprimer la séance')}</div></div>`)}`);
+  s.querySelector('[data-a=edit]').onclick = () => { s.close(); editWorkout(w, back); };
   s.querySelector('[data-a=del]').onclick = () => {
     if (!confirm(t('Supprimer cette séance ? (irréversible)'))) return;
     state.workouts = state.workouts.filter((x) => x.id !== id); save(); s.close(); back();
   };
+}
+
+// Modifier une séance enregistrée (nom, date, séries) ou en saisir une passée (w = null). Travaille sur une copie :
+// fermer sans « Enregistrer » ne change rien. editedWorkout() refuse une date future ou une séance sans série.
+function editWorkout(w, back) {
+  const isNew = !w;
+  const yesterday = S.isoDate(new Date(Date.now() - 86400000));
+  const d = JSON.parse(JSON.stringify(w || { id: uid(), name: t('Séance passée'), date: yesterday, minutes: 0, exercises: [] }));
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t(isNew ? 'Saisir une séance passée' : 'Modifier la séance')}</h3></div><div class="body"></div>`, back);
+  const draw = () => {
+    s.querySelector('.body').innerHTML = `
+      ${group('', `<div class="cells">
+        <label class="cell field"><span>${t('Nom')}</span><input data-f="name" value="${esc(t(d.name || d.dayName || ''))}"></label>
+        <label class="cell field"><span>${t('Date')}</span><input data-f="date" type="date" max="${today()}" value="${d.date}"></label></div>`)}
+      ${d.exercises.map((ex, i) => group(esc(t(ex.name)), `<div class="cells">${ex.sets.map((x, j) => `<div class="cell we-set">
+          <span class="set-type static">${W.SET_LABEL[x.type] || j + 1}</span>
+          <label class="we-in"><input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${x.kg ?? 0}" aria-label="kg"><span>kg</span></label>
+          <label class="we-in"><input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${x.reps ?? 0}" aria-label="${t('reps')}"><span>${t('reps')}</span></label>
+          <button class="icon-btn" data-rm-set="${i}:${j}" aria-label="${t('Retirer la série')}">${icon('trash')}</button></div>`).join('')}
+        <div class="cell action" data-add-set="${i}" role="button">${icon('plus')} ${t('Série')}</div></div>`)).join('')}
+      ${group('', `<div class="cells"><div class="cell action" data-a="add-ex" role="button">${icon('plus')} ${t('Ajouter un exercice')}</div></div>`)}
+      <button class="btn filled large" data-a="save">${t('Enregistrer')}</button>`;
+  };
+  s.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.dataset.f) d[el.dataset.f] = el.value;
+    if (el.dataset.k) d.exercises[+el.dataset.i].sets[+el.dataset.j][el.dataset.k] = parseFloat(String(el.value).replace(',', '.')) || 0;
+  });
+  s.addEventListener('click', (e) => {
+    const rm = e.target.closest('[data-rm-set]'), add = e.target.closest('[data-add-set]'), a = e.target.closest('[data-a]')?.dataset.a;
+    if (rm) {
+      const [i, j] = rm.dataset.rmSet.split(':').map(Number);
+      d.exercises[i].sets.splice(j, 1);
+      if (!d.exercises[i].sets.length) d.exercises.splice(i, 1);
+      return draw();
+    }
+    if (add) { const ex = d.exercises[+add.dataset.addSet], last = ex.sets[ex.sets.length - 1] || { kg: 0, reps: 8 }; ex.sets.push({ kg: last.kg, reps: last.reps, type: 'normal', done: true }); return draw(); }
+    if (a === 'add-ex') {
+      return pickExercise((name) => {
+        const info = findExercise(name, state.customExercises) || {};
+        d.exercises.push({ name, muscle: info.muscle, secondary: info.secondary || [], type: info.type || 'weight_reps', upper: info.upper ?? true, repMin: 8, repMax: 12, sets: [{ kg: 0, reps: 8, type: 'normal', done: true }] });
+        draw();
+      });
+    }
+    if (a === 'save') {
+      const out = editedWorkout(d, { name: d.name, date: d.date }, today(), latestWeight() || 0);
+      if (!out) return toast(t('Ajoute au moins une série avec des répétitions, à une date passée.'));
+      const k = state.workouts.findIndex((x) => x.id === out.id);
+      if (k >= 0) state.workouts[k] = out; else state.workouts.push(out);
+      state.workouts.sort((x, y) => x.date.localeCompare(y.date)); // l'historique suit l'ordre des dates
+      save(); s.close(); toast(t(isNew ? 'Séance ajoutée' : 'Séance modifiée'));
+    }
+  });
+  draw();
 }
 
 function editRoutine(r, back, { isNew = false } = {}) {

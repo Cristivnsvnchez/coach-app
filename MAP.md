@@ -24,7 +24,7 @@ TrackMe — styles de la vue onboarding (voir DESIGN.md, css/trackme.css).
 ## css/planning.css (18 l.)
 TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.md, css/trackme.css).
 
-## css/session.css (48 l.)
+## css/session.css (65 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
 ## css/today.css (112 l.)
@@ -96,6 +96,10 @@ exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildP
 ## js/poses.js (389 l.)
 Mouvements 3D décrits par poses clés (exercices absents de Mixamo : soulevé de terre, développé couché, fentes…).
 exports: POSES,buildPoseClip
+
+## js/recovery.js (53 l.)
+Récupération musculaire (récupère < 48 h / prêt / à reprendre > 7 j) et correction d'une séance enregistrée. Pures, testées.
+exports: recoveryMap,editedWorkout
 
 ## js/science.js (230 l.)
 Calculs nutrition / entraînement. Fonctions pures, sans DOM (testées sous Node).
@@ -183,7 +187,7 @@ exports: active,clearActive addToActive,persist startWorkout,renderSession
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
-## js/views/training.js (181 l.)
+## js/views/training.js (268 l.)
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render
 
