@@ -4,6 +4,24 @@ Monde : « précision calme ». Fond clair légèrement froid, cartes blanches, 
 couleur réservée aux données. Une seule voix typographique (Geist). Verre uniquement sur la couche de contrôle
 (barre d'onglets, minuteur, feuilles).
 
+## Parcours v2 (référence actuelle)
+Source : canevas Design « TrackMe Parcours v2 » (claude.ai/artifact/5Aq8TtTfuJzch1b4Zr9ftZ), 41 écrans à 375 × 812.
+Implémentation : `css/v2.css`, chargée en dernier ; elle prime sur trackme.css et les CSS par vue.
+- Jetons : profond #1B3FD1, moyen #2F7BFF, chaud #FF8A3D, teinte #E6ECFF, encre #141418 / #5E5E6A, filet #E6E6EB,
+  carte blanc 88 %, feuille #F3F4F8 ; couleurs de données : repas #1F8A4C, eau #1C8FA0, cycle #C2255C, fertile #7A4BD1,
+  SPM #B35A1F, effort #D9480F, alerte #A15C00, danger #C92A2A. Fond : gris bleuté #EEF1F7 avec deux halos.
+- Sombre : dérivé (le canevas est en clair) ; les textes bleus passent à #9DB8FF pour rester lisibles.
+- En-tête plein cadre (`.v2-hero`) : halos flous profond / moyen / chaud (cycle : framboise → violet), texte blanc,
+  boutons ronds en verre 44 px ; le contenu suit dans une feuille arrondie 40 px (`.v2-leaf`). Écrans : Journal,
+  séance en direct, Cycle, Étape atteinte.
+- Cartes 24 px (`.v2-card`), listes à lignes (`.v2-li`) avec pastille 40 px (`.v2-av`) et chevron.
+- Bouton principal : pilule 56 px en dégradé profond → moyen avec pastille flèche à droite (`.btn.filled.large.v2-go`).
+- Barre d'onglets : capsule blanche 62 px, icônes seules, onglet actif en pastille teintée avec libellé, « + » surélevé 60 px.
+  Ordre : Journal, Séances, +, Poids, Apprendre.
+- Feuilles : fond #F7F7FA, rayon 40, poignée 40 × 5. Toast : pilule encre en haut, sous l'île.
+- Écarts assumés avec le canevas : pastille « Dépense » au lieu de « Brûlé » (rien ne mesure les kcal brûlées),
+  segment « Tout » sur la courbe de poids, sections détaillées gardées sous chaque écran (aucune fonction retirée).
+
 ## Palette fixe : Océan (prépondérante)
 Une seule palette domine l'app : Océan, avec la forme Vague. L'utilisateur ne choisit plus ni la palette ni la forme
 (étape retirée de l'onboarding et de Profil → Apparence, qui ne garde que le mode clair/sombre et la matière).

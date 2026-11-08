@@ -1,6 +1,6 @@
 # MAP — carte du code TrackMe (générée)
 
-## index.html (34 l.)
+## index.html (37 l.)
 <!doctype html>
 
 ## sw.js (36 l.)
@@ -12,7 +12,7 @@ Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 ## css/cycle.css (58 l.)
 TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 
-## css/learn.css (113 l.)
+## css/learn.css (123 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 
 ## css/motion.css (51 l.)
@@ -27,14 +27,17 @@ TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.
 ## css/session.css (65 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
+## css/v2.css (585 l.)
+TrackMe — Parcours v2 (canevas « TrackMe Parcours v2 ») : jetons, cartes, boutons à flèche, barre d'onglets, feuilles, en-têtes plein cadre à halos (.v2-hero/.v2-leaf) et styles de chaque écran v2. Chargée en dernier.
+
 ## css/today.css (112 l.)
 TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pas de filets durs.
 
-## css/trackme.css (296 l.)
+## css/trackme.css (323 l.)
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
-## js/app.js (121 l.)
-Point d'entrée TrackMe : menu (capsule + « + » central qui ouvre 4 actions rapides : repas, pesée, séance, eau), routes, thème, onboarding, service worker.
+## js/app.js (155 l.)
+Point d'entrée TrackMe : menu (Journal, Séances, « + », Poids, Apprendre ; le « + » ouvre 4 actions rapides : repas, pesée, séance, eau), routes, thème, onboarding, service worker.
 exports: go
 
 ## js/cycle.js (102 l.)
@@ -65,7 +68,7 @@ exports: AUTO,DEFAULT_HABITS habitName,dayStatus migrateHabits,suggestTasks addT
 Traduction FR/EN. La clé est le texte français ; `t()` renvoie l'anglais si la langue active est 'en'.
 exports: register,hasTranslation LANGS,getLang locale,setLang t
 
-## js/icons.js (52 l.)
+## js/icons.js (70 l.)
 Icônes SVG au trait, dessinées pour l'app (les SF Symbols ne sont pas licenciés pour le web).
 exports: icon
 
@@ -93,7 +96,7 @@ exports: retryDelay,shouldRetry fetchRetry
 Planification (pure, testée sous Node) : modèles de programmes, programme daté (phases + décharges),
 exports: GOAL_REPS,PLAN_GOALS TEMPLATES,recommendTemplate defaultWeekdays,buildPlan weekOf,isDeload phaseOf,schedule 
 
-## js/poses.js (389 l.)
+## js/poses.js (553 l.)
 Mouvements 3D décrits par poses clés (exercices absents de Mixamo : soulevé de terre, développé couché, fentes…).
 exports: POSES,buildPoseClip
 
@@ -109,11 +112,11 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
 exports: dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
-## js/store.js (172 l.)
+## js/store.js (214 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay latestWeight,recentFoods
 
-## js/technique.js (664 l.)
+## js/technique.js (651 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
 exports: LEVELS,LEVEL_LABEL LANGS_T,hasFigure combineMuscles,model3D OUTFITS,outfitsFor pictogram,getTechnique allTechniques,missingTechniques
 
@@ -125,7 +128,7 @@ exports: PALETTES,SURFACES palette,variant colors,applyTheme shape,wordmark SCHE
 Petits utilitaires DOM, composants iOS et graphiques SVG.
 exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop banner
 
-## js/viewer3d.js (279 l.)
+## js/viewer3d.js (395 l.)
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
 
@@ -133,17 +136,17 @@ exports: mount3D
 Logique des séances (pure, testée sous Node) : volume, records, précédent, streak hebdo, disques, échauffement.
 exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume workoutVolume,doneSets exerciseRecords,setPRs previousSets,exerciseSeries weekStart,weekStreak restDays,muscleSets plates,warmupSets routineDiffers,migrateProgram
 
-## js/i18n/extra.js (64 l.)
+## js/i18n/extra.js (72 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
 
 ## js/i18n/nl-base.js (204 l.)
 NL : traductions néerlandaises. register({ nl: { 'texte FR': 'NL' } })
 
-## js/views/addfood.js (157 l.)
+## js/views/addfood.js (203 l.)
 Feuille « Ajouter un aliment » : récents, favoris, recherche, scan, IA, saisie manuelle.
 exports: MEALS,openAddFood
 
-## js/views/cycle.js (306 l.)
+## js/views/cycle.js (321 l.)
 Vue « cycle » : héros (phase du jour, prochaines ovulation / règles), calendrier mensuel filtrable, statistiques,
 exports: render
 
@@ -155,7 +158,7 @@ exports: pickExercise,openExercise platesSheet
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick,handleTaskSubmit
 
-## js/views/learn.js (165 l.)
+## js/views/learn.js (163 l.)
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise leave,render openTechnique
 
@@ -167,11 +170,11 @@ exports: needsOnboarding,openOnboarding
 Section « Apparence » du Profil : mode (auto / clair / sombre) et matière (Papier / Brume).
 exports: paletteSection,handlePaletteClick
 
-## js/views/planning.js (247 l.)
+## js/views/planning.js (265 l.)
 Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
 exports: render
 
-## js/views/profile.js (156 l.)
+## js/views/profile.js (194 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
@@ -179,19 +182,19 @@ exports: render
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
 exports: openWizard,planCard plannedDays
 
-## js/views/session.js (380 l.)
+## js/views/session.js (428 l.)
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
 exports: active,clearActive addToActive,persist startWorkout,renderSession
 
-## js/views/today.js (207 l.)
+## js/views/today.js (239 l.)
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
-## js/views/training.js (268 l.)
+## js/views/training.js (330 l.)
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render
 
-## js/views/weight.js (187 l.)
+## js/views/weight.js (277 l.)
 Onglet Poids : pesée, courbe (pesées, tendance, projection, cible, étapes), poids de référence,
 feuille de pesée (−/+ 0,1 kg, appui long) et écran « Étape atteinte ».
 exports: render,openWeigh
