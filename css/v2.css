@@ -570,3 +570,16 @@ html.tm .pf-app .pal-srf small { font-size: 13px; color: var(--a-ink2); }
   .lrn-card .lrn-lvl { color: #cfdcff; }
 }
 @media (prefers-color-scheme: dark) { .v2-cbs .v2-cb:not(.glass), .v2-cb:not(.glass) { background: rgba(255, 255, 255, .1); color: var(--a-ink); } }
+
+/* ----- Onboarding (canevas onboarding-2 à 7) ----- */
+html.tm .onb-top { gap: 10px; }
+.onb-count { font-size: 13px; font-weight: 500; color: var(--a-ink2); flex: none; }
+html.tm .onb-choice { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 16px 18px; border-radius: 22px; background: var(--a-card); border: 2px solid transparent; box-shadow: 0 6px 18px rgba(0, 0, 0, .04); text-align: left; }
+html.tm .onb-choice.on { border-color: var(--a-deep); background: color-mix(in srgb, var(--a-tint) 35%, var(--a-card)); color: var(--a-ink); }
+html.tm .onb-choice .grow { flex: 1; min-width: 0; font-weight: 600; font-size: 16px; }
+.onb-ico { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--a-tint); color: var(--a-deep); }
+.onb-ico svg.ic { width: 20px; height: 20px; }
+.onb-radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--a-line); flex: none; display: grid; place-items: center; color: #fff; }
+.onb-choice.on .onb-radio { background: var(--a-deep); border-color: var(--a-deep); }
+.onb-radio svg.ic { width: 14px; height: 14px; stroke-width: 3; }
+@media (prefers-color-scheme: dark) { .onb-ico { color: #9db8ff; } }

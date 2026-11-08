@@ -76,7 +76,7 @@ const STEPS = [
 ];
 
 function choice(name, opts, sel) {
-  return `<div class="onb-choices" role="radiogroup">${Object.entries(opts).map(([k, l]) => `<button type="button" role="radio" aria-checked="${String(k) === String(sel)}" class="onb-choice ${String(k) === String(sel) ? 'on' : ''}" data-set="${name}" data-v="${esc(k)}"><span>${esc(l)}</span>${String(k) === String(sel) ? icon('check') : ''}</button>`).join('')}</div>`;
+  return `<div class="onb-choices" role="radiogroup">${Object.entries(opts).map(([k, l]) => `<button type="button" role="radio" aria-checked="${String(k) === String(sel)}" class="onb-choice ${String(k) === String(sel) ? 'on' : ''}" data-set="${name}" data-v="${esc(k)}">${name === 'sex' ? `<span class="onb-ico">${icon('profile')}</span>` : ''}<span class="grow">${esc(l)}</span><span class="onb-radio" aria-hidden="true">${String(k) === String(sel) ? icon('check') : ''}</span></button>`).join('')}</div>`;
 }
 function chips(name, opts, sel) {
   return `<div class="onb-chips">${opts.map((o) => `<button type="button" class="chip ${sel.includes(o) ? 'on' : ''}" data-chip="${name}" data-v="${esc(o)}" aria-pressed="${sel.includes(o)}">${esc(t(o))}</button>`).join('')}</div>`;
@@ -125,9 +125,9 @@ export function openOnboarding(done) {
     }
     const list = steps(), st = list[i];
     el.innerHTML = `<div class="onb-step">${shape({ cls: 'onb-orb', grain: 0.4 })}
-      <div class="onb-top"><button class="icon-btn" data-a="back" aria-label="${t('Retour')}">${icon('chevronLeft')}</button>
+      <div class="onb-top"><button class="v2-cb" data-a="back" aria-label="${t('Retour')}">${icon('chevronLeft')}</button>
         <div class="onb-progress seg-prog" role="progressbar" aria-label="${t('Étape {i} sur {n}', { i: i + 1, n: list.length })}" aria-valuenow="${i + 1}" aria-valuemin="1" aria-valuemax="${list.length}">${list.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
-        <button class="btn plain" data-a="skip">${t('Passer')}</button></div>
+        <span class="onb-count num">${i + 1}/${list.length}</span><button class="btn plain" data-a="skip">${t('Passer')}</button></div>
       <div class="onb-body"><h2>${st.title()}</h2>${st.why ? `<p class="onb-why">${st.why()}</p>` : ''}<div class="onb-content">${st.body()}</div></div>
       <div class="onb-foot">${cta('next', st.id === 'safe' ? t('Aller à mon tableau de bord') : t('Continuer'))}</div></div>`;
   };
