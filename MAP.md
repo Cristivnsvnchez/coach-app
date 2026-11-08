@@ -27,7 +27,7 @@ TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.
 ## css/session.css (65 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
-## css/v2.css (585 l.)
+## css/v2.css (614 l.)
 TrackMe — Parcours v2 (canevas « TrackMe Parcours v2 ») : jetons, cartes, boutons à flèche, barre d'onglets, feuilles, en-têtes plein cadre à halos (.v2-hero/.v2-leaf) et styles de chaque écran v2. Chargée en dernier.
 
 ## css/today.css (112 l.)
@@ -112,7 +112,7 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
 exports: dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
-## js/store.js (214 l.)
+## js/store.js (222 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
 exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay latestWeight,recentFoods
 
@@ -128,9 +128,13 @@ exports: PALETTES,SURFACES palette,variant colors,applyTheme shape,wordmark SCHE
 Petits utilitaires DOM, composants iOS et graphiques SVG.
 exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop banner
 
-## js/viewer3d.js (395 l.)
+## js/viewer3d.js (387 l.)
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
+
+## js/year.js (36 l.)
+Bilan de l'année (pur, testé sous Node) : grille des 53 dernières semaines (lundi → dimanche),
+exports: level,yearReview
 
 ## js/workout.js (165 l.)
 Logique des séances (pure, testée sous Node) : volume, records, précédent, streak hebdo, disques, échauffement.
@@ -190,7 +194,7 @@ exports: active,clearActive addToActive,persist startWorkout,renderSession
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
 exports: render
 
-## js/views/training.js (330 l.)
+## js/views/training.js (349 l.)
 Onglet Entraînement : routines (dossiers), séance en direct, calendrier et streak, muscles, exercices, historique.
 exports: render
 

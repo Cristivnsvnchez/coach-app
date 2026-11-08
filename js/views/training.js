@@ -11,6 +11,7 @@ import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 import { openWizard, planCard, plannedDays } from './program.js';
 import { isDeload, weekOf, schedule } from '../planner.js';
 import { recoveryMap, editedWorkout } from '../recovery.js';
+import { yearReview } from '../year.js';
 
 register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements',
     'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'This routine is part of your program: its planned sessions will be removed. Delete it?',
@@ -23,7 +24,9 @@ register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends le
     'semaine {w} sur {n}': 'week {w} of {n}', '{n} exercices · environ {m} min': '{n} exercises · about {m} min', 'Semaine complète': 'Week complete', '{n} semaines d\'affilée.': '{n} weeks in a row.',
     'Prochaine séance : {r}, {d}.': 'Next workout: {r}, {d}.', 'Séance du jour faite': "Today's workout done", 'Repos aujourd\'hui': 'Rest day today', 'Ajoute tes exercices au fil de la séance.': 'Add exercises as you go.',
     '{n} exercices': '{n} exercises', '1 semaine d\'affilée': '1 week in a row', '{d} séance sur {p} cette semaine': '{d} of {p} workouts this week', '{d} séance cette semaine': '{d} workout this week', 'Calendrier': 'Calendar', 'record': 'record', 'Démarrer la séance': 'Start workout', 'Ajoute au moins un exercice.': 'Add at least one exercise.',
-    '<b>À travailler en priorité :</b> {list}': '<b>Train first:</b> {list}', '<b>Prêts aujourd\'hui :</b> {list}': '<b>Ready today:</b> {list}', '7 jours': '7 days', 'Séances': 'Workouts' },
+    '<b>À travailler en priorité :</b> {list}': '<b>Train first:</b> {list}', '<b>Prêts aujourd\'hui :</b> {list}': '<b>Ready today:</b> {list}', '7 jours': '7 days', 'Séances': 'Workouts',
+    "Bilan de l'année": 'Year in review', '12 derniers mois': 'Last 12 months', 'semaines actives': 'active weeks', "sem. d'affilée max": 'best week streak',
+    '{n} séances sur les 12 derniers mois': '{n} workouts in the last 12 months', 'Moins': 'Less', 'Plus': 'More', '{n} séries': '{n} sets', 'séances': 'workouts', 'séries': 'sets' },
   nl: { 'Apprendre les mouvements': 'Bewegingen leren', 'Apprends les bons mouvements': 'Leer de juiste bewegingen',
     'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'Deze routine hoort bij je programma: de geplande trainingen worden verwijderd. Verwijderen?',
     'Muscles · récupération': 'Spieren · herstel', 'Récupère': 'Herstelt', 'Prêt': 'Klaar', 'À reprendre': 'Weer trainen', 'il y a {n} j': '{n} d geleden', "aujourd'hui": 'vandaag',
@@ -35,7 +38,9 @@ register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends le
     'semaine {w} sur {n}': 'week {w} van {n}', '{n} exercices · environ {m} min': '{n} oefeningen · ongeveer {m} min', 'Semaine complète': 'Week voltooid', '{n} semaines d\'affilée.': '{n} weken op rij.',
     'Prochaine séance : {r}, {d}.': 'Volgende training: {r}, {d}.', 'Séance du jour faite': 'Training van vandaag gedaan', 'Repos aujourd\'hui': 'Rustdag vandaag', 'Ajoute tes exercices au fil de la séance.': 'Voeg oefeningen toe tijdens de training.',
     '{n} exercices': '{n} oefeningen', '1 semaine d\'affilée': '1 week op rij', '{d} séance sur {p} cette semaine': '{d} van {p} trainingen deze week', '{d} séance cette semaine': '{d} training deze week', 'Calendrier': 'Kalender', 'record': 'record', 'Démarrer la séance': 'Training starten', 'Ajoute au moins un exercice.': 'Voeg minstens één oefening toe.',
-    '<b>À travailler en priorité :</b> {list}': '<b>Eerst trainen:</b> {list}', '<b>Prêts aujourd\'hui :</b> {list}': '<b>Vandaag klaar:</b> {list}', '7 jours': '7 dagen', 'Séances': 'Trainingen' } });
+    '<b>À travailler en priorité :</b> {list}': '<b>Eerst trainen:</b> {list}', '<b>Prêts aujourd\'hui :</b> {list}': '<b>Vandaag klaar:</b> {list}', '7 jours': '7 dagen', 'Séances': 'Trainingen',
+    "Bilan de l'année": 'Jaaroverzicht', '12 derniers mois': 'Laatste 12 maanden', 'semaines actives': 'actieve weken', "sem. d'affilée max": 'langste reeks weken',
+    '{n} séances sur les 12 derniers mois': '{n} trainingen in de laatste 12 maanden', 'Moins': 'Minder', 'Plus': 'Meer', '{n} séries': '{n} sets', 'séances': 'trainingen', 'séries': 'sets' } });
 
 let month = null; // mois affiché dans le calendrier ('YYYY-MM')
 
@@ -99,6 +104,7 @@ export function render(root, go) {
     <div class="v2-card tr-list"><button class="v2-li tr-act" data-a="new-routine"><span class="v2-av">${icon('plus')}</span><span class="grow v2-lb">${t('Nouvelle routine')}</span></button></div>
     <button class="lrn-entry" data-a="learn"><span class="lrn-entry-ic">${icon('book')}</span><span class="grow"><b>${t('Apprendre les mouvements')}</b><small>${t('Apprends les bons mouvements')}</small></span>${icon('chevronRight', { cls: 'chev' })}</button>
     ${musclesCard(ws, msets)}
+    ${yearCard(ws, td)}
     <h2 class="v2-xs tr-h">${t('Historique')}</h2>
     <div class="v2-card tr-list">${[...ws].reverse().slice(0, 20).map((w) => { const pr = best(w); return `<button class="v2-li" data-w="${esc(w.id)}"><span class="v2-av ${pr ? 'pr' : ''}">${icon(pr ? 'trophy' : 'training')}</span>
       <span class="grow"><span class="v2-lb" style="display:block">${esc(t(w.name || w.dayName))} · ${w.date === td ? t("aujourd'hui") : fmtDate(w.date, { weekday: 'long', day: 'numeric' })}</span>
@@ -115,6 +121,7 @@ export function render(root, go) {
     ${group(t('Outils'), `<div class="cells"><div class="cell tap with-icon" data-a="plates"><span class="badge bg-teal">${icon('dumbbell')}</span><span class="grow">${t('Calculateur de disques')}</span>${icon('chevronRight', { cls: 'chev' })}</div></div>`,
       t("OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem."))}`;
 
+  const yr = root.querySelector('.yr-scroll'); if (yr) yr.scrollLeft = yr.scrollWidth;
   root.onclick = (e) => {
     const el = e.target.closest('[data-a],[data-start],[data-start-plan],[data-edit],[data-ex],[data-w],[data-cal]');
     if (!el) return;
@@ -159,6 +166,18 @@ function musclesCard(ws, msets) {
   }).join('');
   return `<section class="v2-card rc"><div class="rc-top"><h2 class="rc-title">${t('Muscles · récupération')}</h2><span class="v2-sm">${t('7 jours')}</span></div>${head}${rows}
     <p class="rc-foot">${t('Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).')}</p></section>`;
+}
+
+// Bilan de l'année : grille des 53 dernières semaines (une case par jour, plus foncée = plus de séries) + chiffres clés.
+function yearCard(ws, td) {
+  const r = yearReview(ws, td);
+  const months = r.weeks.map((wk, k) => { const first = wk.find((d) => d.date.slice(8) === '01'); return first ? `<span style="grid-column:${k + 1}">${esc(fmtDate(first.date, { month: 'short' }))}</span>` : ''; }).join('');
+  const cells = r.weeks.map((wk) => wk.map((d) => `<i class="yr-l${d.future ? 'f' : d.level}"${d.sets ? ` title="${esc(fmtDate(d.date, { day: 'numeric', month: 'short' }))} · ${t('{n} séries', { n: d.sets })}"` : ''}></i>`).join('')).join('');
+  const stat = (v, l) => `<div><b class="v2-num">${v}</b><small>${l}</small></div>`;
+  return `<section class="v2-card yr"><div class="rc-top"><h2 class="rc-title">${t("Bilan de l'année")}</h2><span class="v2-sm">${t('12 derniers mois')}</span></div>
+    <div class="yr-stats">${stat(fmt(r.sessions), t('séances'))}${stat(`${r.activeWeeks}<small>/52</small>`, t('semaines actives'))}${stat(r.bestStreak, t('sem. d\'affilée max'))}${stat(fmt(r.sets), t('séries'))}</div>
+    <div class="yr-scroll" role="img" aria-label="${t('{n} séances sur les 12 derniers mois', { n: r.sessions })}"><div class="yr-months" aria-hidden="true">${months}</div><div class="yr-grid" aria-hidden="true">${cells}</div></div>
+    <div class="yr-legend" aria-hidden="true"><span>${t('Moins')}</span><i class="yr-l0"></i><i class="yr-l1"></i><i class="yr-l2"></i><i class="yr-l3"></i><span>${t('Plus')}</span></div></section>`;
 }
 
 // Calendrier en feuille (bouton calendrier de l'en-tête).

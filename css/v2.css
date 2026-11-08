@@ -583,3 +583,32 @@ html.tm .onb-choice .grow { flex: 1; min-width: 0; font-weight: 600; font-size: 
 .onb-choice.on .onb-radio { background: var(--a-deep); border-color: var(--a-deep); }
 .onb-radio svg.ic { width: 14px; height: 14px; stroke-width: 3; }
 @media (prefers-color-scheme: dark) { .onb-ico { color: #9db8ff; } }
+
+/* ----- Bilan de l'année (Séances) : grille 53 semaines × 7 jours, défile horizontalement, calée sur aujourd'hui ----- */
+.yr { padding: 16px; margin: 14px 0; }
+.yr-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.yr-stats > div { display: grid; gap: 2px; min-width: 0; }
+.yr-stats b { font-size: 20px; }
+.yr-stats b small { font: 500 12px 'Geist', system-ui, sans-serif; color: var(--a-ink2); letter-spacing: 0; }
+.yr-stats > div > small { font-size: 11px; color: var(--a-ink2); line-height: 1.2; }
+.yr-scroll { overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px 2px; }
+.yr-scroll::-webkit-scrollbar { display: none; }
+.yr-months, .yr-grid { display: grid; grid-template-columns: repeat(53, 11px); column-gap: 3px; width: max-content; }
+.yr-months { height: 16px; font-size: 10px; color: var(--a-ink2); text-transform: capitalize; }
+.yr-months span { white-space: nowrap; }
+.yr-grid { grid-template-rows: repeat(7, 11px); grid-auto-flow: column; row-gap: 3px; }
+.yr i, .yr-legend i { display: block; width: 11px; height: 11px; border-radius: 3px; }
+.yr-l0 { background: rgba(20, 20, 24, .07); }
+.yr-l1 { background: color-mix(in srgb, var(--a-deep) 30%, transparent); }
+.yr-l2 { background: color-mix(in srgb, var(--a-deep) 62%, transparent); }
+.yr-l3 { background: var(--a-deep); }
+.yr-lf { background: transparent; box-shadow: inset 0 0 0 1px rgba(20, 20, 24, .06); }
+.yr-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 10px; font-size: 11px; color: var(--a-ink2); }
+.yr-legend span { margin: 0 4px; }
+@media (prefers-color-scheme: dark) {
+  .yr-l0 { background: rgba(255, 255, 255, .08); }
+  .yr-l1 { background: color-mix(in srgb, #7d97ff 35%, transparent); }
+  .yr-l2 { background: color-mix(in srgb, #7d97ff 65%, transparent); }
+  .yr-l3 { background: #9db8ff; }
+  .yr-lf { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+}
