@@ -151,6 +151,18 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
     for (const nm in keep) setD(nm, keep[nm]); // pieds à plat, au même endroit
     hipsPos = B.Hips.position.clone();
   };
+  // Épaule : bras ni trop en arrière, ni croisé devant le corps (direction du bras dans le repère du thorax). Si le bras
+  // sort du cône réduit de la marge `m` (degrés), on le ramène vers « bras le long du corps » juste jusqu'au bord.
+  const clampShoulder = (S, sg, m, backOnly = false) => {
+    const chest = d('Spine2'), up = pos(S + 'ForeArm').sub(pos(S + 'Arm')).normalize(), a = up.clone().applyQuaternion(chest.clone().invert());
+    const ok = (v, m) => { const x = v.x * sg; return Math.asin(Math.max(0, -v.z)) * DEG <= 45 - 20 * v.y - m
+      && (backOnly || Math.asin(Math.max(0, -x)) * DEG <= 50 * Math.max(v.z, 0) + 25 * (1 - Math.max(v.z, 0)) - m); };
+    if (!ok(a, m)) { // projeté sur le bord du cône réduit de la marge : continu d'une image à l'autre
+      const safe = V(0.2 * sg, -0.98, 0.02).normalize(), at = (t) => a.clone().lerp(safe, t).normalize();
+      let lo = 0, hi = 1; for (let it = 0; it < 14; it++) { const mid = (lo + hi) / 2; if (ok(at(mid), m)) hi = mid; else lo = mid; }
+      setD(S + 'Arm', Q().setFromUnitVectors(up, at(hi).applyQuaternion(chest)).multiply(d(S + 'Arm')));
+    }
+  };
   const fixFrame = () => {
     // 1. Symétrie : on relève toutes les orientations, puis on impose les cibles du haut vers le bas.
     if (symmetric) {
@@ -192,16 +204,7 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
       if (fa.some((x, k) => Math.abs(x - [ax, ay, az][k]) > 0.05)) { const keepToe = d(S + 'ToeBase'), dFoot = d(S + 'Leg').multiply(fromAng('XYZ', fa)); setD(S + 'Foot', dFoot);
         if (B[S + 'ToeBase']) setD(S + 'ToeBase', keepToe.clone().slerp(dFoot, 0.5)); }
       // 5. Épaule : bras ni trop en arrière, ni croisé devant le corps (direction du bras dans le repère du thorax).
-      const chest = d('Spine2'), up = pos(S + 'ForeArm').sub(pos(S + 'Arm')).normalize(), a = up.clone().applyQuaternion(chest.clone().invert());
-      // Si le bras dépasse, on le ramène vers « bras le long du corps » juste assez (recherche par dichotomie, marge 3°) :
-      // la correction varie continûment d'une image à l'autre.
-      const ok = (v, m) => { const x = v.x * sg; return Math.asin(Math.max(0, -v.z)) * DEG <= 45 - 20 * v.y - m
-        && Math.asin(Math.max(0, -x)) * DEG <= 50 * Math.max(v.z, 0) + 25 * (1 - Math.max(v.z, 0)) - m; };
-      if (!ok(a, 0)) {
-        const safe = V(0.2 * sg, -0.98, 0.02).normalize(), at = (t) => a.clone().lerp(safe, t).normalize();
-        let lo = 0, hi = 1; for (let it = 0; it < 14; it++) { const mid = (lo + hi) / 2; if (ok(at(mid), 3)) hi = mid; else lo = mid; }
-        setD(S + 'Arm', Q().setFromUnitVectors(up, at(hi).applyQuaternion(chest)).multiply(d(S + 'Arm')));
-      }
+      clampShoulder(S, sg, 3);
       // 6. Poignet (flexion, extension, déviation) et rotation de l'avant-bras (coude + poignet).
       const ex = ang('YZX', rel(S + 'Arm', S + 'ForeArm'))[2];
       let [wx, wy, wz] = ang('ZYX', rel(S + 'ForeArm', S + 'Hand'));
@@ -259,6 +262,12 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
     }
   }
   const times = Float32Array.from({ length: n }, (_, i) => (T * i) / (n - 1));
+  // Bras trop en arrière, après le lissage, avec 6° de marge (le bras croisé est laissé aux étirements) : l'interpolation entre deux images (1/30 s) d'un geste rapide
+  // (épaulé-jeté) ne doit pas sortir du cône.
+  if (out.LeftArm && out.RightArm) for (let i = 0; i < n; i++) {
+    mixer.setTime(Math.min(T, (T * i) / (n - 1))); for (const [nm] of tracked) B[nm].quaternion.fromArray(out[nm], i * 4); B.Hips.position.fromArray(outHips, i * 3); obj.updateMatrixWorld(true);
+    for (const [S, sg] of SIDES) { clampShoulder(S, sg, 6, true); B[S + 'Arm'].quaternion.toArray(out[S + 'Arm'], i * 4); }
+  }
   // Membres qui se traversent, après lissage (le lissage dilue la correction image par image) : jambes qui se croisent,
   // avant-bras dans l'autre avant-bras ou dans une cuisse. On mesure l'écart manquant sur le geste lissé, puis on
   // l'applique en fondu sur ±5 images pour ne créer aucun à-coup (réponse aux collisions, comme dans un moteur de jeu).
