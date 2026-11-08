@@ -112,9 +112,9 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
 exports: AISLES,aisleOf,byAisle dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
-## js/store.js (222 l.)
+## js/store.js (224 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
-exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay latestWeight,recentFoods
+exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay recordWeight,latestWeight recentFoods
 
 ## js/technique.js (651 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
@@ -128,6 +128,26 @@ exports: PALETTES,SURFACES palette,variant colors,applyTheme shape,wordmark SCHE
 Petits utilitaires DOM, composants iOS et graphiques SVG.
 exports: esc,fmt fmtDate,nav group,ring bar,lineChart md,toast sheet,sheetPop banner
 
+## js/gear3d.js (199 l.)
+Matériel 3D (models/gear.glb, modélisé par tools/build-gear.py) accroché au corps animé : haltères et barre dans les
+exports: gripOf,tube barOnBack,barOnFront attachGear
+
+## js/joint-limits.js (315 l.)
+Limites articulaires appliquées aux clips Mixamo, image par image (partagé : visionneuse, vignettes, banc d'essai).
+exports: limitJoints
+
+## js/mistakes3d.js (118 l.)
+Onglet Erreurs : la faute la plus fréquente de chaque exercice, montrée comme un VRAI mouvement (pas des os tordus
+exports: FAULTS,faultOf faultyPose,faultyClip
+
+## js/overlay3d.js (56 l.)
+Tracés par-dessus la scène 3D (façon vidéos de technique) : ligne-guide reliant des articulations (dos droit,
+exports: GREEN,guideLine pathArrow
+
+## js/studio3d.js (34 l.)
+Studio 3D partagé par la visionneuse (viewer3d.js) et les vignettes (tools/render-thumbs.js) : mannequin d'argile
+exports: CLAY,CLOTH NORMAL_BOOST,studioLights kindOf,clayMaterial
+
 ## js/viewer3d.js (387 l.)
 Visionneuse 3D 360° des exercices : modèle humain animé (glb exporté de Blender depuis Mixamo), à tourner au doigt.
 exports: mount3D
@@ -136,9 +156,13 @@ exports: mount3D
 Bilan de l'année (pur, testé sous Node) : grille des 53 dernières semaines (lundi → dimanche),
 exports: level,yearReview
 
-## js/workout.js (165 l.)
+## js/cues.js (66 l.)
+Signaux de séance : écran maintenu allumé (Screen Wake Lock) et son de fin de repos (Web Audio).
+exports: wakeController,unlockAudio restBeep,wake
+
+## js/workout.js (201 l.)
 Logique des séances (pure, testée sous Node) : volume, records, précédent, streak hebdo, disques, échauffement.
-exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume workoutVolume,doneSets exerciseRecords,setPRs previousSets,exerciseSeries weekStart,weekStreak restDays,muscleSets plates,warmupSets routineDiffers,migrateProgram
+exports: SET_TYPES,SET_LABEL EX_TYPES,effectiveLoad setVolume,exerciseVolume workoutVolume,doneSets exerciseRecords,setPRs previousSets,exerciseSeries weekStart,weekStreak restDays,muscleSets plates,warmupSets routineDiffers,migrateProgram cleanNotes,toggleStopwatch repRecords
 
 ## js/i18n/extra.js (72 l.)
 Textes EN + NL manquants repérés par tests/i18n-scan.mjs (clés déjà utilisées sans traduction).
@@ -154,7 +178,7 @@ exports: MEALS,openAddFood
 Vue « cycle » : héros (phase du jour, prochaines ovulation / règles), calendrier mensuel filtrable, statistiques,
 exports: render
 
-## js/views/exsheets.js (118 l.)
+## js/views/exsheets.js (121 l.)
 Feuilles liées aux exercices : sélection (bibliothèque + perso), fiche (graphique, records, historique), disques.
 exports: pickExercise,openExercise platesSheet
 
@@ -186,9 +210,9 @@ exports: render
 Assistant de programme : brief (objectif, date, jours, durée, niveau, blessures) → programmes proposés
 exports: openWizard,planCard plannedDays
 
-## js/views/session.js (428 l.)
+## js/views/session.js (478 l.)
 Séance en direct : chrono/volume/séries, types de série, colonne « Précédent », repos par exercice (±15 s),
-exports: active,clearActive addToActive,persist startWorkout,renderSession
+exports: active,clearActive persist,startWorkout addToActive,renderSession
 
 ## js/views/today.js (239 l.)
 Onglet Journal : en-tête (Planning, Profil), héros palette (kcal restantes, mangé / brûlé), tuiles macros, pastille cycle,
