@@ -272,14 +272,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, pos
     for (let i = 0; i <= 32; i++) { act0.time = (T * i * 0.999) / 32; mix.update(0); target.updateMatrixWorld(true); out.push(pointOf()); }
     act0.time = t0; mix.update(0); return out; };
   // Point suivi à l'onglet Étapes : le poing droit si un matériel est tenu, sinon la partie du corps qui bouge le plus.
-  const stepsPoint = (() => { const Bm = bonesMap(obj);
-    if (gear?.hold && gear.hold !== 'barFront' && Bm.RightHandMiddle1) return () => gripOf(THREE, Bm, gear.hold === 'dumbbellL' ? 'Left' : 'Right').c.clone();
-    const cands = ['RightHand', 'RightFoot', 'Hips', 'Head'].map((n) => Bm[n]).filter(Boolean);
-    let best = cands[0], bd = -1;
-    for (const b of cands) { const pth = samplePath(obj, mixer, act, () => b.getWorldPosition(new THREE.Vector3())); const d = Math.max(0, ...pth.map((q) => q.distanceTo(pth[0]))); if (d > bd) { bd = d; best = b; } }
-    return () => best.getWorldPosition(new THREE.Vector3()); })();
-  const stepsArrow = showcase || !act ? null : overlay.pathArrow(THREE, samplePath(obj, mixer, act, stepsPoint), overlay.GREEN);
-  if (stepsArrow) scene.add(stepsArrow.group);
+  // Étapes : pas de flèche (demande utilisateur, 08/11) ; les flèches vertes et rouges restent réservées à l'onglet Erreurs.
 
   // Version fautive : un second corps (même matériel), créé la première fois qu'on ouvre l'onglet Erreurs.
   const tintOK = [0.24, 0.86, 0.52, 0.42], tintKO = [1.0, 0.3, 0.28, 0.5];
@@ -315,7 +308,6 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, pos
     if (act && !reduce) act.paused = t === 'tips';
     if (t === 'mistakes' && fault && !wrong && !showcase) wrong = buildWrong();
     tintA.value.set(...(t === 'mistakes' && wrong ? tintOK : [0, 0, 0, 0]));
-    if (stepsArrow) stepsArrow.group.visible = t === 'steps';
     if (wrong) wrong.marks.style.display = t === 'mistakes' ? '' : 'none';
     box.classList.toggle('v3d-split-on', t === 'mistakes' && !!wrong); // l'interface peut agrandir la carte en mode comparaison
   };
@@ -371,7 +363,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, pos
   const dispose = () => {
     cancelAnimationFrame(raf); raf = 0; visible = false;
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
-    controls.dispose(); mixer.stopAllAction(); kit.dispose(); wrong?.dispose(); stepsArrow?.dispose();
+    controls.dispose(); mixer.stopAllAction(); kit.dispose(); wrong?.dispose();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
     grid.geometry.dispose(); grid.material.dispose(); floor.geometry.dispose(); floor.material.alphaMap.dispose(); floor.material.dispose(); catcher.geometry.dispose(); catcher.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();

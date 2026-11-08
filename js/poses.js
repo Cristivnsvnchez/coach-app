@@ -212,7 +212,7 @@ export const POSES = {
     pose(LEGEXT, { shin: [0.02, -1, 0.12], plantar: 6 }),
     pose(LEGEXT, { shin: [0.02, -0.08, 1], plantar: -2 })] }, // jambe tendue, sans hyperextension
   // Chaque répétition repart de la barre posée. Femme : bras plus courts, bassin un peu plus bas pour atteindre la barre.
-  'Soulevé de terre': { ...deadlift, gear: { hold: 'bar', fromFloor: true }, F: { 0: { hips: [0, 0.545, -0.25], torso: [0, 0.52, 0.85] } } },
+  'Soulevé de terre': { ...deadlift, gear: { hold: 'bar', fromFloor: true }, F: { 0: { hips: [0, 0.545, -0.25], torso: [0, 0.52, 0.85], arm: [0.1, -1, 0.2] }, 1: { arm: [0.1, -1, 0.2] }, 2: { arm: [0.1, -1, 0.2] } } }, // femme : bras un peu plus écartés, hors des cuisses
   'Soulevé de terre roumain': { ...rdl, gear: { hold: 'bar' } },
   // À plat ventre : hanches au sol, le talon vient vers les fesses, front posé sur les mains.
   // Leg curl allongé sur la machine : bassin sur le coussin, genoux juste après le bord, rouleau au-dessus des talons,

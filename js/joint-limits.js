@@ -55,6 +55,10 @@ function armClash(P, k, S) {
   return worst;
 }
 
+// Masses des segments (Dempster, fraction du corps), comme le banc d'essai : centre de masse du corps.
+const SEG = [['Hips', 'Neck', 0.497], ['Neck', 'HeadTop_End', 0.081], ['LeftArm', 'LeftForeArm', 0.028], ['RightArm', 'RightForeArm', 0.028], ['LeftForeArm', 'LeftHand', 0.016], ['RightForeArm', 'RightHand', 0.016],
+  ['LeftUpLeg', 'LeftLeg', 0.1], ['RightUpLeg', 'RightLeg', 0.1], ['LeftLeg', 'LeftFoot', 0.0465], ['RightLeg', 'RightFoot', 0.0465], ['LeftFoot', 'LeftToeBase', 0.0145], ['RightFoot', 'RightToeBase', 0.0145]];
+
 export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   if (!clip || !obj) return clip;
   const memo = (clip.userData ||= {}).tmLimited ||= {};
@@ -73,6 +77,7 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   const hb = Object.keys(B).find((k) => /HeadTop_End/.test(k)), tb = Object.keys(B).find((k) => /LeftToe_?End/.test(k)) || 'LeftFoot';
   const lp = (n) => B[n].getWorldPosition(new THREE.Vector3()).applyMatrix4(obj.matrixWorld.clone().invert());
   const bodyK = hb ? 1.75 / Math.max(0.01, lp(hb).y - lp(tb).y) : 1;
+  const restAnkle = B.LeftToe_End ? lp('LeftFoot').y - lp('LeftToe_End').y : 0; // cheville au-dessus du bout des orteils, pied à plat
   const d = (n) => wq(n).multiply(restW[n].clone().invert()); // rotation depuis le repos
   const setD = (n, dq) => { // impose l'orientation (dans le repère du corps) d'un os, ses enfants suivent
     const b = B[n], world = objQ.clone().multiply(dq.clone().multiply(restW[n]));
@@ -81,9 +86,11 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   };
   // Écarte les deux cuisses de `a` radians au total (abduction pure : axe ⟂ à la cuisse et à l'axe latéral du bassin,
   // pour qu'une jambe levée devant s'écarte au lieu de tourner sur elle-même).
+  // Appui sur les mains et les pieds (planche, burpee) : écarter les jambes ferait glisser les pieds au sol.
+  const plankLike = () => feetPlanted() && ['Left', 'Right'].some((S) => B[S + 'HandMiddle1'] && (pos(S + 'HandMiddle1').y - toeMin) * bodyK < 0.25);
   const feetPlanted = () => B.LeftToe_End && B.RightToe_End && ['Left', 'Right'].every((S) => (pos(S + 'Toe_End').y - toeMin) * bodyK < 0.03);
   const abdMax = () => Math.max(...[['Left', 1], ['Right', -1]].map(([S, sg]) => { // abduction de hanche (°), dans le repère du bassin
-    const th = pos(S + 'Leg').sub(pos(S + 'UpLeg')).applyQuaternion(d('Hips').invert()); return Math.atan2(sg * th.x, -th.y) * DEG; }));
+    const th = pos(S + 'Leg').sub(pos(S + 'UpLeg')).applyQuaternion(d('Hips').invert()).normalize(); return Math.asin(Math.max(-1, Math.min(1, sg * th.x))) * DEG; })); // angle hors du plan sagittal, juste même cuisse levée
   const abduct = (a) => {
     const lat = V(1, 0, 0).applyQuaternion(d('Hips'));
     for (const [S, sg] of [['Left', 1], ['Right', -1]]) {
@@ -117,8 +124,33 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   const fps = 30, T = clip.duration, n = Math.max(2, Math.round(T * fps) + 1);
   const mixer = new THREE.AnimationMixer(obj), act = mixer.clipAction(clip);
   act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; act.play();
-  const out = Object.fromEntries(tracked.map(([nm]) => [nm, new Float32Array(n * 4)]));
+  const out = Object.fromEntries(tracked.map(([nm]) => [nm, new Float32Array(n * 4)])), outHips = new Float32Array(n * 3);
 
+  let hipsPos = null; // position du bassin imposée par le contrôleur d'équilibre (repère du parent), sinon null
+  const balanceStanding = () => {
+    hipsPos = null;
+    if (!stance || !B.LeftToe_End || !B.RightToe_End || !B.HeadTop_End || !feetPlanted()) return;
+    const k = 1 / bodyK, P = (m) => pos(m);
+    for (const S of ['Left', 'Right']) if (B[S + 'HandMiddle1'] && P(S + 'HandMiddle1').y - toeMin < 0.25 * k) return; // appui sur les mains
+    if (P('Hips').y - toeMin < 0.55 * k) return; // assis, accroupi, à genoux : pas debout
+    const com = V(); let m = 0; for (const [a, b, w] of SEG) if (B[a] && B[b]) { com.addScaledVector(P(a).add(P(b)).multiplyScalar(0.5), w); m += w; }
+    com.multiplyScalar(1 / m);
+    const aL = P('LeftFoot'), aR = P('RightFoot'), A = aL.clone().add(aR).multiplyScalar(0.5);
+    const F = P('LeftToe_End').sub(aL).add(P('RightToe_End').sub(aR)).setY(0).normalize(), up = V(0, 1, 0);
+    const along = (q) => q.clone().sub(A).dot(F);
+    // Talon posé tant que la cheville reste à sa hauteur pied à plat (+ 3 cm) ; sinon l'appui commence à l'avant-pied.
+    const back = (S, a) => (a.y - toeMin < restAnkle + 0.03 * k ? along(a) - 0.05 * k : along(P(S + 'ToeBase')) - 0.02 * k);
+    const lo = Math.min(back('Left', aL), back('Right', aR)), hi = Math.max(along(P('LeftToe_End')), along(P('RightToe_End'))), c = along(com);
+    const margin = 0.06 * k, delta = c < lo + margin ? lo + margin - c : c > hi - margin ? hi - margin - c : 0;
+    if (!delta) return;
+    const h = Math.max(0.3 * k, com.y - A.y), R = Q().setFromAxisAngle(V().crossVectors(up, F).normalize(), delta / h);
+    const keep = {}; for (const S of ['Left', 'Right']) for (const nm of [S + 'Foot', S + 'ToeBase']) if (B[nm]) keep[nm] = d(nm);
+    const hp = P('Hips').sub(A).applyQuaternion(R).add(A); // le bassin tourne autour des chevilles
+    setD('Hips', R.clone().multiply(d('Hips')));
+    const w = hp.applyMatrix4(obj.matrixWorld); B.Hips.position.copy(B.Hips.parent.worldToLocal(w)); obj.updateMatrixWorld(true);
+    for (const nm in keep) setD(nm, keep[nm]); // pieds à plat, au même endroit
+    hipsPos = B.Hips.position.clone();
+  };
   const fixFrame = () => {
     // 1. Symétrie : on relève toutes les orientations, puis on impose les cibles du haut vers le bas.
     if (symmetric) {
@@ -185,21 +217,35 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
     //    juste assez (rotation autour de l'axe avant du bassin), comme un appui un peu plus large.
     for (let it = 0; it < 8; it++) {
       const P = (n) => pos(n), gap = sepNeeded(P, bodyK);
-      if (gap <= 0) break;
+      if (gap <= 0 || feetPlanted() || abdMax() > 50) break; // pieds posés : corrigés après coup, d'un bloc (voir plus bas)
       abduct(Math.min(0.12, gap / 0.85));
     }
+    // 8 bis. Équilibre debout (contrôleur d'équilibre, comme dans un moteur de jeu) : deux pieds posés, ni mains ni
+    //    fesses au sol, centre de masse devant les orteils ou derrière les talons → tout le corps pivote autour des
+    //    chevilles (les tibias s'inclinent), pieds fixes et à plat, jusqu'à revenir à 6 cm à l'intérieur de l'appui.
+    balanceStanding();
     // 9. Cou (tête par rapport au thorax).
     const [nx, ny, nz] = ang('XZY', rel('Spine2', 'Head'));
     const na = [clamp(nx, -LIM.neck.ext, LIM.neck.flex), clamp(ny, -LIM.neck.twist, LIM.neck.twist), clamp(nz, -LIM.neck.lat, LIM.neck.lat)];
     if (na.some((v, k) => Math.abs(v - [nx, ny, nz][k]) > 0.05)) setD('Head', d('Spine2').multiply(fromAng('XZY', na)));
   };
 
-  let toeMin = Infinity;
+  // Sol du clip (orteil le plus bas sur tout le geste), pour savoir quand les deux pieds sont posés.
+  let toeMin = Infinity, stance = false;
+  if (B.LeftToe_End && B.RightToe_End) {
+    const toes = [];
+    for (let i = 0; i < n; i++) { mixer.setTime(Math.min(T, (T * i) / (n - 1))); obj.updateMatrixWorld(true); const l = pos('LeftToe_End'), r = pos('RightToe_End'); toes.push([l, r]); toeMin = Math.min(toeMin, l.y, r.y); }
+    // Position tenue (étirements, debout sur place) : les deux pieds restent posés au même endroit tout le geste.
+    // Seuls ces gestes reçoivent le contrôleur d'équilibre ; sauts, course et haltérophilie gardent leur dynamique.
+    const k = 1 / bodyK, [l0, r0] = toes[0];
+    stance = toes.every(([l, r]) => l.y - toeMin < 0.03 * k && r.y - toeMin < 0.03 * k && Math.hypot(l.x - l0.x, l.z - l0.z) < 0.1 * k && Math.hypot(r.x - r0.x, r.z - r0.z) < 0.1 * k);
+    act.reset(); act.play(); // l'action s'arrête en fin de clip (LoopOnce) : on la relance pour le vrai passage
+  }
   for (let i = 0; i < n; i++) {
     mixer.setTime(Math.min(T, (T * i) / (n - 1))); obj.updateMatrixWorld(true);
     fixFrame();
-    if (B.LeftToe_End) toeMin = Math.min(toeMin, pos('LeftToe_End').y, pos('RightToe_End').y);
     for (const [nm] of tracked) { const q = B[nm].quaternion; out[nm].set([q.x, q.y, q.z, q.w], i * 4); }
+    B.Hips.position.toArray(outHips, i * 3);
   }
 
   // Lissage léger (1-2-1, trois passes) : une articulation qui touche sa limite puis la quitte ne doit pas faire d'à-coup.
@@ -218,15 +264,15 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   // l'applique en fondu sur ±5 images pour ne créer aucun à-coup (réponse aux collisions, comme dans un moteur de jeu).
   const legTracks = ['LeftUpLeg', 'RightUpLeg'].map((nm) => tracked.find(([m]) => m === nm));
   if (legTracks.every(Boolean)) {
-    const setPose = (i) => { mixer.setTime(Math.min(T, (T * i) / (n - 1))); for (const [nm] of tracked) B[nm].quaternion.fromArray(out[nm], i * 4); obj.updateMatrixWorld(true); };
-    const need = new Float32Array(n), needL = new Float32Array(n), needR = new Float32Array(n), hasArms = B.LeftForeArm && B.RightForeArm;
+    const setPose = (i) => { mixer.setTime(Math.min(T, (T * i) / (n - 1))); for (const [nm] of tracked) B[nm].quaternion.fromArray(out[nm], i * 4); B.Hips.position.fromArray(outHips, i * 3); obj.updateMatrixWorld(true); };
+    const onFloor = new Uint8Array(n), need = new Float32Array(n), needL = new Float32Array(n), needR = new Float32Array(n), hasArms = B.LeftForeArm && B.RightForeArm;
     for (let i = 0; i < n; i++) {
       setPose(i); let tot = 0;
       // Deux pieds posés : écarter les cuisses ferait glisser les pieds (jambes serrées en planche) ; hanche déjà très
-      // ouverte : on n'écarte pas au-delà de 53° d'abduction.
-      const planted = feetPlanted();
-      if (!planted) for (let it = 0; it < 10; it++) { const g = sepNeeded((m) => pos(m), bodyK); if (g <= 0 || abdMax() > 53) break; const a = Math.min(0.12, g / 0.85); abduct(a); tot += a; }
-      need[i] = tot;
+      // ouverte : on n’écarte pas au-delà de 50° (mesure proche de celle du banc d’essai, avec marge) d'abduction.
+      const planted = plankLike();
+      if (!planted) for (let it = 0; it < 10; it++) { const g = sepNeeded((m) => pos(m), bodyK); if (g <= 0 || abdMax() > 50) break; const a = Math.min(0.12, g / 0.85); abduct(a); tot += a; }
+      need[i] = tot; onFloor[i] = feetPlanted() ? 1 : 0;
       if (hasArms) for (const [S, arr] of [['Left', needL], ['Right', needR]].sort((x, y) => crossed(x[0]) - crossed(y[0]))) for (let it = 0; it < 10; it++) { // le bras le moins croisé s'écarte d'abord
         const c = armClash((m) => pos(m), bodyK, S); if (c.pen <= 0) break;
         const a = Math.min(0.15, c.pen / Math.max(0.2, c.pA.distanceTo(pos(S + 'Arm')))); pushArm(S, a); arr[i] += a;
@@ -235,8 +281,11 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
     const W = 5, fade = (nd) => Float32Array.from({ length: n }, (_, i) => { let m = 0; for (let j = Math.max(0, i - W); j <= Math.min(n - 1, i + W); j++) m = Math.max(m, nd[j] * (1 - Math.abs(i - j) / (W + 1))); return m; });
     if ([need, needL, needR].some((nd) => nd.some((x) => x > 0))) {
       const A = fade(need), AL = fade(needL), AR = fade(needR);
+      // Pieds posés : une seule valeur sur tout l'appui (la plus forte), sinon les pieds glisseraient d'une image à l'autre.
+      for (let i = 0; i < n;) { if (!onFloor[i]) { i++; continue; } let j = i; while (j < n && onFloor[j]) j++;
+        let m = 0; for (let q = i; q < j; q++) m = Math.max(m, A[q]); for (let q = i; q < j; q++) A[q] = m; i = j; }
       for (let i = 0; i < n; i++) if (A[i] > 0 || AL[i] > 0 || AR[i] > 0) {
-        setPose(i); if (A[i] > 0 && !feetPlanted() ) { const room = Math.max(0, (53 - abdMax()) / DEG) * 2; abduct(Math.min(A[i], room)); } for (const [S, a] of [['Left', AL[i]], ['Right', AR[i]]]) for (let r = a; r > 1e-4; r -= 0.05) pushArm(S, Math.min(0.05, r)); // par petits pas : la direction de poussée suit le contact
+        setPose(i); if (A[i] > 0 && !plankLike()) { const room = Math.max(0, (50 - abdMax()) / DEG) * 2; abduct(Math.min(A[i], room)); } for (const [S, a] of [['Left', AL[i]], ['Right', AR[i]]]) for (let r = a; r > 1e-4; r -= 0.05) pushArm(S, Math.min(0.05, r)); // par petits pas : la direction de poussée suit le contact
         for (const nm of ['LeftUpLeg', 'RightUpLeg', 'LeftArm', 'RightArm']) if (out[nm]) B[nm].quaternion.toArray(out[nm], i * 4);
       }
     }
@@ -247,7 +296,9 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   obj.updateMatrixWorld(true);
   const tracks = clip.tracks.map((t) => {
     const hit = tracked.find(([, tt]) => tt === t);
-    return hit ? new THREE.QuaternionKeyframeTrack(t.name, times, out[hit[0]]) : t.clone();
+    if (hit) return new THREE.QuaternionKeyframeTrack(t.name, times, out[hit[0]]);
+    if (/Hips\.position$/.test(t.name)) return new THREE.VectorKeyframeTrack(t.name, times, outHips); // contrôleur d'équilibre
+    return t.clone();
   });
   const c = new THREE.AnimationClip(clip.name, T, tracks);
   c.userData = { ...clip.userData, tmLimited: undefined, limited: true };
