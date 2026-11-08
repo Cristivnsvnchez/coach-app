@@ -11,6 +11,7 @@ import { prepareClip } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
 import { limitJoints } from '../js/joint-limits.js';
 import { studioLights, clayMaterial } from '../js/studio3d.js';
+import { attachGear } from '../js/gear3d.js';
 
 const SIZE = 640;
 const loader = new GLTFLoader();
@@ -50,11 +51,20 @@ export async function renderOne(ctx, name, sex) {
   const m = model3D(name, sex); if (!m) return null;
   const body = await load(m.url), anim = m.anim ? await load(m.anim) : null;
   const obj = clone(body.scene); dress(obj, outfitsFor(sex)[0]);
-  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : limitJoints(THREE, prepareClip(anim?.animations[0] || body.animations[0], sex), obj, { symmetric: m.symmetric }); // mêmes corrections que la visionneuse
+  // Échelle 1,75 m et bassin centré, comme la visionneuse (le matériel est en mètres réels).
+  const bone = (re) => { let p = null; obj.traverse((o) => { if (!p && o.isBone && re.test(o.name)) p = o; }); return p; };
+  obj.updateMatrixWorld(true);
+  const wp = (b) => b.getWorldPosition(new THREE.Vector3());
+  const top = wp(bone(/HeadTop_End/)), foot0 = wp(bone(/LeftToe_?End|LeftFoot/));
+  obj.scale.multiplyScalar(1.75 / Math.max(0.01, top.y - foot0.y)); obj.updateMatrixWorld(true);
+  const hips0 = wp(bone(/Hips/)), foot1 = wp(bone(/LeftToe_?End|LeftFoot/));
+  obj.position.x -= hips0.x; obj.position.z -= hips0.z; obj.position.y -= foot1.y; obj.updateMatrixWorld(true);
   ctx.scene.add(obj);
+  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : limitJoints(THREE, prepareClip(anim?.animations[0] || body.animations[0], sex), obj, { symmetric: m.symmetric }); // mêmes corrections que la visionneuse
   const mixer = new THREE.AnimationMixer(obj); mixer.clipAction(clip).play();
+  const kit = attachGear(THREE, m.gear ? await load('models/gear.glb') : null, obj, m.gear, clip); // matériel, comme la visionneuse
   const bs = bones(obj);
-  const sample = (t) => { mixer.setTime(t); obj.updateMatrixWorld(true); return bs.map((b) => b.getWorldPosition(new THREE.Vector3())); };
+  const sample = (t) => { mixer.setTime(t); obj.updateMatrixWorld(true); kit.update(); return [...bs.map((b) => b.getWorldPosition(new THREE.Vector3())), ...kit.points()]; };
   // Sol comme la visionneuse : point de peau le plus bas sur tout le clip à y = 0.
   const skins = []; obj.traverse((o) => { if (o.isSkinnedMesh) skins.push(o); });
   const tv = new THREE.Vector3();
@@ -62,13 +72,12 @@ export async function renderOne(ctx, name, sex) {
   for (let i = 0; i < 24; i++) { mixer.setTime((clip.duration * i) / 24); obj.updateMatrixWorld(true);
     for (const sk of skins) for (let k = 0; k < sk.geometry.attributes.position.count; k += 15) { sk.getVertexPosition(k, tv); tv.applyMatrix4(sk.matrixWorld); ground = Math.min(ground, tv.y); } }
   if (Number.isFinite(ground)) obj.position.y -= ground;
-  // Échelle 1,75 m d'après le corps au repos (comme la visionneuse), pieds au sol.
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3(), N = 24, frames = [];
   for (let i = 0; i < N; i++) { const p = sample((clip.duration * i) / N); frames.push(p); p.forEach((v) => box.expandByPoint(v)); }
   // Pose 2 : la plus éloignée de la pose de départ (somme des déplacements des os).
   let best = 0, bestD = -1;
-  frames.forEach((p, i) => { const d = p.reduce((s, v, k) => s + v.distanceTo(frames[0][k]), 0); if (d > bestD) { bestD = d; best = i; } });
+  frames.forEach((p, i) => { const d = p.slice(0, bs.length).reduce((s, v, k) => s + v.distanceTo(frames[0][k]), 0); if (d > bestD) { bestD = d; best = i; } });
   // Cadrage commun aux 2 poses montrées (pas tout le mouvement : vignette plus grande), vue 3/4 légèrement plongeante.
   // Chaque pose est centrée sur elle-même (un sprint avance), à la même distance pour garder la même échelle.
   const boxes = [0, best].map((i) => new THREE.Box3().setFromPoints(frames[i]));
@@ -86,7 +95,7 @@ export async function renderOne(ctx, name, sex) {
     const b64 = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
     shots.push(b64);
   }
-  ctx.scene.remove(obj);
+  ctx.scene.remove(obj); kit.dispose();
   return { clip: m.clip, shots };
 }
 
