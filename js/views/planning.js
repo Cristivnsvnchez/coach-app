@@ -22,6 +22,8 @@ register({
     'Article ajouté': 'Item added', 'Supprimer': 'Delete', 'Enregistrer': 'Save',
     'Partager la liste': 'Share the list', 'Liste copiée': 'List copied', 'Tout est acheté.': 'Everything is bought.',
     'Article supprimé': 'Item removed', 'Retiré du planning': 'Removed from plan',
+    '1 repas': '1 meal', '{n} repas': '{n} meals', 'Déj.': 'Bkf.', 'Midi': 'Lunch', 'Dîn.': 'Din.', 'Coll.': 'Snk.', 'Courses {d}': 'Shopping {d}',
+    '{n} articles · {s} magasins': '{n} items · {s} stores', 'Ouvre la liste pour la générer depuis tes repas.': 'Open the list to build it from your meals.',
   },
   nl: {
     'Planifier mes repas': 'Maaltijden plannen', 'Aucun repas prévu.': 'Nog geen maaltijd gepland.',
@@ -35,6 +37,8 @@ register({
     'Article ajouté': 'Artikel toegevoegd', 'Supprimer': 'Verwijderen', 'Enregistrer': 'Opslaan',
     'Partager la liste': 'Lijst delen', 'Liste copiée': 'Lijst gekopieerd', 'Tout est acheté.': 'Alles is gekocht.',
     'Article supprimé': 'Artikel verwijderd', 'Retiré du planning': 'Uit planning verwijderd',
+    '1 repas': '1 maaltijd', '{n} repas': '{n} maaltijden', 'Déj.': 'Ontb.', 'Midi': 'Lunch', 'Dîn.': 'Diner', 'Coll.': 'Tussend.', 'Courses {d}': 'Boodschappen {d}',
+    '{n} articles · {s} magasins': '{n} artikelen · {s} winkels', 'Ouvre la liste pour la générer depuis tes repas.': 'Open de lijst om ze uit je maaltijden te maken.',
   },
 });
 
@@ -42,33 +46,46 @@ let date = null;
 
 export function render(root, go) {
   if (!date || date < todayIso()) date = todayIso(); // le lendemain, on revient à aujourd'hui (jours passés absents du bandeau)
-  const day = planDay(date);
-  const keep = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
+    const keep = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
 
   const days = Array.from({ length: 14 }, (_, i) => { const d = parseDate(todayIso()); d.setDate(d.getDate() + i); return isoDate(d); });
+  const has = (d) => Object.keys(MEALS).some((k) => (state.mealPlan[d]?.[k] || []).length);
   const strip = `<div class="pl-strip">${days.map((d) => `<button class="pl-day ${d === date ? 'on' : ''}" data-day="${d}">
-      <span class="pl-dname">${esc(fmtDate(d, { weekday: 'short' }))}</span><span class="pl-dnum">${esc(fmtDate(d, { day: 'numeric' }))}</span></button>`).join('')}</div>`;
+      <span class="pl-dname">${esc(fmtDate(d, { weekday: 'narrow' }))}</span><span class="pl-dnum">${esc(fmtDate(d, { day: 'numeric' }))}</span><i class="pl-dot ${d === todayIso() ? 'today' : has(d) ? 'on' : ''}"></i></button>`).join('')}</div>`;
 
-  const meals = Object.entries(MEALS).map(([k, label]) => {
-    const items = day[k];
-    return `<section class="td-card td-meal"><div class="td-mhead"><div class="grow"><b>${t(label)}</b></div>
-        <button class="td-add" data-add="${k}" aria-label="${t('Ajouter')} — ${t(label)}">${icon('plus')}</button></div>
-      ${items.length ? `<ul class="td-items">${items.map((m) => `<li class="td-item" data-item="${esc(m.id)}" data-meal="${k}" role="button" tabindex="0"><div class="grow"><span class="t">${esc(m.name)}</span>
-        <span class="s num">${m.grams ? fmt(m.grams) + ' g' : ''}</span></div></li>`).join('')}</ul>` : `<p class="empty footnote pl-empty">${t('Aucun repas prévu.')}</p>`}
-    </section>`;
-  }).join('');
+  // Une carte par jour (7 jours à partir du jour choisi) : repas prévus en puces, puces « + repas » pour ce qui manque.
+  const SHORT = { dej: 'Déj.', midi: 'Midi', diner: 'Dîn.', snack: 'Coll.' };
+  const week = Array.from({ length: 7 }, (_, i) => { const d = parseDate(date); d.setDate(d.getDate() + i); return isoDate(d); });
+  const dayCard = (d) => {
+    const pd = state.mealPlan[d] || {};
+    const items = Object.keys(MEALS).flatMap((k) => (pd[k] || []).map((m) => ({ ...m, k })));
+    const missing = Object.keys(MEALS).filter((k) => !(pd[k] || []).length);
+    return `<section class="v2-card pl-card ${d === date ? 'sel' : ''}" data-d="${d}"><div class="pl-ch"><b>${esc(fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' }))}</b>
+        <span class="v2-sm">${t(items.length === 1 ? '1 repas' : '{n} repas', { n: items.length })}</span></div>
+      <div class="chips pl-chips">${items.map((m) => `<button class="chip" data-item="${esc(m.id)}" data-meal="${m.k}" data-date="${d}">${t(SHORT[m.k])} · ${esc(m.name)}</button>`).join('')}
+        ${missing.map((k) => `<button class="chip pl-plus" data-add="${k}" data-date="${d}" aria-label="${t('Ajouter')} — ${t(MEALS[k])}">${icon('plus')} ${t(SHORT[k])}</button>`).join('')}</div></section>`;
+  };
+  const now = todayIso();
+  const trips = visibleTrips(now, state.settings.shopDay ?? 6, state.shoppingList, state.mealPlan, state.shoppingDone);
+  const nextTrip = trips.find((x) => tripDay(x) >= now) || trips[0];
+  const tItems = nextTrip ? state.shoppingList.filter((x) => x.trip === nextTrip && !x.removed) : [];
+  const nStores = new Set(tItems.map((x) => x.store || '')).size;
+  const shopCard = `<button class="v2-card v2-row pl-shopcard" data-a="shop"><span class="v2-av">${icon('cart')}</span><span class="grow"><span class="v2-lb" style="display:block">${nextTrip ? (tripDay(nextTrip) === now ? t("Courses d'aujourd'hui") : t('Courses {d}', { d: fmtDate(tripDay(nextTrip), { weekday: 'long', day: 'numeric', month: 'short' }) })) : t('Liste de courses')}</span>
+    <span class="v2-sm">${tItems.length ? t('{n} articles · {s} magasins', { n: tItems.length, s: nStores }) : t('Ouvre la liste pour la générer depuis tes repas.')}</span></span>${icon('chevronRight', { cls: 'v2-chev' })}</button>`;
 
-  root.innerHTML = `${nav(t('Planifier mes repas'), { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Journal')}</button>` })}
+  root.innerHTML = `${nav(t('Planifier mes repas'), { large: false })}
+    <div class="pl-top"><button class="v2-cb" data-back aria-label="${t('Journal')}">${icon('chevronLeft')}</button><b>${t('Planifier mes repas')}</b>
+      <button class="v2-cb" data-a="shop" aria-label="${t('Liste de courses')}">${icon('cart')}</button></div>
     ${strip}
-    <button class="btn filled wide pl-shop-btn" data-a="shop">${icon('copy')} ${t('Liste de courses')}</button>
-    ${meals}`;
+    ${week.map(dayCard).join('')}
+    ${shopCard}`;
 
   root.onclick = (e) => {
     if (e.target.closest('[data-back]')) return go('today');
     const d = e.target.closest('[data-day]'); if (d) { date = d.dataset.day; return render(root, go); }
     if (e.target.closest('[data-a=shop]')) return openShoppingList();
-    const add = e.target.closest('[data-add]'); if (add) return openAddFood(add.dataset.add, date, keep, { target: 'plan' });
-    const item = e.target.closest('[data-item]'); if (item) return editPlanItem(day[item.dataset.meal], item.dataset.item, keep);
+    const add = e.target.closest('[data-add]'); if (add) return openAddFood(add.dataset.add, add.dataset.date, keep, { target: 'plan' });
+    const item = e.target.closest('[data-item]'); if (item) return editPlanItem(planDay(item.dataset.date)[item.dataset.meal], item.dataset.item, keep);
   };
 }
 
@@ -116,9 +133,9 @@ function openShoppingList() {
     save();
   };
 
-  const itemRow = (it) => `<li class="cell"><button class="icon-btn round pl-check" data-check="${esc(it.id)}" aria-pressed="${it.checked}" aria-label="${esc(it.name)}">${icon('check')}</button>
-      <div class="grow ${it.checked ? 'pl-done' : ''}"><span class="t">${esc(it.name)}</span>${it.grams ? `<span class="s num">${fmt(it.grams)} g</span>` : ''}</div>
-      <button class="btn plain" data-store="${esc(it.id)}">${esc(it.store || t('Magasin'))}</button></li>`;
+  const itemRow = (it) => `<li class="cell pl-row"><button class="se-chk pl-check" data-check="${esc(it.id)}" aria-pressed="${it.checked}" aria-label="${esc(it.name)}">${it.checked ? icon('check') : ''}</button>
+      <button class="grow pl-name ${it.checked ? 'pl-done' : ''}" data-store="${esc(it.id)}"><span class="t">${esc(it.name)}</span><span class="s">${esc(it.store || t('Magasin'))}</span></button>
+      ${it.grams ? `<span class="v2-sm num">${fmt(it.grams)} g</span>` : ''}</li>`;
   const storeGroup = ([store, items]) => group(esc(store || t('Non classé')), `<ul class="cells">${items.map(itemRow).join('')}</ul>`);
   const dayNames = Array.from({ length: 7 }, (_, i) => fmtDate(isoDate(new Date(2026, 10, 1 + i, 12)), { weekday: 'long' })); // 1er nov. 2026 = dimanche
   const nth = (id) => (id.includes('~') ? ` (${id.split('~')[1]})` : '');
@@ -144,12 +161,13 @@ function openShoppingList() {
     box.innerHTML = `<label class="pl-shopday">${t('Jour des courses')}
         <select name="shopDay">${dayNames.map((n, i) => `<option value="${i}" ${i === shopDay() ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <div class="chips pl-trips">${trips.map((tr) => `<button class="chip ${tr === trip ? 'on' : ''}" data-trip="${tr}" aria-pressed="${tr === trip}">${esc(tabLabel(tr))}</button>`).join('')}</div>
-      <p class="footnote pl-trip-info">${info(trip)}</p>
+      <div class="pl-sumrow"><p class="footnote pl-trip-info">${info(trip)}</p>${items.length ? `<span class="pl-count num">${items.filter((x) => x.checked).length} / ${items.length}</span>` : ''}</div>
+      ${items.length ? `<div class="v2-bar pl-prog"><i style="width:${Math.round(items.filter((x) => x.checked).length / items.length * 100)}%;background:var(--a-food)"></i></div>` : ''}
       ${items.length ? byStore(items).map(storeGroup).join('') : `<p class="empty footnote">${t('Rien à acheter pour cette semaine. Planifie des repas ou ajoute un article.')}</p>`}
       <div class="pl-shop-actions">
         <button class="btn large" data-a="add">${icon('plus')} ${t('Ajouter un article')}</button>
         ${items.length ? `<button class="btn large" data-a="share">${icon('share')} ${t('Partager la liste')}</button>
-        <button class="btn filled large" data-a="done">${icon('check')} ${t('Courses faites')}</button>` : ''}</div>`;
+        <button class="btn filled large wide v2-go" data-a="done">${t('Courses faites')}</button>` : ''}</div>`;
   };
   draw();
 

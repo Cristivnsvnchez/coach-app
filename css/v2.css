@@ -471,3 +471,42 @@ html.tm .lrn-card .lrn-lvl { position: absolute; top: 16px; left: 16px; font-siz
 @media (prefers-color-scheme: dark) { html.tm .lrn-card .lrn-lvl { background: rgba(0, 0, 0, .45); color: #cfdcff; } }
 /* Fiche technique (feuille) : boutons d'action au format du canevas */
 html.tm .lrn-actions .btn.filled.large { position: relative; padding: 0 64px 0 24px; }
+
+/* ----- Planifier mes repas + liste de courses (canevas planifier-1 à 4) ----- */
+.pl-top { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; text-align: center; margin: 8px 0 14px; font-size: 16px; }
+html.tm .pl-strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1rem - var(--safe-r)) 14px calc(-1rem - var(--safe-l)); padding: 0 calc(1rem + var(--safe-r)) 2px calc(1rem + var(--safe-l)); }
+html.tm .pl-strip::-webkit-scrollbar { display: none; }
+html.tm .pl-day { flex: 0 0 calc((100% - 36px) / 7); min-width: 42px; height: 66px; border: 0; border-radius: 16px; background: var(--a-card); color: var(--a-ink); display: grid; justify-items: center; align-content: center; gap: 2px; box-shadow: 0 2px 8px rgba(0, 0, 0, .04); cursor: pointer; }
+html.tm .pl-day.on { background: var(--a-ink); color: #fff; }
+@media (prefers-color-scheme: dark) { html.tm .pl-day.on { background: #f2f3f7; color: #141418; } }
+html.tm .pl-dname { font-size: 11px; font-weight: 600; opacity: .7; text-transform: uppercase; }
+html.tm .pl-dnum { font-family: var(--display); font-size: 19px; font-weight: 600; }
+.pl-dot { width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+.pl-dot.on { background: var(--a-food); } .pl-dot.today { background: var(--a-warm); }
+.pl-card { padding: 14px 16px; margin-bottom: 10px; }
+.pl-card.sel { box-shadow: inset 0 0 0 2px var(--a-deep), 0 6px 18px rgba(0, 0, 0, .05); }
+.pl-ch { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.pl-ch b { font-size: 16px; font-weight: 600; text-transform: none; }
+.pl-ch b::first-letter { text-transform: uppercase; }
+.pl-chips { gap: 8px; }
+html.tm .pl-chips .chip { height: 34px; min-height: 34px; font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+html.tm .pl-chips .pl-plus { background: var(--a-tint); border-color: transparent; color: var(--a-deep); }
+.pl-chips .pl-plus svg.ic { width: 14px; height: 14px; }
+.pl-shopcard { width: 100%; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; background: color-mix(in srgb, var(--a-tint) 70%, var(--a-card)); margin: 4px 0 8px; }
+.pl-shopcard .v2-av { background: var(--a-card); color: var(--a-deep); }
+.pl-shopcard .v2-lb::first-letter { text-transform: uppercase; }
+/* Liste de courses */
+.pl-sumrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pl-sumrow .pl-trip-info { margin: 0; }
+.pl-trip-info b { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.03em; color: var(--a-ink); }
+.pl-count { flex: none; height: 34px; padding: 0 12px; border-radius: 17px; background: var(--a-card); display: inline-flex; align-items: center; font-weight: 600; font-size: 14px; box-shadow: 0 2px 8px rgba(0, 0, 0, .05); }
+.pl-prog { margin: 12px 0 6px; }
+html.tm .pl-row { gap: 12px; }
+.pl-name { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; display: grid; }
+.pl-name .t { font-size: 15px; }
+.pl-name .s { font-size: 12px; color: var(--a-ink2); }
+.pl-name.pl-done .t { text-decoration: line-through; color: var(--a-ink2); }
+html.tm .pl-row .pl-check { width: 26px; height: 26px; }
+.pl-shop-actions { display: grid; gap: 8px; margin-top: 14px; }
+html.tm .pl-chips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+html.tm .pl-chips .chip { padding: 0 12px; }
