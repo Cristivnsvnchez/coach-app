@@ -81,14 +81,17 @@ const bulgarian = { beats: [[1, 1.6], [1, 0.25], [0, 1.1], [0, 0.35]], keys: [
 // descend, puis repousse et ramène le pied. Une jambe, puis l'autre. Le pied d'appui ne quitte pas le sol.
 const walkLunge = (() => {
   const FRONT = { x: 0.13, z: 0.8, yaw: 6, heel: 0, lift: 0 }, REAR = (heel) => ({ x: 0.13, z: 0, yaw: 6, heel, lift: 0 }), HOME = flat(0.13, 0, 6);
+  const SHIFT = 0.09;
   const side = (a, b) => [
-    pose(LUNGE_ARMS, { hips: [0, STAND_H, 0.05], torso: [0, 1, 0.03], neck: 0, [a]: { foot: { ...HOME, heel: 8, lift: 0.1, z: 0.3 } }, [b]: { foot: HOME } }),
+    pose(LUNGE_ARMS, { hips: [a === 'R' ? -SHIFT : SHIFT, STAND_H, 0.05], torso: [0, 1, 0.03], neck: 0, [a]: { foot: { ...HOME, heel: 8, lift: 0.1, z: 0.3 } }, [b]: { foot: HOME } }), // sur un pied : bassin au-dessus de l'appui
     pose(LUNGE_ARMS, { hips: [0, 0.8, 0.4], torso: [0, 1, 0.08], neck: -3, [a]: { foot: FRONT }, [b]: { foot: REAR(40) } }),
     pose(LUNGE_ARMS, { hips: [0, 0.5, 0.53], torso: [0, 1, 0.13], neck: -6, [a]: { foot: FRONT }, [b]: { foot: REAR(80) } })];
   const home = pose(LUNGE_ARMS, { hips: [0, STAND_H, 0], torso: [0, 1, 0.02], neck: 0, foot: HOME });
   const [r1, r2, r3] = side('R', 'L'), [l1, l2, l3] = side('L', 'R');
-  return { keys: [home, r1, r2, r3, l1, l2, l3], beats: [[1, 0.35, true], [2, 0.35], [3, 0.8], [3, 0.15], [2, 0.7, true], [1, 0.3, true], [0, 0.35], [0, 0.15],
-    [4, 0.35, true], [5, 0.35], [6, 0.8], [6, 0.15], [5, 0.7, true], [4, 0.3, true], [0, 0.35], [0, 0.15]] };
+  // Report du poids d'abord (deux pieds au sol), puis le pied part ; au retour, il se pose avant que le bassin revienne.
+  const shift = (a) => pose(home, { hips: [a === 'R' ? -SHIFT : SHIFT, STAND_H, 0.02] });
+  return { keys: [home, r1, r2, r3, l1, l2, l3, shift('R'), shift('L')], beats: [[7, 0.25, true], [1, 0.3, true], [2, 0.35], [3, 0.8], [3, 0.15], [2, 0.7, true], [1, 0.3, true], [7, 0.25, true], [0, 0.3], [0, 0.15],
+    [8, 0.25, true], [4, 0.3, true], [5, 0.35], [6, 0.8], [6, 0.15], [5, 0.7, true], [4, 0.3, true], [8, 0.25, true], [0, 0.3], [0, 0.15]] };
 })();
 
 const SEAT_ON_HANDS = { hips: [0, 0.13, 0], torso: [0, 0.9, -0.42], neck: 10, hand: [0.3, 0.05, -0.3], elbowHint: [0.25, 0, -1], palm: [0, -1, 0], wrist: -55, grip: 0 };
@@ -118,6 +121,7 @@ const SQUAT_FOOT = flat(0.165, 0, 22);
 // Mains un peu plus larges que les épaules, coudes vers le bas et l'arrière ; cibles réglées pour que la barre tenue
 // repose sur les trapèzes en haut comme en bas (contrôlé par tools/motion-audit.mjs, homme et femme).
 const BAR_ON_BACK = { elbowHint: [0.45, -1, -0.9], palm: [0, 0.15, 1], grip: 1, wrist: -12 };
+const PISTOL_FOOT = flat(0.07, 0.03, 0), PISTOL_ARMS = { arm: [0.12, 0.02, 1], fore: [0.04, 0.04, 1], palm: [-1, 0, 0], grip: 0.3 };
 const backSquat = { gear: { hold: 'barBack' }, beats: [[1, 1.5], [1, 0.25], [0, 1.15], [0, 0.6]], keys: [
   pose(BAR_ON_BACK, { chest: [0.46, 0.25, -0.04], hips: [0, 0.915, 0], torso: [0, 1, 0.05], neck: 0, foot: SQUAT_FOOT }),
   pose(BAR_ON_BACK, { chest: [0.46, 0.22, -0.01], hips: [0, 0.525, -0.2], torso: [0, 0.73, 0.68], neck: -26, foot: SQUAT_FOOT })] };
@@ -189,6 +193,11 @@ export const POSES = {
   'Presse à cuisses': { gear: { machine: { type: 'legpress', at: [0, 0, 0], rail: [1.14, 0.57] } }, beats: [[1, 1.6], [1, 0.2], [0, 1.2], [0, 0.4]], keys: [
     pose(LEGPRESS, { foot: { ...LP_FOOT, y: 1.09, z: 0.52 } }),
     pose(LEGPRESS, { foot: { ...LP_FOOT, y: 0.99, z: 0.42 } })] }, // pieds sur la ligne du rail (y − z = 0,57), hauts sur le plateau
+  // Squat pistol : sur la jambe droite, l'autre tendue devant ; bras devant en contrepoids, bassin au-dessus du pied
+  // d'appui (centre de masse au-dessus du médio-pied, pas en arrière du talon).
+  'Squat pistol': { beats: [[1, 1.8], [1, 0.3], [0, 1.4], [0, 0.5]], keys: [
+    pose(PISTOL_ARMS, { hips: [0.07, 0.9, 0.03], torso: [0, 1, 0.08], neck: 0, R: { foot: PISTOL_FOOT }, L: { foot: { x: 0.12, y: 0.14, z: 0.3, free: 1, plantar: 5 }, kneeHint: [0, 1, 0.3] } }),
+    pose(PISTOL_ARMS, { hips: [0.05, 0.5, -0.19], torso: [0, 0.72, 0.69], neck: -22, R: { foot: PISTOL_FOOT }, L: { foot: { x: 0.12, y: 0.32, z: 0.62, free: 1, plantar: 0 }, kneeHint: [0, 1, 0] } })] },
   Squat: { ...backSquat, F: { 0: { chest: [0.46, 0.25, -0.1] }, 1: { chest: [0.46, 0.22, -0.08] } } }, // femme : barre un peu plus en arrière sur les trapèzes
   'Squat avant': frontSquat,
   'Squat overhead': overheadSquat,
@@ -219,11 +228,11 @@ export const POSES = {
     { ...HIP_THRUST, hips: [0, 0.55, -0.07], torso: [0, 0.08, -1], pelvis: [0, 0.08, -1], neck: 28, hand: [0.3, 0.69, 0.0] }] },
   'Mollets debout': { beats: [[1, 0.8], [1, 0.8], [0, 1.2], [0, 0.2]], keys: [
     pose(STAND, { hips: [0, STAND_H, 0], foot: flat(0.13, 0, 5) }),
-    pose(STAND, { hips: [0, 0.98, 0.05], foot: flat(0.13, 0, 5, 36) })] },
+    pose(STAND, { hips: [0, 0.98, 0.145], torso: [0, 1, 0.08], foot: flat(0.13, 0, 5, 36) })] }, // sur la pointe : le corps avance au-dessus de l'avant-pied
   // Assis au sol, pieds à plat, mains sur les genoux : seuls talons et genoux montent.
   'Mollets assis': { beats: [[1, 0.8], [1, 0.8], [0, 1.2], [0, 0.2]], keys: [
-    { hips: [0, 0.135, 0], torso: [0, 1, -0.5], neck: 14, foot: flat(0.14, 0.32, 5), kneeHint: [0.05, 1, 0.2], hand: [0.17, 0.5, 0.24], elbowHint: [0.3, -0.2, -1], palm: [0, -1, 0], grip: 0.1 },
-    { hips: [0, 0.135, 0], torso: [0, 1, -0.5], neck: 14, foot: flat(0.14, 0.32, 5, 15), kneeHint: [0.05, 1, 0.2], hand: [0.17, 0.55, 0.24], elbowHint: [0.3, -0.2, -1], palm: [0, -1, 0], grip: 0.1 }] },
+    { hips: [0, 0.135, 0], torso: [0, 1, -0.5], neck: 14, foot: flat(0.14, 0.32, 5), kneeHint: [0.05, 1, 0.2], hand: [0.21, 0.54, 0.22], elbowHint: [0.3, -0.2, -1], palm: [0, -1, 0], grip: 0.1 },
+    { hips: [0, 0.135, 0], torso: [0, 1, -0.5], neck: 14, foot: flat(0.14, 0.32, 5, 15), kneeHint: [0.05, 1, 0.2], hand: [0.21, 0.59, 0.22], elbowHint: [0.3, -0.2, -1], palm: [0, -1, 0], grip: 0.1 }] },
   // Barre : descend sur le bas des pectoraux, remonte au-dessus des épaules ; avant-bras verticaux, coudes à ~50° du buste.
   'Développé couché': { ...press(pose(BENCH_LIE, { gripAt: 1 }), [0.4, 0.77, -0.31], [0.4, 1.08, -0.43]), gear: { hold: 'bar', bench: ON_FLAT_BENCH } },
   // Haltères : les mains se rapprochent en montant, paumes vers les pieds.
@@ -289,8 +298,8 @@ export const POSES = {
     pose(BENCH_LIE, { gripAt: 1, hand: [0.17, 0.78, -0.74], elbowHint: [0.3, 1, 0.2], palm: [0, 0.3, 1], wrist: -10, grip: 1 })] },
   // Jambes presque tendues ; en haut, le bas du dos s'enroule (bassin en rétroversion).
   'Relevés de jambes': { beats: [[1, 1.0], [1, 0.25], [0, 1.6], [0, 0.15]], keys: [
-    pose(SUPINE, armsOnFloor(0), { hips: [0, 0.1, 0], thigh: [0.05, 0.2, 1], shin: [0.04, 0.13, 1], plantar: 16, kneeHint: [0, 1, 0] }), // talons au-dessus du sol entre deux répétitions
-    pose(SUPINE, armsOnFloor(0), { hips: [0, 0.15, 0.02], thigh: [0.05, 0.98, 0.18], shin: [0.04, 0.99, 0.1], plantar: 12, kneeHint: [0, 0.2, 1], pelvis: [0, -0.12, -0.99] })] },
+    pose(SUPINE, armsOnFloor(0), { foot: null, hips: [0, 0.1, 0], thigh: [0.05, 0.2, 1], shin: [0.04, 0.13, 1], plantar: 16, kneeHint: [0, 1, 0] }), // talons au-dessus du sol entre deux répétitions
+    pose(SUPINE, armsOnFloor(0), { foot: null, hips: [0, 0.15, 0.02], thigh: [0.05, 0.98, 0.18], shin: [0.04, 0.99, 0.1], plantar: 12, kneeHint: [0, 0.2, -1], pelvis: [0, -0.12, -0.99] })] },
   // Hanches fixes : c'est la colonne qui s'enroule, le bassin bouge à peine ; les mains restent près du front.
   'Crunch poulie': { gear: { machine: { type: 'tower', at: [0, 0, 1.0], yaw: 180 }, hold: 'rope', cables: [{ from: [0, 2.05, 0.9], to: 'L' }, { from: [0, 2.05, 0.9], to: 'R' }] }, beats: [[1, 0.9], [1, 0.3], [0, 1.3], [0, 0.2]], keys: [
     pose(KNEEL, { neck: 0, torso: [0, 1, 0.08], pelvis: [0, 1, 0.02], chest: [0.09, 0.62, 0.17], elbowHint: [0.5, -0.3, 0.8], palm: [-0.8, 0, -0.4], grip: 1 }),

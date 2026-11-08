@@ -62,6 +62,7 @@ export const LIMITS = {
 export const EXCEPTIONS = {};
 const UNILATERAL = new Set(['Fentes bulgares', 'Fentes marchées', 'Squat pistol', 'Rowing haltère', 'Crunch vélo', 'Footing', 'Tapis de course', 'Sprint', 'Étirement de la nuque', 'Étirement des bras', 'Échauffement', 'Épaulé-jeté', 'Burpee',
   'Curl haltères', 'Corde à sauter']); // curl alterné, corde en pas alternés
+const GAIT = new Set(['Fentes marchées']);
 const BALLISTIC = new Set(['Burpee', 'Arraché', 'Épaulé-jeté', 'Box jump', 'Pompes sautées', 'Jumping jacks', 'Corde à sauter', 'Footing', 'Tapis de course', 'Sprint', 'Kettlebell swing', 'Échauffement']);
 // Pieds censés rester à plat et immobiles pendant tout le mouvement (l'exercice ne décolle pas les talons).
 const FLAT_FEET = new Set(['Squat', 'Squat avant', 'Squat overhead', 'Soulevé de terre', 'Soulevé de terre roumain', 'Tirage sumo', 'Rowing barre', 'Développé militaire', 'Développé épaules haltères', 'Élévations latérales', 'Élévations frontales', 'Face pull', 'Curl haltères', 'Curl barre', 'Curl marteau', 'Extensions triceps', 'Écarté poulie', 'Hip thrust', 'Développé couché', 'Développé couché haltères', 'Développé incliné haltères', 'Barre au front', 'Étirement de la nuque']);
@@ -245,6 +246,75 @@ function disc(c, axis, r, out) { // centre + 16 points du bord d'un disque perpe
   out.push(c.clone()); for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; out.push(c.clone().addScaledVector(e1, r * Math.cos(a)).addScaledVector(e2, r * Math.sin(a))); }
   for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; out.push(c.clone().addScaledVector(e1, 0.5 * r * Math.cos(a)).addScaledVector(e2, 0.5 * r * Math.sin(a))); }
 }
+// ───── Membres qui se traversent ─────
+// Distance entre deux segments (capsules effilées) ; enfoncement = somme des rayons − distance. Paires non voisines
+// seulement (un bras touche toujours le thorax à l'épaule : on ne teste que l'avant-bras contre le tronc, etc.).
+function segDist(a0, a1, b0, b1) {
+  const u = a1.clone().sub(a0), v = b1.clone().sub(b0), w = a0.clone().sub(b0);
+  const A = u.dot(u), Bv = u.dot(v), C = v.dot(v), D = u.dot(w), E = v.dot(w), den = A * C - Bv * Bv;
+  let sN, tN, sD = den, tD = den;
+  if (den < 1e-9) { sN = 0; sD = 1; tN = E; tD = C; } else { sN = Bv * E - C * D; tN = A * E - Bv * D; if (sN < 0) { sN = 0; tN = E; tD = C; } else if (sN > sD) { sN = sD; tN = E + Bv; tD = C; } }
+  if (tN < 0) { tN = 0; sN = Math.min(Math.max(-D, 0), A); sD = A; } else if (tN > tD) { tN = tD; sN = Math.min(Math.max(-D + Bv, 0), A); sD = A; }
+  const s = sD ? sN / sD : 0, t = tD ? tN / tD : 0;
+  return { d: a0.clone().addScaledVector(u, s).distanceTo(b0.clone().addScaledVector(v, t)), s, t };
+}
+const SELF = [['avant-bras G', 'bassin'], ['avant-bras G', 'ventre'], ['avant-bras G', 'thorax'], ['avant-bras D', 'bassin'], ['avant-bras D', 'ventre'], ['avant-bras D', 'thorax'],
+  ['bras G', 'bassin'], ['bras D', 'bassin'], ['cuisse G', 'cuisse D'], ['tibia G', 'tibia D'], ['cuisse G', 'tibia D'], ['cuisse D', 'tibia G'],
+  ['avant-bras G', 'avant-bras D'], ['avant-bras G', 'cuisse G'], ['avant-bras D', 'cuisse D'], ['avant-bras G', 'cuisse D'], ['avant-bras D', 'cuisse G']];
+function selfClash(B) {
+  const caps = Object.fromEntries(capsules(B).map((c) => [c.nm, c])); let worst = { d: 0, where: '' };
+  for (const [x, y] of SELF) { const a = caps[x], b = caps[y]; if (!a || !b) continue;
+    const { d, s, t } = segDist(a.a, a.b, b.a, b.b), pen = a.r0 + (a.r1 - a.r0) * s + b.r0 + (b.r1 - b.r0) * t - d;
+    if (pen > worst.d) worst = { d: pen, where: x + ' / ' + y }; }
+  return worst;
+}
+
+// ───── Équilibre ─────
+// Centre de masse (segments de Dempster) + charge tenue, projeté au sol, doit rester au-dessus de la base d'appui
+// (enveloppe convexe des pieds, mains, genoux et fesses posés, à 4 cm près). Non testé : appui sur un banc ou une machine,
+// couché, ou en l'air (rien ne touche le sol).
+const SEG = [['Hips', 'Neck', 0.497], ['Neck', 'HeadTop_End', 0.081], ['LeftArm', 'LeftForeArm', 0.028], ['RightArm', 'RightForeArm', 0.028], ['LeftForeArm', 'LeftHand', 0.016], ['RightForeArm', 'RightHand', 0.016],
+  ['LeftHand', 'LeftHandMiddle2', 0.006], ['RightHand', 'RightHandMiddle2', 0.006], ['LeftUpLeg', 'LeftLeg', 0.1], ['RightUpLeg', 'RightLeg', 0.1], ['LeftLeg', 'LeftFoot', 0.0465], ['RightLeg', 'RightFoot', 0.0465],
+  ['LeftFoot', 'LeftToeBase', 0.0145], ['RightFoot', 'RightToeBase', 0.0145]];
+const LOAD = { bar: 0.8, barBack: 0.8, barFront: 0.8, dumbbells: 0.32, dumbbellR: 0.16, dumbbellL: 0.16, kettlebell: 0.21 }; // charge / masse du corps
+function hull2(pts) { const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); if (p.length < 3) return p;
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); const lo = [], up = [];
+  for (const q of p) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1)); }
+function outside(h, q) { // 0 si dedans, sinon distance à l'enveloppe
+  if (h.length === 1) return Math.hypot(q[0] - h[0][0], q[1] - h[0][1]);
+  let inside = h.length >= 3, best = Infinity;
+  for (let i = 0; i < h.length; i++) { const a = h[i], b = h[(i + 1) % h.length], ex = b[0] - a[0], ey = b[1] - a[1];
+    if (ex * (q[1] - a[1]) - ey * (q[0] - a[0]) < 0) inside = false;
+    const t = Math.max(0, Math.min(1, ((q[0] - a[0]) * ex + (q[1] - a[1]) * ey) / (ex * ex + ey * ey || 1)));
+    best = Math.min(best, Math.hypot(q[0] - a[0] - ex * t, q[1] - a[1] - ey * t)); }
+  return inside ? 0 : best; }
+function balance(B, gear, ankle0 = 0.09) {
+  const p = (n) => B[n] ? B[n].getWorldPosition(new THREE.Vector3()) : null; let m = 0; const c = new THREE.Vector3();
+  for (const [a, b, w] of SEG) { const pa = p(a), pb = p(b); if (!pa || !pb) continue; c.addScaledVector(pa.add(pb).multiplyScalar(0.5), w); m += w; }
+  const load = LOAD[gear?.hold]; if (load) { const g = gripOf(THREE, B, 'Left').c.add(gripOf(THREE, B, 'Right').c).multiplyScalar(0.5); c.addScaledVector(g, load); m += load; }
+  c.multiplyScalar(1 / m);
+  const cand = []; // points d'appui possibles [x, z, hauteur, seuil]
+  for (const S of ['Left', 'Right']) {
+    const f = p(S + 'Foot'), t = p(S + 'ToeBase'), te = p(S + 'Toe_End');
+    for (const q of [t, te]) if (q) cand.push([q.x, q.z, q.y, 0.06]); // avant-pied, orteils
+    if (f && t) { // talon : 5 cm derrière la cheville, posé tant que la cheville reste à sa hauteur de repos (pied à plat) + 3 cm
+      const back = f.clone().sub(t).setY(0).normalize().multiplyScalar(0.05);
+      cand.push([f.x + back.x, f.z + back.z, f.y, ankle0 + 0.05]); // + bout des orteils (~2 cm) au-dessus du sol
+    }
+    for (const n of ['HandMiddle1', 'Leg']) { const q = p(S + n); if (q) cand.push([q.x, q.z, q.y, 0.09]); } // mains à plat (articulation à ~3 cm de la paume), genoux posés
+  }
+  // Assis au sol : les fesses portent (ischions de part et d'autre, un peu en arrière de la hanche).
+  const hp = p('Hips'); if (hp) for (const [dx, dz] of [[0, 0], [0.07, -0.07], [-0.07, -0.07]]) cand.push([hp.x + dx, hp.z + dz, hp.y, 0.16]);
+  return { com: [c.x, c.z], cand };
+}
+// Écart (m) du centre de masse hors de la base d'appui, sol à `ground` ; null si rien ne touche le sol.
+function balanceGap({ com, cand }, ground) {
+  const sup = cand.filter(([, , y, lim]) => y - ground < lim).map(([x, z]) => [x, z]);
+  return sup.length ? Math.max(0, outside(hull2(sup), com) - 0.04) : null;
+}
+
 function gearPoints(gear, B) {
   const pts = [], grips = [];
   const along = (c, axis, list, r) => { for (const x of list) for (const sg of [1, -1]) disc(c.clone().addScaledVector(axis, sg * x), axis, r, pts); };
@@ -287,6 +357,7 @@ export async function auditOne(name, sex = 'M', { fault = false } = {}) {
   const top = bone(/HeadTop_End/).getWorldPosition(v()), foot = (bone(/LeftToe_?End/) || bone(/LeftFoot/)).getWorldPosition(v());
   obj.scale.multiplyScalar(1.75 / Math.max(0.01, top.y - foot.y)); obj.updateMatrixWorld(true);
   const f2 = (bone(/LeftToe_?End/) || bone(/LeftFoot/)).getWorldPosition(v()), h0 = bone(/Hips$/).getWorldPosition(v());
+  const ankle0 = bone(/LeftFoot$/).getWorldPosition(v()).y - f2.y; // cheville au-dessus des orteils, pied à plat (pose de repos)
   obj.position.set(-h0.x, -f2.y, -h0.z);
   obj.updateMatrixWorld(true);
   const REST = restFrame(obj, Object.fromEntries(['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', ...['Left', 'Right'].flatMap((S) => ['UpLeg', 'Leg', 'Foot', 'Arm', 'ForeArm', 'Hand'].map((n) => S + n))].map((n) => [n, bone(new RegExp(n + '$'))])));
@@ -315,7 +386,7 @@ export async function auditOne(name, sex = 'M', { fault = false } = {}) {
   const HB = {}; obj.traverse((o) => { if (o.isBone) HB[o.name.replace(/^mixamorig:?/, '')] ||= o; });
   // Os suivis pour juger si la faute se voit : celui de la faute (flèche), plus quelques repères du corps.
   const trackBones = m.fault ? [...new Set([FAULTS[m.fault].track, 'Neck', 'Spine1', 'Hips', 'RightLeg', 'RightForeArm'])].map((n) => HB_track(obj, n)).filter(Boolean) : [], trackPath = [];
-  let gripGap = 0; const barGrip = []; let clash = { d: 0, where: '' }, rackGap = 0, openHand = 0;
+  let gripGap = 0; const barGrip = []; let selfW = { d: 0, where: '' }; const balFrames = []; let clash = { d: 0, where: '' }, rackGap = 0, openHand = 0;
   for (let i = 0; i <= N; i++) {
     // i = N : juste avant la fin (setTime(duration) retombe sur 0 en boucle) pour mesurer le raccord.
     mixer.setTime(i === N ? clip.duration - 1e-3 : (clip.duration * i) / N); obj.updateMatrixWorld(true);
@@ -323,6 +394,8 @@ export async function auditOne(name, sex = 'M', { fault = false } = {}) {
     frames.push({ all: bones.map(p), feet: feet.map(p), hips: p(hips), lh: p(lh), rh: p(rh), ls: p(ls), rs: p(rs), skin: skinMin(), bench: bench ? benchLow() : null });
     seq.push(measure(BN, REST));
     if (trackBones.length) trackPath.push(trackBones.map((b) => b.getWorldPosition(v())));
+    { const sc = selfClash(HB); if (sc.d > selfW.d) selfW = { d: sc.d, where: sc.where + ' @' + i }; }
+    balFrames.push(balance(HB, m.gear, ankle0)); // jugé après le recalage du sol (voir plus bas)
     if (m.gear?.hold) { const caps = capsules(HB); for (const q of gearPoints(m.gear, HB)) for (const c of caps) { const dd = depthIn(q, c); if (dd > clash.d) { clash = { d: dd, where: c.nm + ' @' + i }; } } }
     if (m.gear?.hold === 'bar' || m.gear?.hold === 'barBack') { const a = gripOf(THREE, HB, 'Left').c, b = gripOf(THREE, HB, 'Right').c; barGrip.push({ w: a.distanceTo(b), y: (a.y + b.y) / 2 }); }
     // Prise : chaque main qui tient une poignée a les doigts enroulés autour (rayon du « tube » des doigts ≤ 3,5 cm,
@@ -381,6 +454,16 @@ export async function auditOne(name, sex = 'M', { fault = false } = {}) {
     if (Math.max(...gw) - Math.min(...gw) > 0.03) bio['barre : écart des mains qui change (m)'] = { value: +(Math.max(...gw) - Math.min(...gw)).toFixed(3), limit: 0.03, n: 1 };
     if (gy < 0.225 - 0.01) bio['barre : disques dans le sol (m)'] = { value: +(0.225 - gy).toFixed(3), limit: 0.01, n: 1 };
     if (m.gear.fromFloor && gy > 0.225 + 0.02) bio['barre : ne repart pas du sol (m)'] = { value: +(gy - 0.225).toFixed(3), limit: 0.02, n: 1 }; }
+  if (selfW.d > 0.015) bio['membres qui se traversent (' + selfW.where + ') (m)'] = { value: +selfW.d.toFixed(3), limit: 0.015, n: 1 };
+  // Équilibre : seulement debout ou en appui au sol (ni banc, ni machine, ni couché, ni suspendu).
+  // Gestes balistiques (course, sauts, haltérophilie) : le centre de masse sort de l'appui, c'est le principe du mouvement.
+  // Marche (fentes marchées) : le pas avant est une chute contrôlée, rattrapée par le pied qui se pose (équilibre dynamique).
+  if (!m.gear?.bench && !m.gear?.machine && !LYING.has(name) && !BALLISTIC.has(name) && !GAIT.has(name)) {
+    const gaps = balFrames.map((b) => balanceGap(b, ground)).filter((x) => x !== null), worst = Math.max(0, ...gaps);
+    if (process.env.BALDBG) { const i = balFrames.findIndex((b) => balanceGap(b, ground) === worst), b = balFrames[i];
+      console.log('BAL', name, 'frame', i, 'com', b.com.map((x) => x.toFixed(2)).join(','), 'ground', ground.toFixed(3), '\n ', b.cand.map(([x, z, y, l]) => `${x.toFixed(2)},${z.toFixed(2)} h${(y - ground).toFixed(2)}${y - ground < l ? '*' : ''}`).join(' | ')); }
+    if (worst > 0) bio['équilibre : centre de masse hors des appuis (m)'] = { value: +worst.toFixed(3), limit: 0, n: 1 };
+  }
   if (clash.d > 0.01) bio['matériel dans le corps (' + clash.where + ') (m)'] = { value: +clash.d.toFixed(3), limit: 0.01, n: 1 };
   if (openHand > 0.035) bio['prise : doigts pas refermés sur la poignée (m)'] = { value: +openHand.toFixed(3), limit: 0.035, n: 1 };
   if (rackGap > 0.06) bio['squat avant : doigts loin de la barre (m)'] = { value: +rackGap.toFixed(3), limit: 0.06, n: 1 };

@@ -19,6 +19,42 @@ const SIDES = [['Left', 1], ['Right', -1]];
 const CHAIN_C = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head'];
 const CHAIN_S = ['UpLeg', 'Leg', 'Foot', 'ToeBase', 'Shoulder', 'Arm', 'ForeArm', 'Hand'];
 
+
+// Jambes qui se croisent : capsules effilées (mêmes rayons que le banc d'essai) + 3 cm de marge, car le lissage et l’interpolation entre images
+// final adoucit un peu la correction. Renvoie l'enfoncement le plus fort (m), 0 si les jambes passent l'une à côté de l'autre.
+function segD(a0, a1, b0, b1) {
+  let best = [Infinity, 0, 0];
+  for (let i = 0; i <= 16; i++) { const s = i / 16, p = a0.clone().lerp(a1, s);
+    const ab = b1.clone().sub(b0), t = Math.max(0, Math.min(1, p.clone().sub(b0).dot(ab) / ab.lengthSq()));
+    const d = b0.clone().addScaledVector(ab, t).distanceTo(p); if (d < best[0]) best = [d, s, t]; }
+  return best;
+}
+const LEG_R = { th: [0.075, 0.048], sh: [0.046, 0.03] };
+function sepNeeded(P, k = 1) { // k : échelle du corps vers 1,75 m (la visionneuse le normalise)
+  const seg = (S, k) => (k === 'th' ? [P(S + 'UpLeg'), P(S + 'Leg')] : [P(S + 'Leg'), P(S + 'Foot')]);
+  let worst = 0;
+  for (const [ka, kb, A, Bs] of [['th', 'th', 'Left', 'Right'], ['sh', 'sh', 'Left', 'Right'], ['th', 'sh', 'Left', 'Right'], ['th', 'sh', 'Right', 'Left']]) {
+    const [a0, a1] = seg(A, ka), [b0, b1] = seg(Bs, kb), [d, s, t] = segD(a0, a1, b0, b1);
+    const r = (LEG_R[ka][0] + (LEG_R[ka][1] - LEG_R[ka][0]) * s + LEG_R[kb][0] + (LEG_R[kb][1] - LEG_R[kb][0]) * t) / k;
+    worst = Math.max(worst, (r + 0.03 / k - d) * k);
+  }
+  return worst;
+}
+
+// Avant-bras qui entre dans l'autre avant-bras, une cuisse ou le tronc : enfoncement le plus fort (m, + 1 cm de marge) et
+// points les plus proches, pour repousser le bras depuis l'épaule.
+const ARM_R = [0.032, 0.024], THIGH_R = [0.075, 0.048], TRUNK_R = [0.1, 0.1];
+function armClash(P, k, S) {
+  const O = S === 'Left' ? 'Right' : 'Left', a0 = P(S + 'ForeArm'), a1 = P(S + 'Hand');
+  let worst = { pen: 0 };
+  for (const [b0n, b1n, R] of [[O + 'ForeArm', O + 'Hand', ARM_R], ['LeftUpLeg', 'LeftLeg', THIGH_R], ['RightUpLeg', 'RightLeg', THIGH_R], ['Hips', 'Spine1', TRUNK_R], ['Spine1', 'Spine2', TRUNK_R]]) {
+    const b0 = P(b0n), b1 = P(b1n), [d, s, t] = segD(a0, a1, b0, b1);
+    const r = (ARM_R[0] + (ARM_R[1] - ARM_R[0]) * s + R[0] + (R[1] - R[0]) * t) / k, pen = (r + 0.01 / k - d) * k;
+    if (pen > worst.pen) worst = { pen, pA: a0.clone().lerp(a1, s), pB: b0.clone().lerp(b1, t), share: R === ARM_R ? 0.5 : 1 };
+  }
+  return worst;
+}
+
 export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   if (!clip || !obj) return clip;
   const memo = (clip.userData ||= {}).tmLimited ||= {};
@@ -33,11 +69,40 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
   // Orientations « monde » exprimées dans le repère du corps (le corps peut être tourné dans la scène).
   const wq = (n) => objQi.clone().multiply(B[n].getWorldQuaternion(Q()));
   const restW = {}; for (const n in B) restW[n] = wq(n);
+  // Taille au repos (sommet du crâne → orteils), pour exprimer les rayons des membres à l'échelle du corps.
+  const hb = Object.keys(B).find((k) => /HeadTop_End/.test(k)), tb = Object.keys(B).find((k) => /LeftToe_?End/.test(k)) || 'LeftFoot';
+  const lp = (n) => B[n].getWorldPosition(new THREE.Vector3()).applyMatrix4(obj.matrixWorld.clone().invert());
+  const bodyK = hb ? 1.75 / Math.max(0.01, lp(hb).y - lp(tb).y) : 1;
   const d = (n) => wq(n).multiply(restW[n].clone().invert()); // rotation depuis le repos
   const setD = (n, dq) => { // impose l'orientation (dans le repère du corps) d'un os, ses enfants suivent
     const b = B[n], world = objQ.clone().multiply(dq.clone().multiply(restW[n]));
     const pw = b.parent.getWorldQuaternion(Q());
     b.quaternion.copy(pw.invert().multiply(world)); b.updateMatrixWorld(true);
+  };
+  // Écarte les deux cuisses de `a` radians au total (abduction pure : axe ⟂ à la cuisse et à l'axe latéral du bassin,
+  // pour qu'une jambe levée devant s'écarte au lieu de tourner sur elle-même).
+  const feetPlanted = () => B.LeftToe_End && B.RightToe_End && ['Left', 'Right'].every((S) => (pos(S + 'Toe_End').y - toeMin) * bodyK < 0.03);
+  const abdMax = () => Math.max(...[['Left', 1], ['Right', -1]].map(([S, sg]) => { // abduction de hanche (°), dans le repère du bassin
+    const th = pos(S + 'Leg').sub(pos(S + 'UpLeg')).applyQuaternion(d('Hips').invert()); return Math.atan2(sg * th.x, -th.y) * DEG; }));
+  const abduct = (a) => {
+    const lat = V(1, 0, 0).applyQuaternion(d('Hips'));
+    for (const [S, sg] of [['Left', 1], ['Right', -1]]) {
+      const th = pos(S + 'Leg').sub(pos(S + 'UpLeg')).normalize(), ax = V().crossVectors(th, lat);
+      if (ax.lengthSq() < 1e-6) continue;
+      setD(S + 'UpLeg', Q().setFromAxisAngle(ax.normalize(), (sg * a) / 2).multiply(d(S + 'UpLeg')));
+    }
+  };
+  // Repousse l'avant-bras `S` hors de ce qu'il traverse : rotation du bras à l'épaule, de `a` radians, dans le sens
+  // qui éloigne le point de contact (recalculé à chaque image, donc valable aussi en fondu sur les images voisines).
+  const crossed = (S) => { const out = V(S === 'Left' ? 1 : -1, 0, 0).applyQuaternion(d('Spine2')); return -pos(S + 'ForeArm').sub(pos(S + 'Arm')).normalize().dot(out); };
+  const pushArm = (S, a) => {
+    const c = armClash((m) => pos(m), bodyK, S); if (!c.pA) return;
+    const sh = pos(S + 'Arm'), lever = c.pA.clone().sub(sh), n = c.pA.clone().sub(c.pB).normalize();
+    // Jamais vers l'autre côté du corps : l'épaule est déjà au bout du bras croisé dans les étirements.
+    const out = V(S === 'Left' ? 1 : -1, 0, 0).applyQuaternion(d('Spine2')), o = n.dot(out);
+    if (o < 0) { n.addScaledVector(out, -o); if (n.lengthSq() < 0.04) return; }
+    const ax = V().crossVectors(lever, n); if (ax.lengthSq() < 1e-8) return;
+    setD(S + 'Arm', Q().setFromAxisAngle(ax.normalize(), a).multiply(d(S + 'Arm')));
   };
   const rel = (a, b) => d(a).invert().multiply(d(b));
   const ang = (order, q) => { E.setFromQuaternion(q, order); return [E.x * DEG, E.y * DEG, E.z * DEG]; };
@@ -116,20 +181,26 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
       if (Math.abs(fa2) > LIM.forearm) wx += fa2 - Math.sign(fa2) * LIM.forearm;
       if ([wx, wy, wz].some((v, k) => Math.abs(v - w0[k]) > 0.05)) setD(S + 'Hand', d(S + 'ForeArm').multiply(fromAng('ZYX', [wx, wy, wz])));
     }
-    // 8. Cou (tête par rapport au thorax).
+    // 8. Jambes qui se croisent (course, sauts) : si un tibia passe dans l'autre jambe, les deux cuisses s'écartent
+    //    juste assez (rotation autour de l'axe avant du bassin), comme un appui un peu plus large.
+    for (let it = 0; it < 8; it++) {
+      const P = (n) => pos(n), gap = sepNeeded(P, bodyK);
+      if (gap <= 0) break;
+      abduct(Math.min(0.12, gap / 0.85));
+    }
+    // 9. Cou (tête par rapport au thorax).
     const [nx, ny, nz] = ang('XZY', rel('Spine2', 'Head'));
     const na = [clamp(nx, -LIM.neck.ext, LIM.neck.flex), clamp(ny, -LIM.neck.twist, LIM.neck.twist), clamp(nz, -LIM.neck.lat, LIM.neck.lat)];
     if (na.some((v, k) => Math.abs(v - [nx, ny, nz][k]) > 0.05)) setD('Head', d('Spine2').multiply(fromAng('XZY', na)));
   };
 
+  let toeMin = Infinity;
   for (let i = 0; i < n; i++) {
     mixer.setTime(Math.min(T, (T * i) / (n - 1))); obj.updateMatrixWorld(true);
     fixFrame();
+    if (B.LeftToe_End) toeMin = Math.min(toeMin, pos('LeftToe_End').y, pos('RightToe_End').y);
     for (const [nm] of tracked) { const q = B[nm].quaternion; out[nm].set([q.x, q.y, q.z, q.w], i * 4); }
   }
-  mixer.stopAllAction(); mixer.uncacheRoot(obj);
-  for (const [b, q, p] of saved) { b.quaternion.copy(q); b.position.copy(p); }
-  obj.updateMatrixWorld(true);
 
   // Lissage léger (1-2-1, trois passes) : une articulation qui touche sa limite puis la quitte ne doit pas faire d'à-coup.
   const qa = Q(), qb = Q(), qc = Q();
@@ -142,6 +213,38 @@ export function limitJoints(THREE, clip, obj, { symmetric = false } = {}) {
     }
   }
   const times = Float32Array.from({ length: n }, (_, i) => (T * i) / (n - 1));
+  // Membres qui se traversent, après lissage (le lissage dilue la correction image par image) : jambes qui se croisent,
+  // avant-bras dans l'autre avant-bras ou dans une cuisse. On mesure l'écart manquant sur le geste lissé, puis on
+  // l'applique en fondu sur ±5 images pour ne créer aucun à-coup (réponse aux collisions, comme dans un moteur de jeu).
+  const legTracks = ['LeftUpLeg', 'RightUpLeg'].map((nm) => tracked.find(([m]) => m === nm));
+  if (legTracks.every(Boolean)) {
+    const setPose = (i) => { mixer.setTime(Math.min(T, (T * i) / (n - 1))); for (const [nm] of tracked) B[nm].quaternion.fromArray(out[nm], i * 4); obj.updateMatrixWorld(true); };
+    const need = new Float32Array(n), needL = new Float32Array(n), needR = new Float32Array(n), hasArms = B.LeftForeArm && B.RightForeArm;
+    for (let i = 0; i < n; i++) {
+      setPose(i); let tot = 0;
+      // Deux pieds posés : écarter les cuisses ferait glisser les pieds (jambes serrées en planche) ; hanche déjà très
+      // ouverte : on n'écarte pas au-delà de 53° d'abduction.
+      const planted = feetPlanted();
+      if (!planted) for (let it = 0; it < 10; it++) { const g = sepNeeded((m) => pos(m), bodyK); if (g <= 0 || abdMax() > 53) break; const a = Math.min(0.12, g / 0.85); abduct(a); tot += a; }
+      need[i] = tot;
+      if (hasArms) for (const [S, arr] of [['Left', needL], ['Right', needR]].sort((x, y) => crossed(x[0]) - crossed(y[0]))) for (let it = 0; it < 10; it++) { // le bras le moins croisé s'écarte d'abord
+        const c = armClash((m) => pos(m), bodyK, S); if (c.pen <= 0) break;
+        const a = Math.min(0.15, c.pen / Math.max(0.2, c.pA.distanceTo(pos(S + 'Arm')))); pushArm(S, a); arr[i] += a;
+      }
+    }
+    const W = 5, fade = (nd) => Float32Array.from({ length: n }, (_, i) => { let m = 0; for (let j = Math.max(0, i - W); j <= Math.min(n - 1, i + W); j++) m = Math.max(m, nd[j] * (1 - Math.abs(i - j) / (W + 1))); return m; });
+    if ([need, needL, needR].some((nd) => nd.some((x) => x > 0))) {
+      const A = fade(need), AL = fade(needL), AR = fade(needR);
+      for (let i = 0; i < n; i++) if (A[i] > 0 || AL[i] > 0 || AR[i] > 0) {
+        setPose(i); if (A[i] > 0 && !feetPlanted() ) { const room = Math.max(0, (53 - abdMax()) / DEG) * 2; abduct(Math.min(A[i], room)); } for (const [S, a] of [['Left', AL[i]], ['Right', AR[i]]]) for (let r = a; r > 1e-4; r -= 0.05) pushArm(S, Math.min(0.05, r)); // par petits pas : la direction de poussée suit le contact
+        for (const nm of ['LeftUpLeg', 'RightUpLeg', 'LeftArm', 'RightArm']) if (out[nm]) B[nm].quaternion.toArray(out[nm], i * 4);
+      }
+    }
+  }
+  mixer.stopAllAction(); mixer.uncacheRoot(obj);
+  obj.updateMatrixWorld(true);
+  for (const [b, q, p] of saved) { b.quaternion.copy(q); b.position.copy(p); }
+  obj.updateMatrixWorld(true);
   const tracks = clip.tracks.map((t) => {
     const hit = tracked.find(([, tt]) => tt === t);
     return hit ? new THREE.QuaternionKeyframeTrack(t.name, times, out[hit[0]]) : t.clone();

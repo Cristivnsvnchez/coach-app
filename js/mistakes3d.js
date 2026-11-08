@@ -99,7 +99,7 @@ const CLIP_FAULT = {
   backRound: { Spine1: { x: 0.16 }, Spine2: { x: 0.12 } },
   elbowFlare: { LeftArm: { z: 0.25 }, RightArm: { z: -0.25 } },
   elbowDrift: { LeftArm: { x: -0.22 }, RightArm: { x: -0.22 } },
-  hipsDrop: { Spine: { x: 0.2 }, Hips: { x: 0.12 } },
+  hipsDrop: { Spine: { x: -0.14 }, Hips: { x: 0.08 } },
   overArch: { Spine1: { x: -0.18 }, Spine2: { x: -0.14 } },
 };
 export function faultyClip(THREE, clip, kind) {
