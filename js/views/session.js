@@ -23,7 +23,7 @@ register({
     'Séance enregistrée': 'Workout saved', 'Séance enregistrée · prochaine : {n}, {d}': 'Workout saved · next: {n}, {d}',
     'Revenir au Journal': 'Back to Journal', '{n} séries faites': '{n} sets done', 'précédent {kg} kg': 'last {kg} kg', 'Repos': 'Rest', 'Nouveau record · {kg} kg × {r}': 'New record · {kg} kg × {r}',
     'Repos · série {n} à {kg} kg': 'Rest · set {n} at {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets',
-    'Note épinglée': 'Pinned note', 'Gardée pour toutes les prochaines séances de cet exercice.': 'Kept for every future session of this exercise.', 'Ex. : siège cran 4, prise serrée': 'E.g. seat notch 4, close grip', 'Effacer la note': 'Clear note', 'Note épinglée enregistrée': 'Pinned note saved', 'Note épinglée effacée': 'Pinned note cleared', 'Modifier la note épinglée': 'Edit pinned note' },
+    'Note épinglée': 'Pinned note', 'Gardée pour toutes les prochaines séances de cet exercice.': 'Kept for every future session of this exercise.', 'Ex. : siège cran 4, prise serrée': 'E.g. seat notch 4, close grip', 'Effacer la note': 'Clear note', 'Note épinglée enregistrée': 'Pinned note saved', 'Note épinglée effacée': 'Pinned note cleared', 'Modifier la note épinglée': 'Edit pinned note', 'Démarrer le chrono': 'Start timer', 'Arrêter le chrono': 'Stop timer' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
@@ -34,7 +34,7 @@ register({
     'Séance enregistrée': 'Training opgeslagen', 'Séance enregistrée · prochaine : {n}, {d}': 'Training opgeslagen · volgende: {n}, {d}',
     'Revenir au Journal': 'Terug naar Dagboek', '{n} séries faites': '{n} sets gedaan', 'précédent {kg} kg': 'vorige {kg} kg', 'Repos': 'Rust', 'Nouveau record · {kg} kg × {r}': 'Nieuw record · {kg} kg × {r}',
     'Repos · série {n} à {kg} kg': 'Rust · set {n} met {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets',
-    'Note épinglée': 'Vastgezette notitie', 'Gardée pour toutes les prochaines séances de cet exercice.': 'Bewaard voor alle volgende trainingen van deze oefening.', 'Ex. : siège cran 4, prise serrée': 'Bijv. zitting stand 4, smalle greep', 'Effacer la note': 'Notitie wissen', 'Note épinglée enregistrée': 'Vastgezette notitie opgeslagen', 'Note épinglée effacée': 'Vastgezette notitie gewist', 'Modifier la note épinglée': 'Vastgezette notitie bewerken' },
+    'Note épinglée': 'Vastgezette notitie', 'Gardée pour toutes les prochaines séances de cet exercice.': 'Bewaard voor alle volgende trainingen van deze oefening.', 'Ex. : siège cran 4, prise serrée': 'Bijv. zitting stand 4, smalle greep', 'Effacer la note': 'Notitie wissen', 'Note épinglée enregistrée': 'Vastgezette notitie opgeslagen', 'Note épinglée effacée': 'Vastgezette notitie gewist', 'Modifier la note épinglée': 'Vastgezette notitie bewerken', 'Démarrer le chrono': 'Timer starten', 'Arrêter le chrono': 'Timer stoppen' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -97,6 +97,8 @@ function tick() {
   const el = document.querySelector('[data-live=dur]');
   if (!el || !active) { clearInterval(ticker); ticker = null; return; }
   el.textContent = hms(Date.now() - active.start);
+  const sw = document.querySelector('[data-live=sw]');
+  if (sw && active.sw) sw.textContent = mmss(Math.max(0, Math.floor((Date.now() - active.sw.start) / 1000)));
   const rest = document.querySelector('.rest');
   const left = Math.round((restEnd - Date.now()) / 1000);
   if (rest) {
@@ -231,7 +233,7 @@ function exerciseCard(ex, i, ssIndex) {
           return `<div class="se-row ${s.done ? 'done' : ''} t-${esc(s.type)}">
             <button class="set-type" data-a="type" data-i="${i}" data-j="${j}" aria-label="${t('Type de série')}">${label}</button>
             <button class="prev" data-a="prev" data-i="${i}" data-j="${j}" ${p ? '' : 'disabled'}>${prevTxt}</button>
-            ${hasKg ? `<input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${esc(s.kg)}" aria-label="kg">` : '<span></span>'}
+            ${hasKg ? `<input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${esc(s.kg)}" aria-label="kg">` : isDur && !s.done ? swButton(i, j) : '<span></span>'}
             <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${esc(s.reps)}" aria-label="${isDur ? 's' : t('reps')}">
             ${rir ? `<input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${esc(s.rir)}" aria-label="${t('RIR')}">` : ''}
             <button class="se-chk" data-a="done" data-i="${i}" data-j="${j}" aria-label="${t('Série faite')}" aria-pressed="${s.done}">${s.done ? icon('check') : ''}</button>
@@ -241,6 +243,12 @@ function exerciseCard(ex, i, ssIndex) {
       </div>
       <button class="btn wide se-addset" data-a="add-set" data-i="${i}">${icon('plus')} ${t('Série')}</button>
     </section>`;
+}
+
+function swButton(i, j) {
+  const run = active.sw && active.sw.i === i && active.sw.j === j;
+  return run ? `<button class="se-sw run" data-a="sw" data-i="${i}" data-j="${j}" aria-label="${t('Arrêter le chrono')}"><b data-live="sw" class="num">${mmss(Math.max(0, Math.floor((Date.now() - active.sw.start) / 1000)))}</b></button>`
+    : `<button class="se-sw" data-a="sw" data-i="${i}" data-j="${j}" aria-label="${t('Démarrer le chrono')}">${icon('play')}</button>`;
 }
 
 function onClick(e, root, go, back) {
@@ -277,9 +285,16 @@ function onClick(e, root, go, back) {
   if (a === 'add-set') { const last = ex.sets[ex.sets.length - 1] || { kg: 0, reps: ex.repMin, rir: 2 }; ex.sets.push({ ...last, type: 'normal', done: false }); return keep(); }
   if (a === 'rest-cfg') return restSheet(ex, keep);
   if (a === 'pin') return pinSheet(ex, keep);
+  if (a === 'sw') {
+    const r = W.toggleStopwatch(active.sw, i, j, Date.now());
+    active.sw = r.sw;
+    if (r.fill) ex.sets[j].reps = r.fill.sec;
+    return keep();
+  }
   if (a === 'stale-ok') { active.staleOk = true; return keep(); }
   if (a === 'done') {
     const s = ex.sets[j];
+    if (!s.done && active.sw?.i === i && active.sw?.j === j) { s.reps = W.toggleStopwatch(active.sw, i, j, Date.now()).fill.sec; active.sw = null; } // valider arrête le chrono
     s.done = !s.done;
     keep();
     if (s.done) {
@@ -337,6 +352,7 @@ function exerciseMenu(i, keep) {
     ${group('', `<div class="cells"><div class="cell action destructive" data-m="remove">${t('Retirer l\'exercice')}</div></div>`)}`);
   s.addEventListener('click', (e) => {
     const m = e.target.closest('[data-m]')?.dataset.m; if (!m) return;
+    if (['up', 'down', 'remove', 'delset', 'replace'].includes(m)) active.sw = null; // les index de série changent
     const list = active.exercises;
     if (m === 'warmup') {
       const w = W.warmupSets(top);

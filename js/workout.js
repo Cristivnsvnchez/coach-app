@@ -175,3 +175,10 @@ export function cleanNotes(raw) {
   }
   return out;
 }
+
+// Chrono de série (exercices en durée). sw = { i, j, start } ou null. Le temps se calcule depuis l'heure de départ :
+// il reste juste après une mise en veille ou un rechargement. Toucher la série en cours l'arrête et donne les secondes.
+export function toggleStopwatch(sw, i, j, now) {
+  if (sw && sw.i === i && sw.j === j) return { sw: null, fill: { i, j, sec: Math.max(1, Math.round((now - sw.start) / 1000)) } };
+  return { sw: { i, j, start: now }, fill: null }; // autre série : l'ancien chrono est abandonné
+}

@@ -72,3 +72,14 @@ test('notes épinglées : texte seulement, rogné, 300 caractères max', () => {
   assert.equal(n.Squat, 'siège cran 4');
   assert.equal(n.Long.length, 300);
 });
+
+test('chrono de série : démarre, s\'arrête sur la même série, calculé depuis le départ', () => {
+  const t0 = 1_000_000;
+  const a = W.toggleStopwatch(null, 0, 1, t0);
+  assert.deepEqual(a, { sw: { i: 0, j: 1, start: t0 }, fill: null });
+  const b = W.toggleStopwatch(a.sw, 0, 1, t0 + 45_400); // 45,4 s, même après une mise en veille
+  assert.deepEqual(b, { sw: null, fill: { i: 0, j: 1, sec: 45 } });
+  const c = W.toggleStopwatch(a.sw, 0, 2, t0 + 5000); // autre série : nouveau départ
+  assert.deepEqual(c, { sw: { i: 0, j: 2, start: t0 + 5000 }, fill: null });
+  assert.equal(W.toggleStopwatch(a.sw, 0, 1, t0 + 100).fill.sec, 1); // jamais 0 s
+});
