@@ -129,6 +129,10 @@ function fixExercise(e) {
   return e;
 }
 function cleanFields(out) {
+  // Cycle : durées entières et bornées (affichées telles quelles quand aucune règle n'est saisie).
+  const int = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Math.round(Number(v)) || d));
+  out.cycle.cycleLen = int(out.cycle.cycleLen, 18, 45, 28);
+  out.cycle.periodLen = int(out.cycle.periodLen, 1, 12, 5);
   const meals = (a) => objs(a).map((m) => fix(m, ['foodId', 'id'], MACROS));
   out.routines = objs(out.routines).map((r) => { fix(r, ['id'], []); r.exercises = objs(r.exercises).map(fixExercise); return r; });
   out.workouts = objs(out.workouts).map((w) => { fix(w, ['id', 'routineId'], ['minutes']); w.exercises = objs(w.exercises).map(fixExercise); return w; });

@@ -12,7 +12,7 @@ const bad = /[<>"'&]/;
 
 // Parcourt l'état et renvoie les chemins des champs « techniques » (ids, types, nombres) contenant du HTML.
 const TECH = new Set(['id', 'routineId', 'routineIds', 'foodId', 'supersetId', 'type', 'sets', 'repMin', 'repMax', 'rest', 'minutes',
-  'kg', 'reps', 'rir', 'grams', 'serving', 'kcal', 'p', 'c', 'f', 'fib', 'water', 'enabled']);
+  'kg', 'reps', 'rir', 'grams', 'serving', 'kcal', 'p', 'c', 'f', 'fib', 'water', 'enabled', 'cycleLen', 'periodLen']);
 function leaks(v, path = '', tech = false) {
   if (Array.isArray(v)) return v.flatMap((x, i) => leaks(x, `${path}[${i}]`, tech));
   if (v && typeof v === 'object') return Object.entries(v).flatMap(([k, x]) => leaks(x, `${path}.${k}`, tech || TECH.has(k)));
@@ -32,9 +32,18 @@ test('import piégé : aucun id, type ou nombre ne garde de HTML', async () => {
     shoppingList: [{ id: X, foodId: X, name: 'Lait', grams: X }],
     milestones: [{ id: X, kg: X }],
     weights: [{ date: '2026-11-07', kg: X }],
+    cycle: { enabled: true, cycleLen: X, periodLen: X },
   });
   await flushAll();
   assert.deepEqual(leaks(store.state), []);
+});
+
+test('import : durées du cycle entières et bornées (18–45 j, 1–12 j)', async () => {
+  const len = async (cycleLen, periodLen) => { store.replace({ profile: {}, logs: {}, cycle: { enabled: true, cycleLen, periodLen } }); await flushAll(); return [store.state.cycle.cycleLen, store.state.cycle.periodLen]; };
+  assert.deepEqual(await len(X, X), [28, 5]);
+  assert.deepEqual(await len(3, 40), [18, 12]);
+  assert.deepEqual(await len(99, 0), [45, 5]);
+  assert.deepEqual(await len('29.6', 4), [30, 4]);
 });
 
 test('import sain : les valeurs légitimes restent identiques', async () => {
