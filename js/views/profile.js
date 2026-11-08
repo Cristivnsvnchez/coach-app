@@ -5,7 +5,12 @@ import { applyTheme, applyScheme } from '../theme.js';
 import { current } from '../metrics.js';
 import { esc, fmt, fmtDate, toast, nav, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
-import { t, getLang, setLang, LANGS } from '../i18n.js';
+import { t, getLang, setLang, LANGS, register } from '../i18n.js';
+
+register({
+  en: { 'Objectif et calories': 'Goal and calories', 'Programme': 'Program', 'Suivi du cycle': 'Cycle tracking', 'Activé': 'On', 'Désactivé': 'Off', 'Aucun': 'None', 'il y a {n} jours': '{n} days ago', "aujourd'hui": 'today', 'Jamais': 'Never', '{a} ans': '{a} y', 'Homme': 'Man', 'Femme': 'Woman', 'Apparence': 'Appearance', 'Thème': 'Theme' },
+  nl: { 'Objectif et calories': 'Doel en calorieën', 'Programme': 'Programma', 'Suivi du cycle': 'Cyclus volgen', 'Activé': 'Aan', 'Désactivé': 'Uit', 'Aucun': 'Geen', 'il y a {n} jours': '{n} dagen geleden', "aujourd'hui": 'vandaag', 'Jamais': 'Nooit', '{a} ans': '{a} j', 'Homme': 'Man', 'Femme': 'Vrouw', 'Apparence': 'Uiterlijk', 'Thème': 'Thema' },
+});
 import { paletteSection, handlePaletteClick } from './palette.js';
 import { exportBackup } from '../install.js';
 import { clearActive } from './session.js';
@@ -28,11 +33,26 @@ export function render(root, go) {
   const sel = (name, label, options) => `<label class="cell field"><span>${label}</span><select name="${name}">${options}</select></label>`;
   const txt = (name, label, val, ph = '') => `<label class="cell field"><span>${label}</span><input name="${name}" value="${esc(val ?? '')}" placeholder="${esc(ph)}"></label>`;
 
+  // Aperçu Parcours v2 (profil-2) : identité, objectif, programme, cycle, apparence, langue, sauvegarde, références.
+  const ago = state.lastBackup ? Math.floor((Date.now() - new Date(state.lastBackup)) / 864e5) : null;
+  const backupTxt = ago === null ? t('Jamais') : ago === 0 ? t("aujourd'hui") : t('il y a {n} jours', { n: ago });
+  const late = ago === null || ago > (state.settings.backupEvery || 7);
+  const SCH = { auto: 'Automatique', light: 'Clair', dark: 'Sombre' };
+  const row = (a, ic, label, val, cls = '') => `<button class="v2-li pf-row" data-a="${a}"><span class="v2-av">${icon(ic)}</span><span class="grow v2-lb">${label}</span>${val ? `<span class="v2-sm pf-val ${cls}">${val}</span>` : ''}${icon('chevronRight', { cls: 'v2-chev' })}</button>`;
+  const who = [p.sex ? t(p.sex === 'F' ? 'Femme' : 'Homme') : '', p.age ? t('{a} ans', { a: p.age }) : '', p.height ? `${fmt(p.height)} cm` : ''].filter(Boolean).join(' · ') || t('Mes informations');
+  const goalTxt = [S.GOALS[p.goal] ? t(S.GOALS[p.goal].label ?? S.GOALS[p.goal]) : '', targets?.weeklyChangeKg ? `${fmt(Math.abs(targets.weeklyChangeKg), 1)} kg/sem.` : ''].filter(Boolean).join(' · ');
   root.innerHTML = `
-    ${nav(t('Profil'), { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Journal')}</button>` })}
-    ${group(t('Apparence'), `<div class="cells"><div class="cell pal-cell">${paletteSection()}</div></div>`)}
-    ${group(t('Langue'), `<div class="cells"><div class="cell"><div class="seg" style="flex:1" role="tablist">${Object.entries(LANGS).map(([k, l]) => `<button type="button" data-lang="${k}" class="${getLang() === k ? 'on' : ''}" aria-selected="${getLang() === k}">${l}</button>`).join('')}</div></div></div>`)}
-    ${targets ? group(targets.custom ? t('Mes objectifs (personnalisés)') : t('Tes besoins calculés'), `<div class="cells"><div class="stats">
+    ${nav(t('Profil'), { large: false })}
+    <div class="pl-top"><button class="v2-cb" data-back aria-label="${t('Journal')}">${icon('chevronLeft')}</button><b>${t('Profil')}</b><span></span></div>
+    <button class="v2-card v2-row pf-id" data-a="go-info"><span class="pf-avatar">${icon('profile')}</span><span class="grow"><span class="v2-lb" style="display:block;font-size:17px">${esc(who)}</span><span class="v2-sm">${esc(goalTxt)}</span></span>${icon('chevronRight', { cls: 'v2-chev' })}</button>
+    <div class="v2-card pf-card">${row('go-needs', 'target', t('Objectif et calories'), targets ? `${fmt(targets.kcal)} kcal` : '')}
+      ${row('go-program', 'training', t('Programme'), state.plan ? esc(t(state.plan.name)) : t('Aucun'))}
+      ${p.sex === 'F' ? row('cycle', 'heart', t('Suivi du cycle'), state.cycle?.enabled ? t('Activé') : t('Désactivé')) : ''}</div>
+    <div class="v2-card pf-card">${row('appearance', 'palette', t('Apparence'), `${t(st.surface === 'papier' ? 'Papier' : 'Brume')} · ${t(SCH[st.scheme] || 'Automatique').toLowerCase()}`)}
+      ${row('language', 'globe', t('Langue'), esc(LANGS[getLang()]))}</div>
+    <div class="v2-card pf-card">${row('go-backup', 'cloud', t('Sauvegarde'), backupTxt, late ? 'warn' : '')}
+      ${row('go-refs', 'book', t('Références scientifiques'), '')}</div>
+    <div id="pf-needs"></div>${targets ? group(targets.custom ? t('Mes objectifs (personnalisés)') : t('Tes besoins calculés'), `<div class="cells"><div class="stats">
         <div><small>${t('Dépense')}</small><b>${fmt(targets.tdee)}</b><small>${energy.method === 'adaptatif' ? t('adaptative ({n} j)', { n: energy.loggedDays }) : t('formule')}</small></div>
         <div><small>${t('Objectif')}</small><b>${fmt(targets.kcal)}</b><small>${t('kcal/j')}</small></div>
         <div><small>${t('Protéines')}</small><b>${fmt(targets.protein)} g</b><small>${fmt(targets.protein / (latestWeight() || p.weight), 1)} g/kg</small></div>
@@ -40,7 +60,7 @@ export function render(root, go) {
       <div class="cell"><span class="grow subhead secondary num">${t('Lipides')} ${fmt(targets.fat)} g · ${t('Glucides')} ${fmt(targets.carbs)} g · ${t('Fibres')} ${fmt(targets.fiber)} g</span></div>
       <div class="cell action" data-a="edit-needs" role="button">${icon('pencil')} ${t('Modifier mes objectifs')}</div></div>`,
       t("Formule de départ : Mifflin-St Jeor{k} × niveau d'activité FAO/OMS. Après 10 jours de saisie et des pesées sur ≥ 7 jours, la dépense s'ajuste à tes résultats réels (apport moyen − variation de la tendance × 7700 kcal/kg).", { k: p.bodyFat ? ' / Katch-McArdle' : '' })) : ''}
-    <form data-f="profile">
+    <form data-f="profile" id="pf-info">
       ${group(t('Mes informations'), `<div class="cells">
         ${sel('sex', t('Sexe'), `<option value="">—</option>${opt({ M: 'Homme', F: 'Femme' }, p.sex)}`)}
         ${p.sex === 'F' ? `<div class="cell tap" data-a="cycle" role="button"><span class="grow">${t('Suivi de ton cycle')}</span>${icon('chevronRight', { cls: 'chev' })}</div>` : ''}
@@ -59,12 +79,12 @@ export function render(root, go) {
           <label class="switch"><input type="checkbox" name="medical" ${p.medical ? 'checked' : ''} aria-label="${t('Grossesse/allaitement, trouble du comportement alimentaire ou pathologie chronique')}"><span></span></label></div></div>`)}
       <button class="btn filled large" style="margin-bottom:1.75rem">${t('Enregistrer')}</button>
     </form>
-    ${group(t('Sauvegarde'), `<div class="cells">
+    <div id="pf-backup"></div>${group(t('Sauvegarde'), `<div class="cells">
       <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow"><span class="t">${t('Sauvegarder mes données')}</span><span class="s">${state.lastBackup ? t('Dernière sauvegarde : {d}', { d: fmtDate(state.lastBackup, { day: 'numeric', month: 'long' }) }) : t('Jamais sauvegardé · vers Fichiers ou iCloud Drive')}</span></span>${icon('chevronRight', { cls: 'chev' })}</div>
       <label class="cell field"><span>${t('Me le rappeler')}</span><select name="backupEvery" data-backup-every>${[[7, t('Chaque semaine')], [30, t('Chaque mois')], [0, t('Jamais')]].map(([v, l]) => `<option value="${v}" ${v === (state.settings.backupEvery ?? 7) ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell tap with-icon"><span class="badge bg-green">${icon('download')}</span><span class="grow">${t('Importer')}</span>${icon('chevronRight', { cls: 'chev' })}<input type="file" accept="application/json" hidden data-a="import"></label>
     </div>`, t('Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).'))}
-    ${group(t('Références scientifiques'), `<ul class="cells md-ref">${S.REFS.map((r) => `<li class="cell tap"><a href="${r.url}" target="_blank" rel="noopener" class="grow"><div class="grow"><span class="t">${esc(r.k)}</span><span class="s" style="white-space:normal">${esc(r.t)}</span></div>${icon('chevronRight', { cls: 'chev' })}</a></li>`).join('')}</ul>`,
+    <div id="pf-refs"></div>${group(t('Références scientifiques'), `<ul class="cells md-ref">${S.REFS.map((r) => `<li class="cell tap"><a href="${r.url}" target="_blank" rel="noopener" class="grow"><div class="grow"><span class="t">${esc(r.k)}</span><span class="s" style="white-space:normal">${esc(r.t)}</span></div>${icon('chevronRight', { cls: 'chev' })}</a></li>`).join('')}</ul>`,
       t('Cette app ne remplace pas un avis médical.'))}
     ${group(t('Crédits 3D'), `<ul class="cells md-ref">${[
       ['Anatomy study 2.0 Basemesh Human Male Body', 'varvarwork', 'https://sketchfab.com/3d-models/c3f13a4baa2f4ea5a0a88d29e7fa1779'],
@@ -113,6 +133,11 @@ export function render(root, go) {
     if (a === 'edit-needs') return editNeeds(auto, () => render(root, go));
     if (a === 'export') return exportBackup();
     if (a === 'cycle') return go('cycle');
+    if (a === 'go-program') return go('training');
+    if (a === 'appearance') return appearanceSheet(() => { const y = root.scrollTop; render(root, go); root.scrollTop = y; });
+    if (a === 'language') return languageSheet(() => go('profile'));
+    const jump = { 'go-info': '#pf-info', 'go-needs': '#pf-needs', 'go-backup': '#pf-backup', 'go-refs': '#pf-refs' }[a];
+    if (jump) return root.querySelector(jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (a === 'reset' && confirm(t("Effacer TOUTES les données de l'app ? (irréversible)"))) { resetAfterReplace({}); flush(); return location.reload(); } // repart sur l'onboarding
   };
   root.querySelector('[data-a=import]').onchange = async (e) => {
@@ -126,6 +151,19 @@ export function render(root, go) {
       toast(t('Sauvegarde restaurée')); render(root, go);
     } catch (err) { toast(t('Import impossible : {e}', { e: err.message })); }
   };
+}
+
+// Apparence (profil-3) : matière et thème, dans une feuille.
+function appearanceSheet(done) {
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Apparence')}</h3></div><div class="pf-app">${paletteSection()}</div>`, done);
+  s.addEventListener('click', (e) => handlePaletteClick(e, () => { s.querySelector('.pf-app').innerHTML = paletteSection(); }));
+}
+
+// Langue : FR / EN / NL.
+function languageSheet(done) {
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Langue')}</h3></div>
+    <div class="v2-card" style="padding:4px 16px">${Object.entries(LANGS).map(([k, l]) => `<button class="v2-li" data-lang="${k}"><span class="grow v2-lb">${l}</span>${getLang() === k ? icon('check') : ''}</button>`).join('')}</div>`);
+  s.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (b) { setLang(b.dataset.lang); s.close(); done(); } });
 }
 
 // Modifier ses objectifs : champs vides = valeur calculée ; glucides vides = reste des kcal.

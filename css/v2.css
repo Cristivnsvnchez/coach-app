@@ -540,3 +540,21 @@ html.tm .cy-leaf .cy-day.pred:not(.k-period) { box-shadow: none; border: 0; outl
 html.tm .cy-leaf .cy-day.pred.today:not(.k-period) { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--a-fert); }
 html.tm .cy-leaf .cy-day.k-period.pred { box-shadow: none; border: 1.5px dashed var(--a-cycle); }
 html.tm .cy-leaf .cy-tiles > div { background: var(--a-card); border-radius: 24px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); border: 0; }
+
+/* ----- Profil (canevas profil-2 à 4) ----- */
+.pf-id { width: 100%; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; margin-bottom: 12px; padding: 16px; }
+.pf-avatar { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #fff; background: linear-gradient(135deg, var(--a-deep), var(--a-mid)); }
+.pf-avatar svg.ic { width: 26px; height: 26px; }
+.pf-card { padding: 2px 16px; margin-bottom: 12px; }
+.pf-row .v2-av { background: var(--a-fill); }
+.pf-val { flex: none; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-val.warn { color: var(--a-warn); font-weight: 600; }
+#pf-needs, #pf-backup, #pf-refs { scroll-margin-top: calc(var(--safe-t) + 60px); }
+#pf-info { scroll-margin-top: calc(var(--safe-t) + 60px); }
+.pf-app .onb-label { font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--a-ink2); margin: 14px 4px 8px; }
+.pf-app .pal-srfs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+html.tm .pf-app .pal-srf { display: grid; gap: 10px; text-align: left; padding: 10px 10px 14px; border-radius: 24px; background: var(--a-card); border: 2px solid transparent; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); }
+html.tm .pf-app .pal-srf.on { border-color: var(--a-deep); }
+html.tm .pf-app .pal-srf-thumb { width: 100%; height: 64px; border-radius: 16px; }
+html.tm .pf-app .pal-srf b { display: block; font-size: 16px; }
+html.tm .pf-app .pal-srf small { font-size: 13px; color: var(--a-ink2); }
