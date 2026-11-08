@@ -1,0 +1,214 @@
+/* TrackMe — Parcours v2 (canevas « TrackMe Parcours v2 », claude.ai/artifact/5Aq8TtTfuJzch1b4Zr9ftZ).
+   Chargée en dernier : reprend les jetons du canevas (couleurs, rayons, typo) et les composants communs
+   (cartes 24 px, boutons pilule 56 px à flèche, puces, segments, barre d'onglets, feuilles 40 px, toast en haut).
+   Le canevas est dessiné en clair ; le sombre est dérivé ici avec les mêmes rôles. */
+
+html.tm {
+  --a-deep: #1b3fd1; --a-mid: #2f7bff; --a-warm: #ff8a3d; --a-tint: #e6ecff;
+  --a-ink: #141418; --a-ink2: #5e5e6a; --a-line: #e6e6eb; --a-fill: #ededf1; --a-card: rgba(255, 255, 255, .88);
+  --a-food: #1f8a4c; --a-water: #1c8fa0; --a-cycle: #c2255c; --a-fert: #7a4bd1; --a-spm: #b35a1f; --a-effort: #d9480f; --a-warn: #a15c00; --a-danger: #c92a2a;
+  --a-leaf: #f3f4f8; --a-sheet: #f7f7fa; --a-dim: rgba(20, 20, 24, .38);
+  --a-food-bg: #e3f3ea; --a-water-bg: #e0f1f3; --a-effort-bg: #fdeadf; --a-fert-bg: #f1eafb; --a-warm-bg: #fff1e6;
+  --display: 'Funnel Display', 'Geist', system-ui, -apple-system, sans-serif;
+}
+html.tm[data-surface] {
+  --bg: #eef1f7; --cell: var(--a-card); --elevated: #fff;
+  --label: var(--a-ink); --label-2: var(--a-ink2); --label-3: rgba(20, 20, 24, .3);
+  --separator: var(--a-line); --fill: var(--a-fill); --fill-2: #e2e2e8;
+  --frost: rgba(237, 237, 241, .85); --frost-edge: transparent; --frost-shadow: none;
+  --glass: rgba(255, 255, 255, .82); --glass-edge: transparent; --glass-shadow: 0 10px 30px rgba(20, 30, 60, .14);
+}
+@media (prefers-color-scheme: dark) {
+  html.tm {
+    --a-ink: #f2f3f7; --a-ink2: #a3a8b5; --a-line: rgba(255, 255, 255, .1); --a-fill: rgba(255, 255, 255, .09); --a-card: rgba(255, 255, 255, .07);
+    --a-tint: rgba(47, 123, 255, .2); --a-leaf: #11141b; --a-sheet: #171a22; --a-dim: rgba(0, 0, 0, .55);
+    --a-food: #3fbf74; --a-water: #3cbccf; --a-cycle: #f06292; --a-fert: #a88bff; --a-spm: #e08a4f; --a-effort: #ff7a45; --a-warn: #e0a040; --a-danger: #ff6b6b;
+    --a-food-bg: rgba(63, 191, 116, .16); --a-water-bg: rgba(60, 188, 207, .16); --a-effort-bg: rgba(255, 122, 69, .16); --a-fert-bg: rgba(168, 139, 255, .16); --a-warm-bg: rgba(255, 138, 61, .14);
+  }
+  html.tm[data-surface] {
+    --bg: #0c0f15; --elevated: #1b1f28; --label-3: rgba(255, 255, 255, .3); --fill-2: rgba(255, 255, 255, .14);
+    --frost: rgba(255, 255, 255, .1); --glass: rgba(28, 32, 42, .82); --glass-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  }
+}
+/* Fond : deux halos doux sur gris bleuté (canevas .scr) */
+html.tm[data-surface] body::before { display: block; content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 60% at 100% 0%, #dce4fb 0%, transparent 60%), radial-gradient(90% 50% at 0% 100%, #e9e5f6 0%, transparent 60%), #eef1f7; }
+@media (prefers-color-scheme: dark) {
+  html.tm[data-surface] body::before { background: radial-gradient(120% 60% at 100% 0%, #18223d 0%, transparent 60%), radial-gradient(90% 50% at 0% 100%, #1d1830 0%, transparent 60%), #0c0f15; }
+}
+html.tm[data-surface="papier"] body::before { background: #f3f0ea; }
+@media (prefers-color-scheme: dark) { html.tm[data-surface="papier"] body::before { background: #12110f; } }
+html.tm body { font-family: 'Geist', system-ui, -apple-system, sans-serif; color: var(--label); -webkit-font-smoothing: antialiased; }
+
+/* Titres d'écran : Funnel Display 32 px serrée */
+html.tm .large-title { font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: -.035em; line-height: 1.05; }
+html.tm .group-title { font-family: 'Geist', system-ui, sans-serif; font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--a-ink2); }
+
+/* Cartes : blanc 88 %, rayon 24, ombre très douce, aucun filet */
+html.tm[data-surface] .cells, html.tm[data-surface] .summary, html.tm[data-surface] .cta {
+  background: var(--a-card); border: 0; border-radius: 24px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); }
+html.tm .cell { border-color: var(--a-line); }
+
+/* Boutons : principal = pilule 56 px en dégradé profond → moyen, pastille flèche à droite (.v2-go) */
+html.tm[data-surface] .btn.filled, html.tm[data-surface] .btn.large.filled {
+  background: linear-gradient(100deg, var(--a-deep), var(--a-mid)); color: #fff; box-shadow: none; }
+html.tm .btn.large { min-height: 56px; border-radius: 28px; font-size: 16px; }
+html.tm .btn.large.filled.v2-go { position: relative; padding: 0 64px 0 24px; }
+html.tm .btn.large.filled.v2-go::after { content: ''; position: absolute; right: 6px; top: 6px; width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255, 255, 255, .2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / 20px no-repeat; }
+html.tm[data-surface] .btn:not(.filled):not(.plain):not(.destructive) { background: var(--a-tint); color: var(--a-deep); border: 0; box-shadow: none; }
+@media (prefers-color-scheme: dark) { html.tm[data-surface] .btn:not(.filled):not(.plain):not(.destructive) { color: #9db8ff; } }
+html.tm[data-surface] .icon-btn.round { background: var(--a-fill); border: 0; box-shadow: none; -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); }
+
+/* Puces : blanches à filet, active = encre pleine */
+html.tm[data-surface] .chip { height: 36px; min-height: 36px; border-radius: 18px; padding: 0 14px; background: #fff; border: 1px solid var(--a-line); box-shadow: none; color: var(--a-ink); font-size: 14px; font-weight: 500; }
+html.tm[data-surface] .chip.on { background: var(--a-ink); color: #fff; border-color: var(--a-ink); }
+@media (prefers-color-scheme: dark) {
+  html.tm[data-surface] .chip { background: var(--a-card); }
+  html.tm[data-surface] .chip.on { background: #f2f3f7; color: #141418; border-color: #f2f3f7; }
+}
+
+/* Segments : rail gris, onglet actif blanc */
+html.tm[data-surface] .seg { background: rgba(237, 237, 241, .9); border: 0; border-radius: 14px; padding: 3px; gap: 2px; box-shadow: none; }
+html.tm[data-surface] .seg button { border-radius: 11px; font-size: 13px; font-weight: 600; color: var(--a-ink2); }
+html.tm[data-surface] .seg button.on { background: #fff; color: var(--a-ink); box-shadow: 0 2px 6px rgba(0, 0, 0, .08); }
+@media (prefers-color-scheme: dark) {
+  html.tm[data-surface] .seg { background: rgba(255, 255, 255, .08); }
+  html.tm[data-surface] .seg button.on { background: rgba(255, 255, 255, .9); color: #141418; }
+}
+html.tm .bar-fill, html.tm .bar .bar-fill { background: var(--a-deep); }
+html.tm .ring-fg { stroke: var(--a-deep); }
+
+/* Barre d'onglets : capsule blanche 62 px, icônes seules, onglet actif = pastille teintée avec libellé, « + » surélevé */
+@media (max-width: 1023px) {
+  html.tm .tabbar { left: calc(16px + var(--safe-l)); right: calc(16px + var(--safe-r)); bottom: calc(10px + var(--safe-b)); height: 62px; padding: 0 8px; gap: 0;
+    border-radius: 31px; background: var(--glass); border: 0; box-shadow: var(--glass-shadow); justify-content: space-around;
+    -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); }
+  html.tm .tabbar button, html.tm .tabbar button.on, html.tm .tabbar button.parent { flex: 0 0 auto; min-width: 46px; width: auto; height: 46px; min-height: 46px; padding: 0 11px; flex-direction: row; gap: 6px;
+    border-radius: 23px; background: none; color: var(--a-ink2); font-size: 14px; font-weight: 600; }
+  html.tm .tabbar button span { display: none; }
+  html.tm .tabbar button svg.ic { width: 22px; height: 22px; stroke-width: 1.9; }
+  html.tm .tabbar button.on, html.tm .tabbar button.parent { background: var(--a-tint); color: var(--a-deep); padding: 0 14px; }
+  html.tm .tabbar button.on span, html.tm .tabbar button.parent span { display: inline; }
+  html.tm .tabbar button.on svg.ic, html.tm .tabbar button.parent svg.ic { width: 20px; height: 20px; }
+  html.tm .tabbar .tm-fab, html.tm[data-surface] .tabbar .tm-fab { flex: 0 0 60px; width: 60px; height: 60px; min-height: 60px; margin: -26px 0 0; padding: 0; border-radius: 50%;
+    background: var(--a-deep); color: #fff; box-shadow: 0 0 0 6px var(--bg), 0 8px 18px rgba(27, 63, 209, .35); }
+  html.tm .tabbar .tm-fab svg.ic { width: 26px; height: 26px; stroke-width: 2.2; }
+}
+@media (max-width: 1023px) and (prefers-color-scheme: dark) {
+  html.tm .tabbar button.on, html.tm .tabbar button.parent { background: var(--a-tint); color: #9db8ff; }
+}
+
+/* Feuilles : fond #F7F7FA, rayon 40, poignée 40 × 5 */
+html.tm[data-surface] .sheet { background: var(--a-sheet); border-radius: 40px 40px 0 0; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (min-width: 820px) { html.tm[data-surface] .sheet { border-radius: 40px; } }
+html.tm .sheet-grab::after { width: 40px; margin-left: -20px; background: #d0d0d8; }
+@media (prefers-color-scheme: dark) { html.tm .sheet-grab::after { background: rgba(255, 255, 255, .22); } }
+html.tm .sheet-wrap, html.tm .sheet-backdrop { --dim: var(--a-dim); }
+html.tm .sheet .title2 { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -.03em; }
+
+/* Toast : pilule encre en haut, sous l'île (canevas) ; garde le bouton « Annuler » de 44 px */
+html.tm .toast, html[data-look="glass"].tm .toast { top: calc(var(--safe-t) + 12px); bottom: auto; background: rgba(20, 20, 24, .88); color: #fff; border: 0; border-radius: 22px;
+  padding: 11px 16px; font-size: 14px; font-weight: 500; box-shadow: 0 10px 24px rgba(0, 0, 0, .2); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+html.tm body.typing .toast { bottom: auto; }
+html.tm .toast.with-undo { padding: 6px 6px 6px 16px; }
+html.tm .toast-undo { background: rgba(255, 255, 255, .18); }
+
+/* Menu « + » : quatre tuiles blanches, pastille de couleur par action (canevas repas-2) */
+html.tm .qa-grid { gap: 10px; }
+html.tm .qa-card { padding: 16px; border-radius: 24px; background: var(--a-card); box-shadow: 0 6px 18px rgba(0, 0, 0, .05); gap: 14px; }
+html.tm .qa-ic { width: 40px; height: 40px; border-radius: 14px; }
+html.tm .qa-card[data-q="meal"] .qa-ic { background: var(--a-food-bg); color: var(--a-food); }
+html.tm .qa-card[data-q="weigh"] .qa-ic { background: var(--a-tint); color: var(--a-deep); }
+html.tm .qa-card[data-q="train"] .qa-ic { background: var(--a-effort-bg); color: var(--a-effort); }
+html.tm .qa-card[data-q="water"] .qa-ic { background: var(--a-water-bg); color: var(--a-water); }
+html.tm .qa-card b { font-size: 16px; }
+html.tm .qa-cancel { display: block; width: 100%; margin-top: 6px; }
+
+/* ===== Écrans à en-tête plein cadre (Journal, séance, cycle…) : halos profond / moyen / chaud + feuille arrondie ===== */
+.v2-hero { position: relative; color: #fff; margin: 0 calc(-1rem - var(--safe-r)) 0 calc(-1rem - var(--safe-l));
+  padding: calc(var(--safe-t) + 12px) calc(20px + var(--safe-r)) 64px calc(20px + var(--safe-l)); overflow: hidden; isolation: isolate; }
+.v2-blobs { position: absolute; left: -60px; right: -60px; top: -60px; bottom: -40px; z-index: -1; overflow: hidden; filter: blur(26px); background: var(--a-deep); }
+.v2-blobs i { position: absolute; border-radius: 50%; }
+.v2-blobs .b1 { width: 420px; height: 380px; left: -20px; top: -40px; background: var(--a-deep); }
+.v2-blobs .b2 { width: 300px; height: 300px; right: -10px; top: 30px; background: var(--a-mid); }
+.v2-blobs .b3 { width: 220px; height: 200px; right: 20px; bottom: -20px; background: var(--a-warm); opacity: .95; }
+.v2-blobs.cycle { background: var(--a-cycle); }
+.v2-blobs.cycle .b1 { background: #c2255c; } .v2-blobs.cycle .b2 { background: #9b2f8e; } .v2-blobs.cycle .b3 { background: #7a4bd1; opacity: 1; }
+.v2-leaf { position: relative; margin: -40px calc(-1rem - var(--safe-r)) 0 calc(-1rem - var(--safe-l)); padding: 22px calc(20px + var(--safe-r)) 0 calc(20px + var(--safe-l));
+  border-radius: 40px 40px 0 0; background: var(--a-leaf); min-height: 60vh; display: flex; flex-direction: column; gap: 14px; }
+html[data-look="glass"].tm #view:has(.v2-leaf) { background: linear-gradient(transparent 50%, var(--a-leaf) 50%); }
+.v2-leaf > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+.v2-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; }
+.v2-cbs { display: flex; gap: 8px; flex: none; }
+.v2-cb { width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(237, 237, 241, .85); color: var(--a-ink); cursor: pointer;
+  -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); }
+.v2-cb.glass { background: rgba(255, 255, 255, .22); color: #fff; }
+.v2-cb svg.ic { width: 20px; height: 20px; stroke-width: 1.9; }
+.v2-cb:disabled { opacity: .35; }
+.v2-pill { display: inline-flex; align-items: center; gap: 6px; height: 34px; border-radius: 17px; padding: 0 12px; font-size: 13px; font-weight: 600;
+  background: rgba(255, 255, 255, .22); color: #fff; -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); white-space: nowrap; }
+.v2-pill svg.ic { width: 15px; height: 15px; stroke-width: 1.9; }
+.v2-ring { position: relative; width: 92px; height: 92px; flex: none; }
+.v2-ring svg { width: 92px; height: 92px; transform: rotate(-90deg); }
+.v2-ring span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 600; font-size: 15px; }
+
+/* Carte générique du canevas */
+.v2-card { background: var(--a-card); border-radius: 24px; padding: 16px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); }
+.v2-row { display: flex; align-items: center; gap: 12px; }
+.v2-av { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; flex: none; background: var(--a-fill); color: var(--a-ink); }
+.v2-av svg.ic { width: 18px; height: 18px; stroke-width: 1.9; }
+.v2-lb { font-weight: 600; font-size: 15px; }
+.v2-sm { font-size: 13px; color: var(--a-ink2); }
+.v2-xs { font-size: 11px; font-weight: 500; color: var(--a-ink2); letter-spacing: .04em; text-transform: uppercase; }
+.v2-num { font-family: var(--display); font-variant-numeric: tabular-nums; letter-spacing: -.035em; font-weight: 600; }
+.v2-li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--a-line); width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0;
+  color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.v2-li:last-child { border-bottom: 0; }
+.v2-chev { width: 18px; height: 18px; color: var(--a-ink); flex: none; }
+.v2-bar { height: 6px; border-radius: 3px; background: rgba(20, 20, 24, .08); overflow: hidden; }
+.v2-bar i { display: block; height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.2, .9, .25, 1); }
+@media (prefers-color-scheme: dark) { .v2-bar { background: rgba(255, 255, 255, .1); } }
+
+/* ----- Journal ----- */
+#view[data-view="today"] { padding-bottom: calc(var(--tabbar-h) + 3rem); }
+.jr-date { display: flex; align-items: center; gap: 2px; margin-left: -10px; }
+.jr-date span { display: inline-block; font-size: 13px; font-weight: 500; opacity: .85; }
+.jr-date span::first-letter { text-transform: uppercase; }
+.jr-arrow { width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: #fff; display: grid; place-items: center; cursor: pointer; position: relative; opacity: .85; }
+.jr-arrow::before { content: ''; position: absolute; inset: -6px; }
+.jr-arrow svg.ic { width: 16px; height: 16px; }
+.jr-arrow:disabled { opacity: .25; }
+.jr-word { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.04em; line-height: 1.1; }
+.jr-word i { font-style: normal; color: var(--a-warm); }
+.jr-kpi { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.jr-big { font-family: var(--display); font-size: 72px; font-weight: 500; line-height: .95; letter-spacing: -.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jr-cap { font-weight: 500; opacity: .9; margin-top: 6px; }
+.jr-pills { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.v2-hero .grow, .v2-leaf .grow, .sheet .v2-li .grow, .v2-row .grow { flex: 1; min-width: 0; }
+.jr-macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.jr-macro { padding: 12px 12px 14px; display: grid; gap: 6px; }
+.jr-macro .v2-sm { font-size: 12px; }
+.jr-macro .v2-num { font-size: 20px; white-space: nowrap; }
+.jr-macro small { font: 500 12px 'Geist', system-ui, sans-serif; color: var(--a-ink2); letter-spacing: 0; }
+.jr-macro.over .v2-num { color: var(--a-warn); }
+.jr-cycle { padding: 12px 14px; width: 100%; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.jr-cycle .v2-av { background: var(--a-fert-bg); color: var(--a-fert); }
+.jr-cycle.period .v2-av { background: color-mix(in srgb, var(--a-cycle) 14%, transparent); color: var(--a-cycle); }
+.jr-meals { padding: 6px 16px; }
+.jr-meals .v2-li > .v2-num { font-size: 17px; }
+.jr-add { font-size: 15px; font-weight: 500; color: var(--a-ink2); }
+.jr-msg { padding: 18px; }
+.jr-msg p { margin: 6px 0 12px; color: var(--a-ink2); font-size: 14px; }
+.jr-hero-msg { margin-top: 28px; }
+.jr-hero-msg b { font-family: var(--display); font-size: 28px; font-weight: 600; letter-spacing: -.03em; }
+/* Le reste du Journal (checklist, eau, repères ANSES, copie) reprend les cartes du canevas */
+.v2-leaf .td-card, .v2-leaf .td-quick .cells { background: var(--a-card); border-radius: 24px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); border: 0; }
+.v2-leaf .td-h { margin: 8px 0 -4px !important; }
+/* Feuille d'un repas : liste des aliments + ajouter */
+.ml-list { padding: 4px 16px; margin-bottom: 14px; }
+.ml-list .v2-num { font-size: 16px; }
+.ml-total { display: flex; justify-content: space-between; align-items: baseline; margin: 0 4px 10px; }
+html.tm .sheet:has(.qa-grid) .sheet-close { display: none; }
+html.tm .qa-cancel { color: var(--a-ink); font-weight: 600; min-height: 44px; }
+.jr-cycle svg.v2-chev { width: 18px; height: 18px; }

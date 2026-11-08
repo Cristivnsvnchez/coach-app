@@ -7,8 +7,7 @@ import { esc, fmt, fmtDate, toast, group, sheet } from '../ui.js';
 import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 import { register } from '../i18n.js';
-import { shape } from '../theme.js';
-import { phaseOn } from '../cycle.js';
+import { phaseOn, nextStarts } from '../cycle.js';
 import { GOALS, addPortion, getPortions, weekTotal, avg7 } from '../foodgroups.js';
 import { openAddFood, MEALS } from './addfood.js';
 import { countUp } from '../motion.js';
@@ -21,6 +20,8 @@ register({
     'Repères ANSES': 'ANSES guidelines', 'Fruits et légumes': 'Fruits and vegetables', 'Poisson': 'Fish', 'portions aujourd\'hui': 'servings today', 'Moyenne 7 jours : {n} / jour': '7-day average: {n} / day',
     'Cette semaine : {n} / 2 (dont 1 gras)': 'This week: {n} / 2 (including 1 oily)', 'Retirer une portion': 'Remove a serving', 'Ajouter une portion': 'Add a serving', 'Coach': 'Coach', 'Profil': 'Profile', 'Aucun aliment': 'No food yet', 'Voir le cycle': 'Open cycle',
     'Quantité supérieure à 0, ou touche Supprimer': 'Enter more than 0, or tap Delete',
+    'kcal restantes sur {n}': 'kcal left of {n}', 'kcal en trop sur {n}': 'kcal over {n}', 'Rien de saisi': 'Nothing logged', 'règles': 'period', 'phase fertile': 'fertile phase',
+    'phase {p}': '{p} phase', 'Jour {n} · {phase}': 'Day {n} · {phase}', 'Prochaines règles vers le {d}': 'Next period around {d}', '{n} aliments': '{n} foods',
   },
   nl: {
     'Journal': 'Dagboek', 'Mangé': 'Gegeten', 'objectif': 'doel', 'Brûlé': 'Verbrand', 'dont 50 % des kcal brûlées ajoutées au budget': 'incl. 50% van de verbrande kcal toegevoegd aan het budget',
@@ -28,6 +29,8 @@ register({
     'Repères ANSES': 'ANSES-richtlijnen', 'Fruits et légumes': 'Groente en fruit', 'Poisson': 'Vis', 'portions aujourd\'hui': 'porties vandaag', 'Moyenne 7 jours : {n} / jour': 'Gemiddelde 7 dagen: {n} / dag',
     'Cette semaine : {n} / 2 (dont 1 gras)': 'Deze week: {n} / 2 (waarvan 1 vette)', 'Retirer une portion': 'Een portie verwijderen', 'Ajouter une portion': 'Een portie toevoegen', 'Coach': 'Coach', 'Profil': 'Profiel', 'Aucun aliment': 'Nog geen voedingsmiddel', 'Voir le cycle': 'Cyclus openen',
     'Quantité supérieure à 0, ou touche Supprimer': 'Vul meer dan 0 in, of tik op Verwijderen',
+    'kcal restantes sur {n}': 'kcal over van {n}', 'kcal en trop sur {n}': 'kcal boven {n}', 'Rien de saisi': 'Niets ingevoerd', 'règles': 'menstruatie', 'phase fertile': 'vruchtbare fase',
+    'phase {p}': '{p} fase', 'Jour {n} · {phase}': 'Dag {n} · {phase}', 'Prochaines règles vers le {d}': 'Volgende menstruatie rond {d}', '{n} aliments': '{n} voedingsmiddelen',
   },
 });
 
@@ -56,13 +59,6 @@ function portionRing(n, goal) {
 let prevBars = {};
 const startW = (key, pct) => prevBars[key] ?? pct;
 
-const macroTile = (label, v, max, key) => {
-  const over = max && v > max;
-  const pct = max ? Math.min(100, Math.round((v / max) * 100)) : 0;
-  return `<div class="td-macro ${over ? 'over' : ''}"><span class="td-ml">${label}</span><b class="num">${fmt(v, 0)}<small> / ${fmt(max || 0, 0)} g</small></b>
-    <span class="td-track"><i style="width:${startW(key, pct)}%" data-to="${pct}" data-k="${key}"></i></span></div>`;
-};
-
 export function render(root, go) {
   if (!date || renderedOn !== today()) date = today();
   renderedOn = today();
@@ -76,30 +72,46 @@ export function render(root, go) {
   const keep = () => { const y = root.scrollTop; render(root, go); root.scrollTop = y; };
   state.foodGroups ||= {};
 
-  // Héros : budget du jour = objectif calorique.
+  // Héros plein cadre (canevas Parcours v2) : date, logotype, kcal restantes, anneau « mangé », pastilles.
   const budget = targets ? targets.kcal : 0;
   const diff = budget - tot.kcal;
   prevBars = lastShown?.date === date ? lastShown.bars : {};
   const eatPct = budget ? Math.min(100, Math.round((tot.kcal / budget) * 100)) : 0;
-  const dayNav = `<div class="td-daynav"><button class="td-arrow" data-a="prev" aria-label="${t('Jour précédent')}">${icon('chevronLeft')}</button>
-      <span>${esc(isToday ? t("Aujourd'hui") : fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' }))}</span>
-      <button class="td-arrow" data-a="next" aria-label="${t('Jour suivant')}" ${isToday ? 'disabled' : ''}>${icon('chevronRight')}</button></div>`;
+  const longDate = fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long' });
+  const R = 41.5, C = 2 * Math.PI * R;
+  const ring = `<div class="v2-ring" aria-label="${eatPct} %"><svg viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="${R}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="9"/>
+      <circle cx="46" cy="46" r="${R}" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(C * eatPct / 100).toFixed(1)} ${C.toFixed(1)}"/></svg><span class="num">${eatPct} %</span></div>`;
+  const kpi = blocked ? `<div class="jr-hero-msg"><b>${t('Objectifs chiffrés désactivés')}</b></div>`
+    : !targets ? `<div class="jr-hero-msg"><b>${t('Complète ton profil')}</b></div>`
+    : `<div class="jr-kpi"><div class="grow"><div class="jr-big">${fmt(Math.abs(diff))}</div>
+        <div class="jr-cap">${diff < 0 ? t('kcal en trop sur {n}', { n: fmt(budget) }) : t('kcal restantes sur {n}', { n: fmt(budget) })}</div>
+        </div>${ring}</div>
+        <div class="jr-pills"><span class="v2-pill">${icon('leaf')} ${t('Mangé')} ${fmt(tot.kcal)}</span>
+          <span class="v2-pill" title="${energy.method === 'adaptatif' ? t('dépense adaptative') : t('dépense estimée')}${targets.floored ? ' · ' + t('plancher de sécurité appliqué') : ''}">${icon('burn')} ${t('Dépense')} ${fmt(targets.tdee)}</span></div>`;
+  const hero = `<section class="v2-hero jr-hero"><div class="v2-blobs" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+      <header class="v2-top"><div><div class="jr-date"><button class="jr-arrow" data-a="prev" aria-label="${t('Jour précédent')}">${icon('chevronLeft')}</button>
+          <span>${esc(longDate)}</span><button class="jr-arrow" data-a="next" aria-label="${t('Jour suivant')}" ${isToday ? 'disabled' : ''}>${icon('chevronRight')}</button></div>
+        <h1 class="jr-word">TrackMe<i>.</i></h1></div>
+        <div class="v2-cbs"><button class="v2-cb glass" data-a="planning" aria-label="${t('Planifier mes repas')}">${icon('calendar')}</button>
+          <button class="v2-cb glass" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
+      ${kpi}</section>`;
 
-  const summary = blocked ? `<div class="cta"><b class="headline">${t('Objectifs chiffrés désactivés')}</b><p>${t('Ta situation (âge < 18 ans, grossesse/allaitement, trouble alimentaire ou pathologie) nécessite un suivi par un professionnel de santé. Le journal reste disponible.')}</p></div>`
-    : !targets ? `<div class="cta"><b class="headline">${t('Complète ton profil')}</b><p>${t('Âge, taille, poids, activité et objectif pour calculer tes besoins.')}</p><button class="btn filled" data-a="profile">${t('Compléter')}</button></div>`
-    : `<section class="tm-hero td-hero">${shape({ cls: 'td-shape' })}
-        ${dayNav}
-        <p class="td-sub">${t('Mangé')} ${fmt(tot.kcal)} · ${t('objectif')} ${fmt(budget)} kcal</p>
-        <div class="td-big num">${fmt(Math.abs(diff))}</div>
-        <p class="td-cap">${diff < 0 ? t('kcal en trop') : t('kcal restantes')}</p>
-        <div class="td-bars"><div class="td-bar"><span>${t('Mangé')} <b class="num">${fmt(tot.kcal)}</b></span><i><u style="width:${startW('eat', eatPct)}%" data-to="${eatPct}" data-k="eat"></u></i></div></div>
-        <p class="td-note">${energy.method === 'adaptatif' ? t('dépense adaptative') : t('dépense estimée')} ${fmt(targets.tdee)}${targets.floored ? ' · ' + t('plancher de sécurité appliqué') : ''}</p>
-      </section>
-      <div class="td-macros">${macroTile(t('Protéines'), tot.p, targets.protein, 'p')}${macroTile(t('Glucides'), tot.c, targets.carbs, 'c')}${macroTile(t('Lipides'), tot.f, targets.fat, 'f')}</div>`;
+  const macroTile = (label, v, max, key, color) => {
+    const over = max && v > max, pct = max ? Math.min(100, Math.round((v / max) * 100)) : 0;
+    return `<div class="v2-card jr-macro ${over ? 'over' : ''}"><span class="v2-sm">${label}</span><span class="v2-num">${fmt(v, 0)}<small> / ${fmt(max || 0, 0)} g</small></span>
+      <div class="v2-bar"><i style="width:${startW(key, pct)}%;background:${over ? 'var(--a-warn)' : color}" data-to="${pct}" data-k="${key}"></i></div></div>`;
+  };
+  const summary = blocked ? `<div class="v2-card jr-msg"><b class="v2-lb">${t('Objectifs chiffrés désactivés')}</b><p>${t('Ta situation (âge < 18 ans, grossesse/allaitement, trouble alimentaire ou pathologie) nécessite un suivi par un professionnel de santé. Le journal reste disponible.')}</p></div>`
+    : !targets ? `<div class="v2-card jr-msg"><b class="v2-lb">${t('Complète ton profil')}</b><p>${t('Âge, taille, poids, activité et objectif pour calculer tes besoins.')}</p><button class="btn filled" data-a="profile">${t('Compléter')}</button></div>`
+    : `<div class="jr-macros">${macroTile(t('Protéines'), tot.p, targets.protein, 'p', 'var(--a-deep)')}${macroTile(t('Glucides'), tot.c, targets.carbs, 'c', 'var(--a-mid)')}${macroTile(t('Lipides'), tot.f, targets.fat, 'f', 'var(--a-warm)')}</div>`;
 
-  // Pastille cycle (utilisatrice, suivi activé).
+  // Carte cycle (utilisatrice, suivi activé) : jour, phase, prochaines règles.
   const ph = state.cycle?.enabled && state.profile?.sex === 'F' ? phaseOn(state.cycle, date) : null;
-  const cyclePill = ph ? `<button class="td-cycle" data-a="cycle" aria-label="${t('Voir le cycle')}"><span class="dot"></span>${t('Cycle · {phase}, jour {n}', { phase: t(ph.phase), n: ph.day })}${icon('chevronRight', { cls: 'chev' })}</button>` : '';
+  const nextP = ph ? nextStarts(state.cycle, date, 1)[0] : null;
+  const phaseName = ph ? (ph.isPeriod ? t('règles') : ph.fertile ? t('phase fertile') : t('phase {p}', { p: t(ph.phase) })) : '';
+  const cyclePill = ph ? `<button class="v2-card v2-row jr-cycle ${ph.isPeriod ? 'period' : ''}" data-a="cycle" aria-label="${t('Voir le cycle')}"><span class="v2-av">${icon('heart')}</span>
+      <span class="grow"><span class="v2-lb" style="display:block">${t('Jour {n} · {phase}', { n: ph.day, phase: phaseName })}</span>
+      ${nextP ? `<span class="v2-sm">${t('Prochaines règles vers le {d}', { d: fmtDate(nextP, { day: 'numeric', month: 'short' }) })}</span>` : ''}</span>${icon('chevronRight', { cls: 'v2-chev' })}</button>` : '';
 
   const quick = `<div class="td-card td-quick"><ul class="cells">
       ${habitsCells(date)}
@@ -109,15 +121,13 @@ export function render(root, go) {
         <div class="stepper"><button class="icon-btn" data-a="water-" aria-label="−250 ml">${icon('minus')}</button><button class="icon-btn round" data-a="water+" aria-label="+250 ml">${icon('plus')}</button></div>
       </li></ul></div>`;
 
-  const meals = `<h2 class="td-h">${t('Repas')}<b class="num">${fmt(tot.kcal)} kcal</b></h2>` + Object.entries(MEALS).map(([k, label]) => {
+  // Repas : une carte, une ligne par repas (pictogramme, aliments, kcal ou « Ajouter »).
+  const meals = `<div class="v2-card jr-meals">` + Object.entries(MEALS).map(([k, label]) => {
     const items = log.meals.filter((m) => m.meal === k);
-    return `<section class="td-card td-meal"><div class="td-mhead"><span class="td-pill">${mealIcon(k)}</span>
-        <div class="grow"><b>${t(label)}</b><span class="s num">${fmt(sum(items).kcal)} kcal</span></div>
-        <button class="td-add" data-add="${k}" aria-label="${t('Ajouter')} — ${t(label)}">${icon('plus')}</button></div>
-      ${items.length ? `<ul class="td-items">${items.map((m) => `<li class="td-item" data-item="${esc(m.id)}" role="button" tabindex="0"><div class="grow"><span class="t">${esc(m.name)}</span>
-        <span class="s num">${m.grams ? fmt(m.grams) + ' g · ' : ''}P ${fmt(m.p, 0)} · G ${fmt(m.c, 0)} · L ${fmt(m.f, 0)}</span></div><span class="val num">${fmt(m.kcal)}</span></li>`).join('')}</ul>` : ''}
-    </section>`;
-  }).join('') + `<button class="btn plain wide" data-a="copy">${icon('copy')} ${t('Copier les repas de la veille')}</button>`;
+    return `<button class="v2-li" data-meal="${k}" aria-label="${t(label)}"><span class="v2-av">${icon('leaf')}</span>
+      <span class="grow"><span class="v2-lb" style="display:block">${t(label)}</span><span class="v2-sm">${items.length ? esc(items.map((m) => m.name).join(', ')) : t('Rien de saisi')}</span></span>
+      ${items.length ? `<span class="v2-num">${fmt(sum(items).kcal)}</span>` : `<span class="jr-add">${t('Ajouter')}</span>`}</button>`;
+  }).join('') + `</div><button class="btn plain wide" data-a="copy">${icon('copy')} ${t('Copier les repas de la veille')}</button>`;
 
   // Repères ANSES : un anneau par groupe, toucher = +1, « − » = −1.
   const fv = getPortions(state.foodGroups, date, 'fruitVeg'), fish = getPortions(state.foodGroups, date, 'fish');
@@ -132,18 +142,14 @@ export function render(root, go) {
       <span class="s num">${t('Moyenne 7 jours : {n} / jour', { n: fmt(avg7(state.foodGroups, date, 'fish'), 1) })}</span>
       <button class="td-minus" data-pg="fish" data-d="-1" aria-label="${t('Retirer une portion')}" ${fish ? '' : 'disabled'}>${icon('minus')}</button></div></div>`;
 
-  root.innerHTML = `
-    <header class="td-head"><h1 class="td-title">${esc(title)}</h1>
-      <div class="td-btns"><button class="td-round" data-a="planning" aria-label="${t('Planifier mes repas')}">${icon('calendar')}</button>
-        <button class="td-round" data-a="profile" aria-label="${t('Profil')}">${icon('profile')}</button></div></header>
-    <div class="split td-split"><div>${summary}${cyclePill}${quick}${anses}</div><div>${meals}</div></div>`;
+  root.innerHTML = `${hero}<div class="v2-leaf">${summary}${cyclePill}${meals}${quick}${anses}</div>`;
 
   // Animations : chiffre héros et barres partent de leur ancienne valeur (même jour seulement).
   const bars = {};
   root.querySelectorAll('[data-to]').forEach((b) => { bars[b.dataset.k] = +b.dataset.to; });
   void root.offsetWidth; // fixe la largeur de départ avant d'appliquer la cible
   root.querySelectorAll('[data-to]').forEach((b) => { b.style.width = b.dataset.to + '%'; });
-  const bigEl = root.querySelector('.td-big');
+  const bigEl = root.querySelector('.jr-big');
   const big = bigEl ? Math.abs(diff) : null;
   if (bigEl && lastShown?.date === date && lastShown.big != null && lastShown.big !== big) countUp(bigEl, lastShown.big, big);
   lastShown = { date, big, bars };
@@ -153,7 +159,7 @@ export function render(root, go) {
     if (handleHabitClick(e, date, keep)) return;
     const pg = e.target.closest('[data-pg]');
     if (pg) { addPortion(state.foodGroups, date, pg.dataset.pg, +pg.dataset.d); save(); navigator.vibrate?.(8); return keep(); }
-    const el = e.target.closest('[data-a],[data-add],[data-item]');
+    const el = e.target.closest('[data-a],[data-add],[data-item],[data-meal]');
     if (!el) return;
     const a = el.dataset.a;
     if (a === 'prev') return shift(-1);
@@ -170,9 +176,35 @@ export function render(root, go) {
       prev.meals.forEach((m) => log.meals.push({ ...m, id: uid() }));
       save(); toast(t('{n} aliments copiés', { n: prev.meals.length }), { undo: () => { log.meals = before; save(); keep(); } }); return keep();
     }
+    if (el.dataset.meal) return log.meals.some((m) => m.meal === el.dataset.meal) ? mealSheet(log, el.dataset.meal, date, keep) : openAddFood(el.dataset.meal, date, keep);
     if (el.dataset.add) return openAddFood(el.dataset.add, date, keep);
     if (el.dataset.item) return editItem(log, el.dataset.item, keep);
   };
+}
+
+// La fermeture d'une feuille recule l'historique (asynchrone) : on attend ce recul avant d'ouvrir la suivante.
+function afterBack(fn) {
+  let fired = false;
+  const run = () => { if (fired) return; fired = true; removeEventListener('popstate', run); setTimeout(fn, 0); };
+  addEventListener('popstate', run); setTimeout(run, 450);
+}
+
+// Feuille d'un repas : ses aliments (toucher = modifier) et « Ajouter un aliment ».
+function mealSheet(log, meal, date, done) {
+  const draw = () => {
+    const items = log.meals.filter((m) => m.meal === meal);
+    return `<div class="sheet-head"><h3 class="title2">${t(MEALS[meal])}</h3></div>
+      <div class="ml-total"><span class="v2-sm">${t('{n} aliments', { n: items.length })}</span><b class="v2-num">${fmt(sum(items).kcal)} kcal</b></div>
+      <div class="v2-card ml-list">${items.map((m) => `<button class="v2-li" data-item="${esc(m.id)}"><span class="grow"><span class="v2-lb" style="display:block">${esc(m.name)}</span>
+        <span class="v2-sm num">${m.grams ? fmt(m.grams) + ' g · ' : ''}P ${fmt(m.p, 0)} · G ${fmt(m.c, 0)} · L ${fmt(m.f, 0)}</span></span><span class="v2-num">${fmt(m.kcal)}</span></button>`).join('')}</div>
+      <button class="btn filled large wide v2-go" data-a="add">${t('Ajouter un aliment')}</button>`;
+  };
+  const s = sheet(draw(), done);
+  s.addEventListener('click', (e) => {
+    const it = e.target.closest('[data-item]');
+    if (it) { s.close(); return afterBack(() => editItem(log, it.dataset.item, done)); }
+    if (e.target.closest('[data-a="add"]')) { s.close(); afterBack(() => openAddFood(meal, date, done)); }
+  });
 }
 
 // Feuille d'un aliment du journal : changer la quantité (macros recalculées au prorata) ou supprimer.

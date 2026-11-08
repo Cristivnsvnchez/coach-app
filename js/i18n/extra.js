@@ -31,6 +31,9 @@ register({
     '{p} % du chemin · {k} kg restants': '{p}% of the way · {k} kg to go', 'Ajouter une étape': 'Add a step', "Personnaliser l'étape": 'Customise step',
     "Touche un rond pour cocher une étape. Elle se coche aussi toute seule quand ta tendance l'atteint. Projection indicative : la perte ralentit avec le temps (Hall 2011).": 'Tap a circle to tick a step. It also ticks itself when your trend reaches it. Indicative projection: loss slows down over time (Hall 2011).',
     'Un repas': 'A meal', 'Une pesée': 'A weigh-in', 'Poids du jour': "Today's weight", 'Une séance': 'A workout', 'Démarrer ou reprendre': 'Start or resume', "De l'eau": 'Water', "+250 ml d'eau · {v} L": '+250 ml of water · {v} L',
+    // Parcours v2 : menu « + »
+    "Aucune pour l'instant": 'None yet', "Dernière : aujourd'hui": 'Last: today', 'Dernière : hier': 'Last: yesterday', 'Dernière : il y a {n} j': 'Last: {n} d ago', 'Dernière : {d}': 'Last: {d}',
+    '{m} en cours': '{m} now', '{n} prévue': '{n} planned', '{v} L sur {g} L': '{v} L of {g} L',
   },
   nl: {
     'Ajouter un aliment': 'Voedingsmiddel toevoegen', 'Aller à mon tableau de bord': 'Naar mijn dashboard',
@@ -62,5 +65,8 @@ register({
     '{p} % du chemin · {k} kg restants': '{p}% van de weg · nog {k} kg', 'Ajouter une étape': 'Stap toevoegen', "Personnaliser l'étape": 'Stap aanpassen',
     "Touche un rond pour cocher une étape. Elle se coche aussi toute seule quand ta tendance l'atteint. Projection indicative : la perte ralentit avec le temps (Hall 2011).": 'Tik op een rondje om een stap af te vinken. Hij wordt ook vanzelf afgevinkt wanneer je trend hem bereikt. Indicatieve prognose: afvallen vertraagt na verloop van tijd (Hall 2011).', 'Superset': 'Superset', 'Type': 'Type', 'Volume': 'Volume',
     'Un repas': 'Een maaltijd', 'Une pesée': 'Een weging', 'Poids du jour': 'Gewicht van vandaag', 'Une séance': 'Een training', 'Démarrer ou reprendre': 'Starten of hervatten', "De l'eau": 'Water', "+250 ml d'eau · {v} L": '+250 ml water · {v} L',
+    // Parcours v2 : menu « + »
+    "Aucune pour l'instant": 'Nog geen', "Dernière : aujourd'hui": 'Laatste: vandaag', 'Dernière : hier': 'Laatste: gisteren', 'Dernière : il y a {n} j': 'Laatste: {n} d geleden', 'Dernière : {d}': 'Laatste: {d}',
+    '{m} en cours': '{m} nu', '{n} prévue': '{n} gepland', '{v} L sur {g} L': '{v} L van {g} L',
   },
 });

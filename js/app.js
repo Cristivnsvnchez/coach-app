@@ -17,11 +17,14 @@ import { needsOnboarding, openOnboarding } from './views/onboarding.js';
 import { openAddFood } from './views/addfood.js';
 import { openWeigh } from './views/weight.js';
 import { current } from './metrics.js';
+import { plannedWorkout } from './views/habits.js';
+import { fmtDate } from './ui.js';
 import { startupNudges } from './install.js';
 
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
 const VIEWS = { today, weight, training, profile, cycle, learn, planning };
-const TABS = [['today', 'Journal', 'calendar'], ['weight', 'Poids', 'weight'], ['add'], ['training', 'Sport', 'training'], ['learn', 'Apprendre', 'flask']];
+// Ordre du canevas Parcours v2 : Journal, Sport, « + », Poids, Apprendre.
+const TABS = [['today', 'Journal', 'home'], ['training', 'Sport', 'training'], ['add'], ['weight', 'Poids', 'scale'], ['learn', 'Apprendre', 'book']];
 const TAB_OF = { cycle: 'today', profile: 'today', planning: 'today' };
 const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
@@ -89,12 +92,19 @@ const MEAL_LABEL = { dej: 'Petit-déjeuner', midi: 'Déjeuner', diner: 'Dîner',
 function quickAdd() {
   const log = dayLog(todayIso()), goal = (current().targets?.waterL ?? 2);
   const card = (a, ic, title, sub) => `<button class="qa-card" data-q="${a}"><span class="qa-ic">${icon(ic)}</span><span><b>${title}</b><br><small>${sub}</small></span></button>`;
+  // Sous-titres du canevas : repas en cours, dernière pesée, séance prévue, eau du jour.
+  const last = state.weights.length ? [...state.weights].sort((a, b) => a.date.localeCompare(b.date)).pop().date : null;
+  const ago = last ? Math.round((new Date(todayIso() + 'T12:00:00') - new Date(last + 'T12:00:00')) / 864e5) : null;
+  const lastTxt = ago === null ? t('Aucune pour l\'instant') : ago === 0 ? t('Dernière : aujourd\'hui') : ago === 1 ? t('Dernière : hier') : ago < 7 ? t('Dernière : il y a {n} j', { n: ago }) : t('Dernière : {d}', { d: fmtDate(last) });
+  const plan = plannedWorkout(todayIso());
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Ajouter')}</h3></div>
-    <div class="qa-grid">${card('meal', 'meal', t('Un repas'), t(MEAL_LABEL[mealNow()]))}${card('weigh', 'weight', t('Une pesée'), t('Poids du jour'))}
-      ${card('train', 'training', t('Une séance'), t('Démarrer ou reprendre'))}${card('water', 'drop', t('De l\'eau'), `+250 ml · ${fmt(log.water / 1000, 2)} / ${fmt(goal, 1)} L`)}</div>`);
+    <div class="qa-grid">${card('meal', 'leaf', t('Un repas'), t('{m} en cours', { m: t(MEAL_LABEL[mealNow()]) }))}${card('weigh', 'scale', t('Une pesée'), lastTxt)}
+      ${card('train', 'training', t('Une séance'), plan ? t('{n} prévue', { n: plan }) : t('Démarrer ou reprendre'))}${card('water', 'drop', t('De l\'eau'), t('{v} L sur {g} L', { v: fmt(log.water / 1000, 1), g: fmt(goal, 1) }))}</div>
+    <button class="btn plain qa-cancel" data-q="cancel">${t('Annuler')}</button>`);
   s.addEventListener('click', (e) => {
     const q = e.target.closest('[data-q]')?.dataset.q; if (!q) return;
     s.close();
+    if (q === 'cancel') return;
     // La fermeture recule l'historique (asynchrone) : on attend ce recul, sinon il refermerait la feuille suivante.
     let fired = false;
     const after = (fn) => { const run = () => { if (fired) return; fired = true; removeEventListener('popstate', run); setTimeout(fn, 0); }; addEventListener('popstate', run); setTimeout(run, 450); };

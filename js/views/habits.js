@@ -34,7 +34,7 @@ const actionRow = ({ id, name, done, task }) => `<li class="hb-act ${done ? 'don
 const AUTO_ICON = { protein: 'bolt', kcal: 'flame', fiber: 'meal', water: 'drop', weigh: 'weight', workout: 'dumbbell' };
 
 // Séance prévue ce jour par le programme (nom de la routine), sinon null.
-function plannedWorkout(date) {
+export function plannedWorkout(date) {
   if (!state.plan || state.workouts.some((w) => w.date === date)) return null;
   const ev = schedule(state.plan, date, date)[0];
   return ev ? t(state.routines.find((r) => r.id === ev.routineId)?.name || 'Séance') : null;
