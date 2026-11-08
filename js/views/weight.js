@@ -10,10 +10,14 @@ import * as Cy from '../cycle.js';
 import { register } from '../i18n.js';
 register({ en: { 'rétention d\'eau probable': 'water retention likely', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Pink dots: weigh-ins with likely water retention (cycle). ', 'Étape supprimée': 'Milestone removed',
   'Pesée du jour': 'Today\'s weigh-in', 'Dernière pesée : {kg} kg': 'Last weigh-in: {kg} kg', 'Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).': 'A ± 1 kg swing from one day to the next is normal (water, salt, cycle).',
-  'Étape atteinte': 'Milestone reached', 'Prochaine étape : {kg} kg.': 'Next milestone: {kg} kg.', 'Tu as atteint ta cible.': 'You reached your target.' },
+  'Étape atteinte': 'Milestone reached', 'Prochaine étape : {kg} kg.': 'Next milestone: {kg} kg.', 'Tu as atteint ta cible.': 'You reached your target.',
+  '1 mois': '1 month', '3 mois': '3 months', '6 mois': '6 months', 'kg/sem.': 'kg/wk', 'Prochaine étape : {kg} kg': 'Next milestone: {kg} kg', 'Cible atteinte': 'Target reached', 'Objectif {kg} kg': 'Goal {kg} kg',
+  'Nouvelle pesée': 'New weigh-in', 'Hier : {kg} kg': 'Yesterday: {kg} kg', 'Voir ma courbe': 'See my curve', 'Tu as passé {kg} kg, {d} kg depuis le {date}.': 'You passed {kg} kg, {d} kg since {date}.', 'Plus': 'More' },
   nl: { 'rétention d\'eau probable': 'waarschijnlijk vochtretentie', 'Points roses : pesées en rétention d\'eau probable (cycle). ': 'Roze stippen: wegingen met waarschijnlijke vochtretentie (cyclus). ', 'Étape supprimée': 'Tussendoel verwijderd',
   'Pesée du jour': 'Weging van vandaag', 'Dernière pesée : {kg} kg': 'Laatste weging: {kg} kg', 'Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).': 'Een verschil van ± 1 kg van dag tot dag is normaal (vocht, zout, cyclus).',
-  'Étape atteinte': 'Tussendoel bereikt', 'Prochaine étape : {kg} kg.': 'Volgend tussendoel: {kg} kg.', 'Tu as atteint ta cible.': 'Je hebt je doel bereikt.' } });
+  'Étape atteinte': 'Tussendoel bereikt', 'Prochaine étape : {kg} kg.': 'Volgend tussendoel: {kg} kg.', 'Tu as atteint ta cible.': 'Je hebt je doel bereikt.',
+  '1 mois': '1 maand', '3 mois': '3 maanden', '6 mois': '6 maanden', 'kg/sem.': 'kg/wk', 'Prochaine étape : {kg} kg': 'Volgend tussendoel: {kg} kg', 'Cible atteinte': 'Doel bereikt', 'Objectif {kg} kg': 'Doel {kg} kg',
+  'Nouvelle pesée': 'Nieuwe weging', 'Hier : {kg} kg': 'Gisteren: {kg} kg', 'Voir ma courbe': 'Mijn curve bekijken', 'Tu as passé {kg} kg, {d} kg depuis le {date}.': 'Je bent onder {kg} kg, {d} kg sinds {date}.', 'Plus': 'Meer' } });
 
 let range = 90;
 
@@ -74,22 +78,27 @@ export function render(root, go) {
   };
 
   const kgIn = (name, ph, val) => `<input class="input num" name="${name}" type="number" step="0.1" inputmode="decimal" placeholder="${ph}" value="${val ?? ''}" aria-label="${ph}">`;
+  // En-tête Parcours v2 : grand chiffre (dernière pesée), écart sur la période, segments, courbe, deux cartes, prochaine étape.
+  const lastRaw = [...state.weights].sort((a, b) => a.date.localeCompare(b.date)).pop();
+  const first = shown[0];
+  const change = lastRaw && first && shown.length > 1 ? lastRaw.kg - first.kg : null;
+  const next = target ? steps.find((m) => !S.milestoneStatus(m, trend, speed, today(), down).reached) : null;
+  const speedTxt = obs !== null ? `${obs > 0 ? '+' : obs < 0 ? '−' : ''}${fmt(Math.abs(obs), 1)}` : '–';
   root.innerHTML = `
-    ${nav(t('Poids'))}
-    ${group('', `<form class="row" data-f="w">${kgIn('kg', t('Poids du jour (kg)'), state.weights.find((w) => w.date === today())?.kg)}<button class="btn filled">${t('Enregistrer')}</button></form>`)}
-    ${group('', `<div class="cells">
-      <div class="stats">
-        <div><small>${t('Tendance')}</small><b>${last ? fmt(last.trend, 1) : '–'} <span class="u">kg</span></b></div>
-        <div><small>${t('Vitesse')}</small><b>${obs !== null ? (obs > 0 ? '+' : '') + fmt(obs, 2) : '–'} <span class="u">${t('kg/sem')}</span></b></div>
-        <div><small>${t('Objectif')}</small><b>${target ? fmt(target, 1) : '–'} <span class="u">kg</span></b></div>
-      </div>
-      <div class="cell chart-cell" style="display:block">
-        <div class="seg" role="tablist">${[[30, t('{n} j', { n: 30 })], [90, t('{n} j', { n: 90 })], [365, t('1 an')], [0, t('Tout')]].map(([r, l]) => `<button role="tab" aria-selected="${r === range}" data-r="${r}" class="${r === range ? 'on' : ''}">${l}</button>`).join('')}</div>
-        ${chart}
-      </div></div>`,
-      trend.length < 2 ? t('Pèse-toi 3 à 7 fois par semaine, le matin à jeun : la tendance devient fiable après une à deux semaines.')
-        : (state.profile?.sex === 'F' && state.cycle?.enabled ? t('Points roses : pesées en rétention d\'eau probable (cycle). ') : '') + t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.'))}
-    ${group(t('Timeline'), !target ? `<div class="cells"><div class="cell" style="display:block"><p class="t wrap" style="margin:.25rem 0">${t('Définis ton poids cible (plus bas) pour voir la date d\'arrivée estimée et tes étapes.')}</p></div></div>`
+    ${nav(t('Poids'), { large: false })}
+    <div class="wt-title"><h1 class="large-title">${t('Poids')}</h1><button class="v2-cb" data-a="menu" aria-label="${t('Plus')}">${icon('more')}</button></div>
+    <div class="wt-now"><span class="v2-num wt-big">${lastRaw ? fmt(lastRaw.kg, 1) : '–'}</span><span class="wt-unit">kg</span>
+      ${change !== null ? `<span class="wt-delta ${(change <= 0) === down ? 'good' : 'bad'}">${change > 0 ? '+' : change < 0 ? '−' : ''}${fmt(Math.abs(change), 1)} kg</span>` : ''}</div>
+    <div class="seg wt-seg" role="tablist">${[[30, t('1 mois')], [90, t('3 mois')], [180, t('6 mois')], [365, t('1 an')], [0, t('Tout')]].map(([r, l]) => `<button role="tab" aria-selected="${r === range}" data-r="${r}" class="${r === range ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="v2-card wt-chart">${chart}</div>
+    <p class="wt-foot">${trend.length < 2 ? t('Pèse-toi 3 à 7 fois par semaine, le matin à jeun : la tendance devient fiable après une à deux semaines.')
+        : (state.profile?.sex === 'F' && state.cycle?.enabled ? t('Points roses : pesées en rétention d\'eau probable (cycle). ') : '') + t('Points : pesées · ligne pleine : tendance lissée · pointillés : projection jusqu\'à ta cible · ronds orange : tes étapes estimées.')}</p>
+    <div class="wt-stats"><div class="v2-card"><span class="v2-sm">${t('Tendance')}</span><span class="v2-num">${speedTxt}<small> ${t('kg/sem.')}</small></span></div>
+      <div class="v2-card"><span class="v2-sm">${t('Arrivée estimée')}</span><span class="v2-num">${eta ? fmtDate(eta, { day: 'numeric', month: 'short' }) : '–'}</span></div></div>
+    ${target ? `<button class="v2-card v2-row wt-next" data-a="timeline"><span class="v2-av">${icon('target')}</span><span class="grow"><span class="v2-lb" style="display:block">${next ? t('Prochaine étape : {kg} kg', { kg: fmt(next.kg, 1) }) : t('Cible atteinte')}</span>
+      <span class="v2-sm">${t('Objectif {kg} kg', { kg: fmt(target, 1) })}</span></span>${icon('chevronRight', { cls: 'v2-chev' })}</button>` : ''}
+    <button class="btn filled large wide v2-go wt-add" data-a="weigh">${t('Nouvelle pesée')}</button>
+    <div id="wt-timeline"></div>${group(t('Timeline'), !target ? `<div class="cells"><div class="cell" style="display:block"><p class="t wrap" style="margin:.25rem 0">${t('Définis ton poids cible (plus bas) pour voir la date d\'arrivée estimée et tes étapes.')}</p></div></div>`
       : `<ul class="cells">
         <li class="cell ms-head" style="display:block"><div class="row-between"><span class="t headline">${t('Arrivée estimée')}</span>
           <span class="val headline">${eta ? fmtDate(eta, { day: 'numeric', month: 'short', year: 'numeric' }) : '–'}</span></div>
@@ -107,13 +116,6 @@ export function render(root, go) {
     ${group(t('Historique'), `<ul class="cells">${[...trend].reverse().slice(0, 30).map((x) => `<li class="cell"><div class="grow"><span class="t num">${retention(x.date) ? '<span class="cy-wdot" aria-hidden="true"></span>' : ''}${fmt(x.kg, 1)} kg</span><span class="s">${retention(x.date) ? `<span class="cy-wnote">${t('rétention d\'eau probable')}</span> · ` : ''}${fmtDate(x.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${t('tendance')} ${fmt(x.trend, 1)}</span></div>
       <button class="icon-btn" data-del="${x.date}" aria-label="${t('Supprimer')}">${icon('trash')}</button></li>`).join('') || `<li class="empty">${t('Aucune pesée.')}</li>`}</ul>`)}`;
 
-  root.querySelector('[data-f=w]').onsubmit = (e) => {
-    e.preventDefault();
-    const kg = parseFloat(String(e.target.kg.value).replace(',', '.'));
-    if (!(kg > 20 && kg < 400)) return toast(t('Poids invalide'));
-    saveWeight(kg, { steps, speed, down });
-    keep();
-  };
   const tf = root.querySelector('[data-f=target]');
   if (tf) tf.onsubmit = (e) => {
     e.preventDefault();
@@ -131,6 +133,9 @@ export function render(root, go) {
       return toast(t('Pesée supprimée'), { undo: () => { state.weights = before; save(); keep(); } });
     }
     if (e.target.closest('[data-a=profile]')) return go('profile');
+    if (e.target.closest('[data-a=weigh]')) return openWeigh(keep);
+    if (e.target.closest('[data-a=timeline]')) return root.querySelector('#wt-timeline')?.scrollIntoView({ behavior: 'smooth' });
+    if (e.target.closest('[data-a=menu]')) return weightMenu({ last, target, keep, root });
     if (e.target.closest('[data-a=add-ms]')) return editMilestone(null, { last, target, keep });
     const tg = e.target.closest('[data-toggle]');
     if (tg) { const m = steps.find((x) => x.id === tg.dataset.toggle);
@@ -143,6 +148,24 @@ export function render(root, go) {
     const ms = e.target.closest('[data-ms]');
     if (ms) { const m = steps.find((x) => x.id === ms.dataset.ms); editMilestone(m?.auto ? null : m, { last, target, keep, preset: m?.auto ? m : null }); }
   };
+}
+
+// Menu « ··· » : nouvelle pesée, poids cible, nouvelle étape.
+function weightMenu({ last, target, keep, root }) {
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Poids')}</h3></div>
+    <div class="v2-card" style="padding:4px 16px">
+      <button class="v2-li" data-m="weigh"><span class="v2-av">${icon('scale')}</span><span class="grow v2-lb">${t('Nouvelle pesée')}</span>${icon('chevronRight', { cls: 'v2-chev' })}</button>
+      <button class="v2-li" data-m="target"><span class="v2-av">${icon('target')}</span><span class="grow v2-lb">${t('Mon poids cible (kg)')}</span>${icon('chevronRight', { cls: 'v2-chev' })}</button>
+      <button class="v2-li" data-m="ms"><span class="v2-av">${icon('plus')}</span><span class="grow v2-lb">${t('Ajouter une étape')}</span>${icon('chevronRight', { cls: 'v2-chev' })}</button></div>`);
+  s.addEventListener('click', (e) => {
+    const m = e.target.closest('[data-m]')?.dataset.m; if (!m) return;
+    s.close();
+    let fired = false;
+    const after = (fn) => { const run = () => { if (fired) return; fired = true; removeEventListener('popstate', run); setTimeout(fn, 0); }; addEventListener('popstate', run); setTimeout(run, 450); };
+    if (m === 'weigh') return after(() => openWeigh(keep));
+    if (m === 'ms') return after(() => editMilestone(null, { last, target, keep }));
+    if (m === 'target') return after(() => { const f = root.querySelector('[data-f=target] input'); f?.scrollIntoView({ behavior: 'smooth', block: 'center' }); f?.focus({ preventScroll: true }); });
+  });
 }
 
 // Cocher / décocher à la main. Une étape automatique cochée devient une étape personnalisée (elle garde son poids).
@@ -215,13 +238,16 @@ export function openWeigh(onDone) {
   const last = [...state.weights].sort((a, b) => (a.date < b.date ? -1 : 1)).pop();
   let v = state.weights.find((w) => w.date === today())?.kg ?? last?.kg ?? Number(state.profile.weight) ?? 70;
   v = Math.round((Number(v) || 70) * 10) / 10;
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Pesée du jour')}</h3></div>
-    <div class="wg-pick"><button class="icon-btn round wg-btn" data-d="-1" aria-label="−0,1 kg">${icon('minus')}</button>
+  const prev = [...state.weights].filter((w) => w.date < today()).sort((a, b) => a.date.localeCompare(b.date)).pop();
+  const yest = prev && Math.round((new Date(today() + 'T12:00:00') - new Date(prev.date + 'T12:00:00')) / 864e5) === 1;
+  const now = new Date();
+  const s = sheet(`<div class="sheet-head wg-head"><h3 class="title2">${t('Pesée du jour')}</h3><span class="v2-sm">${fmtDate(today(), { weekday: 'short', day: 'numeric', month: 'short' })}, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+    <div class="v2-card wg-card"><div class="wg-pick"><button class="icon-btn round wg-btn" data-d="-1" aria-label="−0,1 kg">${icon('minus')}</button>
       <p class="wg-val" aria-live="polite"><b class="num"></b><span>kg</span></p>
       <button class="icon-btn round wg-btn" data-d="1" aria-label="+0,1 kg">${icon('plus')}</button></div>
-    <p class="footnote secondary center">${last ? t('Dernière pesée : {kg} kg', { kg: fmt(last.kg, 1) }) : ''}</p>
-    <p class="footnote secondary wg-note">${t('Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).')}</p>
-    <button class="btn filled large" data-a="ok">${t('Enregistrer')}</button>`);
+      <p class="v2-sm wg-prev">${prev ? (yest ? t('Hier : {kg} kg', { kg: fmt(prev.kg, 1) }) : t('Dernière pesée : {kg} kg', { kg: fmt(prev.kg, 1) })) : ''}</p></div>
+    <p class="v2-row wg-note">${icon('info')}<span class="v2-sm">${t('Un écart de ± 1 kg d\'un jour à l\'autre est normal (eau, sel, cycle).')}</span></p>
+    <button class="btn filled large wide v2-go" data-a="ok">${t('Enregistrer')}</button>`);
   const out = s.querySelector('.wg-val b');
   const draw = () => { out.textContent = fmt(v, 1); };
   draw();
@@ -240,9 +266,12 @@ export function openWeigh(onDone) {
 // Étape franchie : un moment sobre, avec la suite.
 function celebrate(m, steps) {
   const i = steps.indexOf(m), next = steps[i + 1];
-  const s = sheet(`<div class="wg-win"><span class="wg-ring num">${fmt(m.kg, 1)}<small>kg</small></span>
-    <h3 class="title2">${t('Étape atteinte')}</h3>
-    <p class="secondary">${next ? t('Prochaine étape : {kg} kg.', { kg: fmt(next.kg, 1) }) : t('Tu as atteint ta cible.')}</p>
-    <button class="btn filled large" data-a="ok">${t('Continuer')}</button></div>`);
+  const trend = S.emaTrend(state.weights), first = trend[0];
+  const lost = first ? Math.abs(first.kg - m.kg) : 0;
+  const s = sheet(`<div class="wg-win"><div class="v2-blobs" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+    <span class="wg-ring"><b class="num">${fmt(m.kg, 1)}</b><small>kg</small></span>
+    <h3 class="wg-win-t">${t('Étape atteinte')}</h3>
+    <p class="wg-win-p">${first ? t('Tu as passé {kg} kg, {d} kg depuis le {date}.', { kg: fmt(m.kg, 1), d: fmt(lost, 1), date: fmtDate(first.date, { day: 'numeric', month: 'long' }) }) + ' ' : ''}${next ? t('Prochaine étape : {kg} kg.', { kg: fmt(next.kg, 1) }) : t('Tu as atteint ta cible.')}</p>
+    <button class="btn large wide wg-win-btn" data-a="ok">${t('Voir ma courbe')}</button></div>`);
   s.querySelector('[data-a=ok]').onclick = () => s.close();
 }

@@ -212,3 +212,49 @@ html[data-look="glass"].tm #view:has(.v2-leaf) { background: linear-gradient(tra
 html.tm .sheet:has(.qa-grid) .sheet-close { display: none; }
 html.tm .qa-cancel { color: var(--a-ink); font-weight: 600; min-height: 44px; }
 .jr-cycle svg.v2-chev { width: 18px; height: 18px; }
+
+/* ----- Poids (canevas pesee-1 à 4) ----- */
+.wt-title { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 10px; }
+.wt-title .large-title { margin: 0; }
+.wt-now { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }
+.wt-big { font-size: 56px; line-height: 1; letter-spacing: -.045em; }
+.wt-unit { font-size: 17px; font-weight: 600; color: var(--a-ink2); }
+.wt-delta { margin-left: auto; align-self: center; height: 34px; padding: 0 12px; border-radius: 17px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; }
+.wt-delta.good { background: var(--a-food-bg); color: var(--a-food); }
+.wt-delta.bad { background: var(--a-warm-bg); color: var(--a-warn); }
+.wt-seg { margin-bottom: 12px; }
+.wt-chart { padding: 12px 12px 8px; }
+.wt-chart .chart { margin: 0; }
+.wt-chart .chart .trend { stroke: var(--a-deep); }
+.wt-chart .chart .raw-dot { fill: color-mix(in srgb, var(--a-deep) 45%, transparent); }
+.wt-foot { font-size: 12px; color: var(--a-ink2); margin: 8px 4px 12px; line-height: 1.35; }
+.wt-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.wt-stats .v2-card { display: grid; gap: 4px; }
+.wt-stats .v2-num { font-size: 22px; }
+.wt-stats small { font: 500 13px 'Geist', system-ui, sans-serif; color: var(--a-ink2); letter-spacing: 0; }
+.wt-next { width: 100%; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; margin-bottom: 14px; }
+.wt-next .v2-av { background: var(--a-tint); color: var(--a-deep); }
+.wt-add { margin-bottom: 8px; }
+/* Feuille de pesée */
+.wg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-right: 48px; }
+.wg-card { padding: 8px 12px 14px; margin: 4px 0 12px; }
+.wg-card .wg-pick { padding: 12px 0 6px; }
+.wg-card .wg-val b { font-size: 64px; }
+.wg-prev { text-align: center; margin: 0; }
+.wg-note { align-items: flex-start; gap: 10px; margin: 0 4px 16px; color: var(--a-ink2); }
+.wg-note svg.ic { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+/* Étape atteinte : plein écran à halos */
+html.tm .sheet:has(.wg-win) { min-height: 100%; height: 100%; max-height: none; border-radius: 0; padding: 0; overflow: hidden; background: #c9cfe0; }
+html.tm .sheet:has(.wg-win) .sheet-close, html.tm .sheet:has(.wg-win) .sheet-grab { display: none; }
+.wg-win { position: relative; isolation: isolate; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; gap: 14px;
+  padding: calc(var(--safe-t) + 40px) 24px calc(var(--safe-b) + 40px); }
+.wg-win .v2-blobs { inset: -60px; bottom: -60px; }
+.wg-win .v2-blobs .b1 { top: -120px; left: -80px; } .wg-win .v2-blobs .b2 { top: -40px; } .wg-win .v2-blobs .b3 { bottom: -20px; top: auto; }
+.wg-win .wg-ring { width: 150px; height: 150px; border: 10px solid #fff; border-radius: 50%; display: grid; place-content: center; color: #fff; margin-bottom: 18px; }
+.wg-win .wg-ring b { font-family: var(--display); font-size: 40px; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+.wg-win .wg-ring small { font-size: 12px; opacity: .85; color: #fff; }
+.wg-win-t { margin: 0; font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: -.035em; }
+.wg-win-p { margin: 0; max-width: 300px; font-size: 15px; opacity: .92; line-height: 1.45; }
+.wg-win-btn { position: absolute; left: 20px; right: 20px; bottom: calc(var(--safe-b) + 32px); background: #fff !important; color: var(--a-deep) !important; }
+html.tm .wg-card .wg-btn { background: var(--a-fill); color: var(--a-ink); }
+.wg-win::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 35%, rgba(10, 20, 70, .25)); pointer-events: none; }
