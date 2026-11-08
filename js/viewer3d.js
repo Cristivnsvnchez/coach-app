@@ -9,8 +9,8 @@ const noop3D = { dispose() {}, setOutfit() {}, setMode() {} };
 
 // `showcase` : vitrine (carte « Mouvement du jour ») — fond transparent sur un décor HTML, sans grille ni ombre,
 // sans interaction (la carte reste cliquable), cadrage un peu plus serré.
-export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mistake, pose, gear, symmetric }, outfit = null, { showcase = false } = {}) {
-  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio, attachGear, limitJoints;
+export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, pose, gear, symmetric, fault, faultPose }, outfit = null, { showcase = false } = {}) {
+  let THREE, GLTFLoader, OrbitControls, fix, buildPoseClip, studio, attachGear, limitJoints, overlay, faults, gripOf;
   try {
     THREE = await import('../vendor/three/three.module.min.js');
     ({ GLTFLoader } = await import('../vendor/three/GLTFLoader.js'));
@@ -20,6 +20,8 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     studio = await import('./studio3d.js'); // argile et lumière partagées avec les vignettes
     ({ attachGear } = await import('./gear3d.js'));
     ({ limitJoints } = await import('./joint-limits.js'));
+    overlay = await import('./overlay3d.js'); faults = await import('./mistakes3d.js'); // onglet Erreurs : tracés, fautes
+    ({ gripOf } = await import('./gear3d.js'));
   } catch { return noop3D; }
 
   const canvas = document.createElement('canvas');
@@ -91,7 +93,8 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   const uTime = { value: 0 };
   const uHighlight = { value: 1 }; // boosté à l'onglet Conseils : la lueur musculaire devient une planche anatomique
   const byKind = {}; // kind ('top'/'shorts'/'shoes') → matériaux à recolorer quand on change de tenue
-  obj.traverse((o) => {
+  // Teinte du corps entier (onglet Erreurs : vert = bon geste, rouge = faute) : rgb + intensité.
+  const dress = (target, uTint) => target.traverse((o) => {
     if (!o.isSkinnedMesh) return;
     o.castShadow = true; o.frustumCulled = false; // la boîte englobante d'un maillage skinné ne suit pas l'animation
     const names = o.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ''));
@@ -104,15 +107,15 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
       const { mm, kind, skin, cloth } = studio.clayMaterial(THREE, m, outfit);
       const hair = kind === 'hair', glows = skin || kind === 'top';
       if (cloth) (byKind[kind] ||= []).push(mm);
-      mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé
+      mm.customProgramCacheKey = () => 'tm-' + kind; // sinon three.js réutilise le 1er shader compilé (même programme pour les deux corps)
       mm.onBeforeCompile = (sh) => {
-        sh.uniforms.uWF = { value: WF }; sh.uniforms.uWB = { value: WB }; sh.uniforms.uTime = uTime; sh.uniforms.uHighlight = uHighlight;
+        sh.uniforms.uWF = { value: WF }; sh.uniforms.uWB = { value: WB }; sh.uniforms.uTime = uTime; sh.uniforms.uHighlight = uHighlight; sh.uniforms.uTint = uTint;
         sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWF[96];\nuniform float uWB[96];\nvarying float vMask;')
           .replace('#include <skinning_vertex>', `#include <skinning_vertex>
             float back = smoothstep(0.55, -0.55, objectNormal.z); // les corps regardent vers +Z : dos = -Z (0 devant, 1 derrière)
             vMask = 0.0;
             for (int k = 0; k < 4; k++) { int ib = int(skinIndex[k]); vMask += mix(uWF[ib], uWB[ib], back) * skinWeight[k]; }`);
-        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHighlight;\nvarying float vMask;')
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nuniform float uHighlight;\nuniform vec4 uTint;\nvarying float vMask;')
           .replace('#include <map_fragment>', cloth && m.map ? `#include <map_fragment>
             float grain = dot(sampledDiffuseColor.rgb, vec3(0.3, 0.59, 0.11));
             diffuseColor.rgb = diffuse * clamp(0.55 + grain * 0.9, 0.0, 1.25);` : '#include <map_fragment>')
@@ -125,23 +128,19 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
             float lum = dot(gl_FragColor.rgb, vec3(0.3, 0.59, 0.11));
             vec3 glow = mix(vec3(1.0, 0.52, 0.16), vec3(1.0, 0.3, 0.05), clamp(fres * 1.4, 0.0, 1.0)) * (0.45 + 1.1 * lum) + vec3(0.18, 0.05, 0.0);
             gl_FragColor.rgb = mix(gl_FragColor.rgb, glow, clamp(m * 0.9 * pulse * uHighlight, 0.0, 1.0));
+            // Teinte vert/rouge (onglet Erreurs) : garde le relief, bords lumineux comme un halo.
+            float lum2 = dot(gl_FragColor.rgb, vec3(0.3, 0.59, 0.11));
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, uTint.rgb * (0.35 + 1.0 * lum2) + uTint.rgb * fres * 0.9, uTint.a);
             #include <dithering_fragment>`);
       };
       return mm;
     });
     if (o.material.length === 1) o.material = o.material[0];
   });
+  const tintA = { value: new THREE.Vector4(0, 0, 0, 0) };
+  dress(obj, tintA);
 
   const findBone = (re) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && re.test(o.name)) b = o; }); return b; };
-  // Onglet Erreurs : rotation fixe ajoutée par-dessus l'animation sur quelques os, pour montrer le défaut typique.
-  // Onglet Conseils : pose figée + lueur musculaire renforcée, façon planche anatomique.
-  let mistakeMode = false;
-  const mistakeBones = Object.entries(mistake || {}).map(([n, off]) => ({ bone: findBone(new RegExp(n + '$')), off })).filter((x) => x.bone);
-  const setMode = (tab) => {
-    mistakeMode = tab === 'mistakes' && mistakeBones.length > 0;
-    uHighlight.value = tab === 'tips' ? 1.7 : 1;
-    if (act && !reduce) act.paused = tab === 'tips';
-  };
 
   const mixer = new THREE.AnimationMixer(obj);
   // Clip corrigé (dérive retirée, retour vers la pose de départ si la répétition ne boucle pas) : voir motion-fix.js.
@@ -261,6 +260,88 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   };
   const ro = new ResizeObserver(fit); ro.observe(box); fit();
 
+  // ───── Onglets : Étapes (flèche verte du trajet), Erreurs (bon geste ✓ en haut, faute ✗ en bas), Conseils ─────
+  let tab = 'steps';
+  const sex = /-f\.glb$/.test(url) ? 'F' : 'M';
+  const boneOf = (target, n) => { let b = null; target.traverse((o) => { if (!b && o.isBone && o.name.replace(/^mixamorig:?/, '') === n) b = o; }); return b; };
+  const bonesMap = (target) => { const m = {}; target.traverse((o) => { if (o.isBone) m[o.name.replace(/^mixamorig:?/, '')] ||= o; }); return m; };
+  // Trajet d'un point pendant tout le clip (33 instants), puis retour à l'instant courant.
+  const samplePath = (target, mix, act0, pointOf) => { const out = []; if (!act0) return out; const t0 = act0.time, T = act0.getClip().duration;
+    for (let i = 0; i <= 32; i++) { act0.time = (T * i * 0.999) / 32; mix.update(0); target.updateMatrixWorld(true); out.push(pointOf()); }
+    act0.time = t0; mix.update(0); return out; };
+  // Point suivi à l'onglet Étapes : le poing droit si un matériel est tenu, sinon la partie du corps qui bouge le plus.
+  const stepsPoint = (() => { const Bm = bonesMap(obj);
+    if (gear?.hold && gear.hold !== 'barFront' && Bm.RightHandMiddle1) return () => gripOf(THREE, Bm, gear.hold === 'dumbbellL' ? 'Left' : 'Right').c.clone();
+    const cands = ['RightHand', 'RightFoot', 'Hips', 'Head'].map((n) => Bm[n]).filter(Boolean);
+    let best = cands[0], bd = -1;
+    for (const b of cands) { const pth = samplePath(obj, mixer, act, () => b.getWorldPosition(new THREE.Vector3())); const d = Math.max(0, ...pth.map((q) => q.distanceTo(pth[0]))); if (d > bd) { bd = d; best = b; } }
+    return () => best.getWorldPosition(new THREE.Vector3()); })();
+  const stepsArrow = showcase || !act ? null : overlay.pathArrow(THREE, samplePath(obj, mixer, act, stepsPoint), overlay.GREEN);
+  if (stepsArrow) scene.add(stepsArrow.group);
+
+  // Version fautive : un second corps (même matériel), créé la première fois qu'on ouvre l'onglet Erreurs.
+  const tintOK = [0.24, 0.86, 0.52, 0.42], tintKO = [1.0, 0.3, 0.28, 0.5];
+  let wrong = null;
+  const buildWrong = () => {
+    const o2 = clone(model); scene.add(o2);
+    o2.scale.copy(obj.scale); o2.position.copy(obj.position); o2.updateMatrixWorld(true);
+    const tintB = { value: new THREE.Vector4(...tintKO) }; dress(o2, tintB);
+    const c2 = faultPose ? buildPoseClip(THREE, o2, faultPose, clip)
+      : !pose && raw ? limitJoints(THREE, fix.prepareClip(faults.faultyClip(THREE, raw, fault), sex), o2, { symmetric }) : null;
+    const m2 = new THREE.AnimationMixer(o2), a2 = c2 ? m2.clipAction(c2) : null; a2?.play();
+    const k2 = attachGear(THREE, gearGltf, o2, gear, c2); k2.update();
+    const F = faults.FAULTS[fault] || faults.FAULTS.backRound;
+    const gA = overlay.guideLine(THREE, F.guide.map((n) => boneOf(obj, n)), overlay.GREEN), gB = overlay.guideLine(THREE, F.guide.map((n) => boneOf(o2, n)), overlay.RED);
+    const tA = boneOf(obj, F.track), tB = boneOf(o2, F.track);
+    const arA = overlay.pathArrow(THREE, samplePath(obj, mixer, act, () => tA.getWorldPosition(new THREE.Vector3())), overlay.GREEN, { radius: 0.01 });
+    const arB = overlay.pathArrow(THREE, samplePath(o2, m2, a2, () => tB.getWorldPosition(new THREE.Vector3())), overlay.RED, { radius: 0.01 });
+    const okFx = new THREE.Group(), koFx = new THREE.Group(); okFx.add(gA.group, arA.group); koFx.add(gB.group, arB.group); scene.add(okFx, koFx);
+    // Pastilles ✓ / ✗ et séparation (éléments de la carte, au-dessus du canevas ; classes stylables par l'interface).
+    const marks = document.createElement('div'); marks.className = 'v3d-split';
+    marks.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+    const badge = (cls, top, col, path) => `<span class="${cls}" style="position:absolute;right:14px;top:${top};width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:${col}26;box-shadow:0 0 0 1.5px ${col}, 0 0 14px ${col}88"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${path}</svg></span>`;
+    marks.innerHTML = badge('v3d-ok', '12px', '#3ddc84', '<path d="M5 12.5l4.5 4.5L19 7.5"/>') + badge('v3d-ko', 'calc(50% + 12px)', '#ff4d4d', '<path d="M6 6l12 12M18 6L6 18"/>')
+      + '<span class="v3d-split-line" style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,.14)"></span>';
+    box.append(marks);
+    return { o2, m2, a2, k2, gA, gB, arA, arB, okFx, koFx, marks,
+      dispose() { m2.stopAllAction(); k2.dispose(); [gA, gB, arA, arB].forEach((x) => x.dispose()); okFx.removeFromParent(); koFx.removeFromParent(); marks.remove();
+        o2.traverse((o) => { [].concat(o.material || []).forEach((m) => m.dispose?.()); }); o2.removeFromParent(); } };
+  };
+  const setMode = (t) => {
+    tab = t;
+    uHighlight.value = t === 'tips' ? 1.7 : 1;
+    if (act && !reduce) act.paused = t === 'tips';
+    if (t === 'mistakes' && fault && !wrong && !showcase) wrong = buildWrong();
+    tintA.value.set(...(t === 'mistakes' && wrong ? tintOK : [0, 0, 0, 0]));
+    if (stepsArrow) stepsArrow.group.visible = t === 'steps';
+    if (wrong) wrong.marks.style.display = t === 'mistakes' ? '' : 'none';
+    box.classList.toggle('v3d-split-on', t === 'mistakes' && !!wrong); // l'interface peut agrandir la carte en mode comparaison
+  };
+  // Rendu : une vue, ou deux demi-vues empilées à l'onglet Erreurs (même angle, même échelle pour comparer).
+  const half = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 50), vsz = new THREE.Vector2();
+  // Distance pour qu'un corps tienne en hauteur dans une demi-vue (points du mouvement vus de face, sans orbite complète).
+  let fitHalf = 3;
+  const fitHalves = () => { const tV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2); fitHalf = Math.max(1.2, ((yMax - yMin) / 2 + 0.06) / tV * 1.02); };
+  fitHalves();
+  const draw = () => {
+    if (tab !== 'mistakes' || !wrong) {
+      if (wrong) { wrong.o2.visible = false; wrong.k2.holder && (wrong.k2.holder.visible = false); wrong.okFx.visible = wrong.koFx.visible = false; } // une seule vue : le bon geste
+      renderer.setScissorTest(false); renderer.getSize(vsz); renderer.setViewport(0, 0, vsz.x, vsz.y); renderer.render(scene, camera); return; }
+    renderer.getSize(vsz); const w = vsz.x, h = vsz.y, hh = Math.floor(h / 2);
+    half.aspect = w / hh; half.updateProjectionMatrix();
+    const zoom = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) / fitD, 0.5, 1.65);
+    // Cadrage des demi-vues : sur la hauteur seule (le corps remplit sa moitié), sans le plafond « corps debout ».
+    half.position.copy(controls.target).add(camera.position.clone().sub(controls.target).setLength(fitHalf * zoom)); half.lookAt(controls.target);
+    renderer.setScissorTest(true);
+    const pass = (y, ok) => {
+      obj.visible = ok; kit.holder && (kit.holder.visible = ok); wrong.o2.visible = !ok; wrong.k2.holder && (wrong.k2.holder.visible = !ok);
+      wrong.okFx.visible = ok; wrong.koFx.visible = !ok;
+      renderer.setViewport(0, y, w, hh); renderer.setScissor(0, y, w, hh); renderer.render(scene, half);
+    };
+    pass(h - hh, true); pass(0, false);
+    obj.visible = true; kit.holder && (kit.holder.visible = true);
+  };
+
   // Boucle de rendu : arrêtée quand la fiche n'est pas visible (économie de batterie).
   const clock = new THREE.Clock();
   let raf = 0, visible = true;
@@ -271,13 +352,11 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     raf = requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05);
     mixer.update(dt); uTime.value += dt; kit.update();
+    if (wrong && tab === 'mistakes') { if (wrong.a2 && act) { wrong.a2.time = act.time % wrong.a2.getClip().duration; wrong.m2.update(0); } wrong.k2.update(); wrong.gA.update(); wrong.gB.update(); }
     if (beltV.lengthSq()) { grid.position.addScaledVector(beltV, dt); grid.position.x %= 0.25; grid.position.z %= 0.25; } // cases de 25 cm
-    if (mistakeMode) for (const { bone, off } of mistakeBones) {
-      if (off.x) bone.rotation.x += off.x; if (off.y) bone.rotation.y += off.y; if (off.z) bone.rotation.z += off.z;
-    }
     controls.update();
     lights.rotation.y = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
-    renderer.render(scene, camera);
+    draw();
   }
   const onVis = () => { if (!document.hidden && !raf) { clock.getDelta(); loop(); } };
   document.addEventListener('visibilitychange', onVis);
@@ -290,7 +369,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   const dispose = () => {
     cancelAnimationFrame(raf); raf = 0; visible = false;
     io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
-    controls.dispose(); mixer.stopAllAction(); kit.dispose();
+    controls.dispose(); mixer.stopAllAction(); kit.dispose(); wrong?.dispose(); stepsArrow?.dispose();
     obj.traverse((o) => { o.geometry?.dispose?.(); [].concat(o.material || []).forEach((m) => m.dispose?.()); });
     grid.geometry.dispose(); grid.material.dispose(); floor.geometry.dispose(); floor.material.alphaMap.dispose(); floor.material.dispose(); catcher.geometry.dispose(); catcher.material.dispose();
     shadow.geometry.dispose(); shadow.material.map.dispose(); shadow.material.dispose();
@@ -302,6 +381,9 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
     azimuth(deg) { controls.autoRotate = false; const r = camera.position.clone().sub(controls.target), a = THREE.MathUtils.degToRad(deg);
       const h = Math.hypot(r.x, r.z); camera.position.set(controls.target.x + h * Math.sin(a), camera.position.y, controls.target.z + h * Math.cos(a)); controls.update(); },
   };
+  // Rendu d'une image à la demande (panneau en arrière-plan : requestAnimationFrame suspendu).
+  dev.draw = () => { mixer.update(0); kit.update(); if (wrong && tab === 'mistakes') { if (wrong.a2 && act) { wrong.a2.time = act.time % wrong.a2.getClip().duration; wrong.m2.update(0); } wrong.k2.update(); wrong.gA.update(); wrong.gB.update(); }
+    controls.update(); lights.rotation.y = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z); fit(); draw(); };
   // Gros plan sur un os (contrôle visuel de la prise) : focus('RightHand', 0.35).
   dev.focus = (re, dist = 0.4) => { const b = findBone(new RegExp(re + '$')); if (!b) return; controls.autoRotate = false;
     const p = b.getWorldPosition(new THREE.Vector3()), dir = camera.position.clone().sub(controls.target).normalize();
