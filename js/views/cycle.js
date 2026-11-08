@@ -278,9 +278,9 @@ function openLog(day, done) {
   const cur = (c.periods || []).find((p) => p.start <= day && (p.end ? p.end >= day : diff(p.start, day) < C.avgPeriodLen(c)));
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Noter mes règles')}</h3></div>
     <form>${group('', `<div class="cells">
-      <label class="cell field"><span>${t('Début des règles')}</span><input name="start" type="date" max="${today()}" value="${cur?.start || ''}"></label>
-      <label class="cell field"><span>${t('Fin des règles')}</span><input name="end" type="date" max="${today()}" value="${cur?.end || ''}"></label>
-      <label class="cell field"><span>${t('Jour concerné')}</span><input name="day" type="date" max="${today()}" required value="${day > today() ? today() : day}"></label></div>`)}
+      <label class="cell field"><span>${t('Début des règles')}</span><input name="start" type="date" max="${today()}" value="${esc(cur?.start || '')}"></label>
+      <label class="cell field"><span>${t('Fin des règles')}</span><input name="end" type="date" max="${today()}" value="${esc(cur?.end || '')}"></label>
+      <label class="cell field"><span>${t('Jour concerné')}</span><input name="day" type="date" max="${today()}" required value="${esc(day > today() ? today() : day)}"></label></div>`)}
       ${group(t('Flux'), `<div class="cy-chips wrap">${Object.entries(FLOW_LABEL).map(([k, l]) => `<label class="chip ${log.flow === k ? 'on' : ''}"><input type="radio" name="flow" value="${k}" ${log.flow === k ? 'checked' : ''} hidden>${t(l)}</label>`).join('')}</div>`)}
       ${group(t('Symptômes'), `<div class="cy-chips wrap">${C.SYMPTOMS.map((x) => `<label class="chip ${(log.symptoms || []).includes(x) ? 'on' : ''}"><input type="checkbox" name="sym" value="${esc(x)}" ${(log.symptoms || []).includes(x) ? 'checked' : ''} hidden>${t(x)}</label>`).join('')}</div>`)}
       <button class="btn filled large">${t('Enregistrer')}</button>
