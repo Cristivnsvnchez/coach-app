@@ -258,3 +258,43 @@ html.tm .sheet:has(.wg-win) .sheet-close, html.tm .sheet:has(.wg-win) .sheet-gra
 .wg-win-btn { position: absolute; left: 20px; right: 20px; bottom: calc(var(--safe-b) + 32px); background: #fff !important; color: var(--a-deep) !important; }
 html.tm .wg-card .wg-btn { background: var(--a-fill); color: var(--a-ink); }
 .wg-win::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 35%, rgba(10, 20, 70, .25)); pointer-events: none; }
+
+/* ----- Ajouter un aliment (canevas repas-3) et portion (repas-4) ----- */
+html.tm .sheet:has(.af-head) { min-height: 88vh; }
+.af-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 52px; }
+.af-head .title2 { font-size: 20px !important; }
+.af-meals { margin: 4px 0 12px; }
+.af-search { margin-bottom: 10px; }
+html.tm .af-search .searchbar { height: 52px; border-radius: 16px; background: var(--a-card); border: 1.5px solid var(--a-line); box-shadow: none; }
+html.tm .af-search .searchbar:focus-within { border-color: var(--a-deep); }
+.af-chips { margin-bottom: 4px; }
+.af-recent { display: flex; flex-wrap: wrap; gap: 8px; }
+.af-recent .chip:first-child { background: var(--a-tint) !important; color: var(--a-deep) !important; border-color: transparent !important; }
+html.tm .sheet .results .cells { background: var(--a-card); border-radius: 24px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); }
+.af-row .t { font-weight: 600; }
+.af-plus { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--a-fill); color: var(--a-ink); flex: none; }
+.af-plus.first { background: var(--a-deep); color: #fff; }
+.af-plus svg.ic { width: 18px; height: 18px; }
+.af-src { text-align: center; font-size: 13px; color: var(--a-ink2); margin: 14px 0 4px; }
+.sheet:has(.af-pick) .af-src, .sheet:has(.af-pick) .af-chips, .sheet:has(.af-pick) .af-search { display: none; }
+.af-pick { display: grid; gap: 14px; }
+.af-ph { display: flex; align-items: flex-start; gap: 12px; }
+.af-name { margin: 0; font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+.af-ph .v2-cb[aria-pressed="true"] { color: var(--a-cycle); }
+.af-ph .v2-cb[aria-pressed="true"] svg path { fill: currentColor; }
+.af-viz { display: flex; align-items: center; gap: 18px; }
+.af-ring { position: relative; width: 112px; height: 112px; flex: none; }
+.af-ring svg { width: 100%; height: 100%; }
+.af-ring span { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.af-ring b { font-size: 30px; line-height: 1; }
+.af-ring small { font-size: 12px; color: var(--a-ink2); }
+.af-macros { flex: 1; display: grid; gap: 12px; }
+.af-macros .v2-row { gap: 8px; margin-bottom: 5px; }
+.af-macros b { font-size: 14px; }
+.af-portions { flex-wrap: wrap; }
+.af-gin { gap: 2px !important; }
+.af-gin input { width: 3.2em; border: 0; background: none; font: inherit; color: inherit; text-align: right; padding: 0; }
+.af-range { width: 100%; accent-color: var(--a-deep); height: 28px; }
+.af-fib { margin: -6px 0 0; }
+.af-ph .grow { flex: 1; min-width: 0; }
+.af-gin { padding: 0 10px !important; }
