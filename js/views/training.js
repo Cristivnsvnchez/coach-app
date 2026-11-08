@@ -9,7 +9,7 @@ import { t, locale, register } from '../i18n.js';
 import { active, startWorkout, renderSession } from './session.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
 import { openWizard, planCard, plannedDays } from './program.js';
-import { isDeload, weekOf } from '../planner.js';
+import { isDeload, weekOf, schedule } from '../planner.js';
 import { recoveryMap, editedWorkout } from '../recovery.js';
 
 register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends les bons mouvements': 'Learn the right movements',
@@ -18,14 +18,24 @@ register({ en: { 'Apprendre les mouvements': 'Learn the movements', 'Apprends le
     'Prêts aujourd\'hui : {list}': 'Ready today: {list}', 'À travailler en priorité : {list}': 'Train first: {list}', 'Tous tes muscles récupèrent : jour de repos conseillé.': 'All your muscles are recovering: a rest day is advised.',
     'Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).': 'Recovering: trained under 48 h ago. Ready: recovered, trained this week. Train again: nothing for over 7 days. Bar: sets over the last 7 days (secondary = 0.5), target 10–20 per week (Schoenfeld 2016, 2017).',
     'Modifier la séance': 'Edit workout', 'Saisir une séance passée': 'Log a past workout', 'Séance passée': 'Past workout', 'Séance modifiée': 'Workout updated', 'Séance ajoutée': 'Workout added',
-    'Ajoute au moins une série avec des répétitions, à une date passée.': 'Add at least one set with reps, on a past date.', 'Date': 'Date', 'Retirer la série': 'Remove set' },
+    'Ajoute au moins une série avec des répétitions, à une date passée.': 'Add at least one set with reps, on a past date.', 'Date': 'Date', 'Retirer la série': 'Remove set',
+    '{n} semaines d\'affilée': '{n} weeks in a row', '{d} séances sur {p} cette semaine': '{d} of {p} workouts this week', '{d} séances cette semaine': '{d} workouts this week',
+    'semaine {w} sur {n}': 'week {w} of {n}', '{n} exercices · environ {m} min': '{n} exercises · about {m} min', 'Semaine complète': 'Week complete', '{n} semaines d\'affilée.': '{n} weeks in a row.',
+    'Prochaine séance : {r}, {d}.': 'Next workout: {r}, {d}.', 'Séance du jour faite': "Today's workout done", 'Repos aujourd\'hui': 'Rest day today', 'Ajoute tes exercices au fil de la séance.': 'Add exercises as you go.',
+    '{n} exercices': '{n} exercises', '1 semaine d\'affilée': '1 week in a row', '{d} séance sur {p} cette semaine': '{d} of {p} workouts this week', '{d} séance cette semaine': '{d} workout this week', 'Calendrier': 'Calendar', 'record': 'record', 'Démarrer la séance': 'Start workout', 'Ajoute au moins un exercice.': 'Add at least one exercise.',
+    '<b>À travailler en priorité :</b> {list}': '<b>Train first:</b> {list}', '<b>Prêts aujourd\'hui :</b> {list}': '<b>Ready today:</b> {list}', '7 jours': '7 days', 'Séances': 'Workouts' },
   nl: { 'Apprendre les mouvements': 'Bewegingen leren', 'Apprends les bons mouvements': 'Leer de juiste bewegingen',
     'Cette routine fait partie de ton programme : ses séances prévues seront retirées. Supprimer ?': 'Deze routine hoort bij je programma: de geplande trainingen worden verwijderd. Verwijderen?',
     'Muscles · récupération': 'Spieren · herstel', 'Récupère': 'Herstelt', 'Prêt': 'Klaar', 'À reprendre': 'Weer trainen', 'il y a {n} j': '{n} d geleden', "aujourd'hui": 'vandaag',
     'Prêts aujourd\'hui : {list}': 'Vandaag klaar: {list}', 'À travailler en priorité : {list}': 'Eerst trainen: {list}', 'Tous tes muscles récupèrent : jour de repos conseillé.': 'Al je spieren herstellen: een rustdag is aangeraden.',
     'Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).': 'Herstelt: minder dan 48 u geleden getraind. Klaar: hersteld, deze week getraind. Weer trainen: niets in meer dan 7 dagen. Balk: sets van de laatste 7 dagen (secundair = 0,5), doel 10–20 per week (Schoenfeld 2016, 2017).',
     'Modifier la séance': 'Training bewerken', 'Saisir une séance passée': 'Eerdere training invoeren', 'Séance passée': 'Eerdere training', 'Séance modifiée': 'Training bijgewerkt', 'Séance ajoutée': 'Training toegevoegd',
-    'Ajoute au moins une série avec des répétitions, à une date passée.': 'Voeg minstens één set met herhalingen toe, op een eerdere datum.', 'Date': 'Datum', 'Retirer la série': 'Set verwijderen' } });
+    'Ajoute au moins une série avec des répétitions, à une date passée.': 'Voeg minstens één set met herhalingen toe, op een eerdere datum.', 'Date': 'Datum', 'Retirer la série': 'Set verwijderen',
+    '{n} semaines d\'affilée': '{n} weken op rij', '{d} séances sur {p} cette semaine': '{d} van {p} trainingen deze week', '{d} séances cette semaine': '{d} trainingen deze week',
+    'semaine {w} sur {n}': 'week {w} van {n}', '{n} exercices · environ {m} min': '{n} oefeningen · ongeveer {m} min', 'Semaine complète': 'Week voltooid', '{n} semaines d\'affilée.': '{n} weken op rij.',
+    'Prochaine séance : {r}, {d}.': 'Volgende training: {r}, {d}.', 'Séance du jour faite': 'Training van vandaag gedaan', 'Repos aujourd\'hui': 'Rustdag vandaag', 'Ajoute tes exercices au fil de la séance.': 'Voeg oefeningen toe tijdens de training.',
+    '{n} exercices': '{n} oefeningen', '1 semaine d\'affilée': '1 week op rij', '{d} séance sur {p} cette semaine': '{d} van {p} trainingen deze week', '{d} séance cette semaine': '{d} training deze week', 'Calendrier': 'Kalender', 'record': 'record', 'Démarrer la séance': 'Training starten', 'Ajoute au moins un exercice.': 'Voeg minstens één oefening toe.',
+    '<b>À travailler en priorité :</b> {list}': '<b>Eerst trainen:</b> {list}', '<b>Prêts aujourd\'hui :</b> {list}': '<b>Vandaag klaar:</b> {list}', '7 jours': '7 dagen', 'Séances': 'Trainingen' } });
 
 let month = null; // mois affiché dans le calendrier ('YYYY-MM')
 
@@ -41,29 +51,67 @@ export function render(root, go) {
   const folders = [...new Set(state.routines.map((r) => r.folder || ''))];
   const doneNames = [...new Set(ws.flatMap((w) => w.exercises.map((e) => e.name)))];
 
+  // Parcours v2 : semaine en bandeau, carte du jour (ou semaine complète), routines, historique en carte.
+  const td = today(), plan = state.plan;
+  const wk0 = (() => { const d = S.parseDate(td); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; })();
+  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(wk0); d.setDate(d.getDate() + i); return S.isoDate(d); });
+  const doneDays = new Set(ws.map((w) => w.date));
+  const planned = plan ? new Map(schedule(plan, week[0], week[6]).map((e) => [e.date, e])) : new Map();
+  const doneWeek = week.filter((d) => doneDays.has(d)).length;
+  const dow = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: 'narrow' }));
+  const strip = `<div class="tr-week">${week.map((d, i) => `<div class="tr-day"><small>${dow[i]}</small><span class="${doneDays.has(d) ? 'done' : ''} ${d === td ? 'today' : ''} ${planned.has(d) && !doneDays.has(d) ? 'plan' : ''}">${+d.slice(8)}</span></div>`).join('')}</div>
+    <p class="tr-cap">${icon('timer')} ${t(streak === 1 ? '1 semaine d\'affilée' : '{n} semaines d\'affilée', { n: streak })} · ${planned.size ? t(doneWeek === 1 ? '{d} séance sur {p} cette semaine' : '{d} séances sur {p} cette semaine', { d: doneWeek, p: planned.size }) : t(doneWeek === 1 ? '{d} séance cette semaine' : '{d} séances cette semaine', { d: doneWeek })}</p>`;
+  const todayEv = planned.get(td);
+  const rOf = (id) => state.routines.find((r) => r.id === id);
+  const estMin = (r) => Math.max(10, Math.round(r.exercises.reduce((m, e) => m + (+e.sets || 3) * ((+e.rest || 90) + 40), 0) / 60 / 5) * 5);
+  let hero = '';
+  if (todayEv && !doneDays.has(td) && rOf(todayEv.routineId)) {
+    const r = rOf(todayEv.routineId);
+    hero = `<section class="tr-hero"><div class="v2-blobs" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+      <p class="tr-hero-k">${t("Aujourd'hui")} · ${t('semaine {w} sur {n}', { w: Math.max(1, weekOf(plan, td)), n: plan.weeks })}${todayEv.deload ? ' · ' + t('décharge') : ''}</p>
+      <h2 class="tr-hero-t">${esc(t(r.name))}</h2><p class="tr-hero-s">${t('{n} exercices · environ {m} min', { n: r.exercises.length, m: estMin(r) })}</p>
+      <button class="tr-go" data-start-plan="${esc(r.id)}">${icon('play')} ${t('Démarrer')}</button></section>`;
+  } else if (planned.size && doneWeek >= planned.size) {
+    const nextEv = schedule(plan, S.isoDate(new Date(S.parseDate(td).getTime() + 86400000)), plan.end)[0];
+    const R = 52, C = 2 * Math.PI * R;
+    hero = `<section class="v2-card tr-done"><div class="tr-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--a-food)" stroke-width="10" stroke-dasharray="${C} ${C}"/></svg><b class="v2-num">${doneWeek}/${planned.size}</b></div>
+      <h2 class="tr-done-t">${t('Semaine complète')}</h2>
+      <p class="v2-sm">${t('{n} semaines d\'affilée.', { n: streak })}${nextEv ? ' ' + t('Prochaine séance : {r}, {d}.', { r: t(rOf(nextEv.routineId)?.name || 'Séance'), d: fmtDate(nextEv.date, { weekday: 'long', day: 'numeric', month: 'short' }) }) : ''}</p></section>`;
+  } else {
+    const nextEv = plan ? schedule(plan, td, plan.end).find((e) => e.date > td) : null;
+    hero = `<section class="tr-hero"><div class="v2-blobs" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+      <p class="tr-hero-k">${doneDays.has(td) ? t('Séance du jour faite') : nextEv ? t('Repos aujourd\'hui') : t("Aujourd'hui")}</p>
+      <h2 class="tr-hero-t">${nextEv ? esc(t(rOf(nextEv.routineId)?.name || 'Séance')) : t('Séance libre')}</h2>
+      <p class="tr-hero-s">${nextEv ? fmtDate(nextEv.date, { weekday: 'long', day: 'numeric', month: 'short' }) : t('Ajoute tes exercices au fil de la séance.')}</p>
+      <button class="tr-go" data-a="empty">${icon('play')} ${t('Démarrer une séance vide')}</button></section>`;
+  }
+  const dayOf = (r) => { if (!plan?.routineIds?.includes(r.id)) return ''; const ev = schedule(plan, td, plan.end).find((e) => e.routineId === r.id); return ev ? ' · ' + fmtDate(ev.date, { weekday: 'long' }) : ''; };
+  const best = (w) => { const prev = ws.filter((x) => x.date < w.date); return w.exercises.some((ex) => { const now = W.exerciseRecords([w], ex.name, bw).e1rm || 0; return now > 0 && prev.some((x) => x.exercises.some((e) => e.name === ex.name)) && now > (W.exerciseRecords(prev, ex.name, bw).e1rm || 0); }); };
+
   root.innerHTML = `
-    ${nav(t('Entraînement'), { right: `<button class="btn plain bold" data-a="wizard">${icon('sparkles')} ${t('Programme')}</button>` })}
-    <div class="cells stats" style="margin-bottom:1.25rem">
+    ${nav(t('Séances'), { large: false })}
+    <div class="wt-title"><h1 class="large-title">${t('Séances')}</h1><div class="v2-cbs"><button class="v2-cb" data-a="wizard" aria-label="${t('Programme')}">${icon('sparkles')}</button><button class="v2-cb" data-a="cal" aria-label="${t('Calendrier')}">${icon('calendar')}</button></div></div>
+    ${strip}${hero}
+    ${todayEv && !doneDays.has(td) ? `<button class="btn large wide tr-empty" data-a="empty">${icon('plus')} ${t('Démarrer une séance vide')}</button>` : ''}
+    ${folders.map((f) => `<h2 class="v2-xs tr-h">${esc(t(f || 'Mes routines'))}</h2><div class="v2-card tr-list">${state.routines.filter((r) => (r.folder || '') === f).map((r) => `
+      <button class="v2-li" data-edit="${esc(r.id)}"><span class="v2-av">${icon('training')}</span><span class="grow"><span class="v2-lb" style="display:block">${esc(t(r.name))}</span>
+        <span class="v2-sm">${t('{n} exercices', { n: r.exercises.length })}${dayOf(r)}</span></span>${icon('chevronRight', { cls: 'v2-chev' })}</button>`).join('')}</div>`).join('')}
+    <div class="v2-card tr-list"><button class="v2-li tr-act" data-a="new-routine"><span class="v2-av">${icon('plus')}</span><span class="grow v2-lb">${t('Nouvelle routine')}</span></button></div>
+    <button class="lrn-entry" data-a="learn"><span class="lrn-entry-ic">${icon('book')}</span><span class="grow"><b>${t('Apprendre les mouvements')}</b><small>${t('Apprends les bons mouvements')}</small></span>${icon('chevronRight', { cls: 'chev' })}</button>
+    ${musclesCard(ws, msets)}
+    <h2 class="v2-xs tr-h">${t('Historique')}</h2>
+    <div class="v2-card tr-list">${[...ws].reverse().slice(0, 20).map((w) => { const pr = best(w); return `<button class="v2-li" data-w="${esc(w.id)}"><span class="v2-av ${pr ? 'pr' : ''}">${icon(pr ? 'trophy' : 'training')}</span>
+      <span class="grow"><span class="v2-lb" style="display:block">${esc(t(w.name || w.dayName))} · ${w.date === td ? t("aujourd'hui") : fmtDate(w.date, { weekday: 'long', day: 'numeric' })}</span>
+      <span class="v2-sm num">${fmt(w.minutes || 0)} min · ${fmt(w.volume ?? W.workoutVolume(w, bw))} kg${pr ? ' · ' + t('record') : ''}</span></span>${icon('chevronRight', { cls: 'v2-chev' })}</button>`; }).join('') || `<p class="v2-sm" style="padding:12px 0">${t('Aucune séance.')}</p>`}
+      <button class="v2-li tr-act" data-a="log-past"><span class="v2-av">${icon('plus')}</span><span class="grow v2-lb">${t('Saisir une séance passée')}</span></button></div>
+    ${planCard()}
+    <div class="cells stats tr-stats">
       <div><small>${t('Régularité')}</small><b>${streak} <span class="u">${t('sem.')}</span></b></div>
       <div><small>${t('Repos')}</small><b>${rest ?? '–'} <span class="u">${t('j')}</span></b></div>
-      <div><small>${t('Ce mois-ci')}</small><b>${ws.filter((w) => w.date.slice(0, 7) === today().slice(0, 7)).length} <span class="u">${t('séances')}</span></b></div>
+      <div><small>${t('Ce mois-ci')}</small><b>${ws.filter((w) => w.date.slice(0, 7) === td.slice(0, 7)).length} <span class="u">${t('séances')}</span></b></div>
     </div>
-    <button class="lrn-entry" data-a="learn"><span class="lrn-entry-ic">${icon('sparkles')}</span><span class="grow"><b>${t('Apprendre les mouvements')}</b><small>${t('Apprends les bons mouvements')}</small></span>${icon('chevronRight', { cls: 'chev' })}</button>
-    ${planCard()}
-    <button class="btn large" data-a="empty" style="margin-bottom:1.75rem">${icon('plus')} ${t('Démarrer une séance vide')}</button>
-    ${folders.map((f) => group(esc(t(f || 'Mes routines')), `<ul class="cells">${state.routines.filter((r) => (r.folder || '') === f).map((r) => `
-      <li class="cell with-icon"><span class="badge bg-blue">${icon('dumbbell')}</span>
-        <button class="grow routine-open" data-edit="${esc(r.id)}"><span class="t headline">${esc(t(r.name))}</span>
-        <span class="s" style="white-space:normal">${r.exercises.map((e) => esc(t(e.name))).join(' · ') || '—'}</span></button>
-        <button class="btn filled pill" data-start="${esc(r.id)}">${t('Démarrer')}</button></li>`).join('')}</ul>`)).join('')}
-    ${group('', `<div class="cells"><div class="cell action" data-a="new-routine">${icon('plus')} ${t('Nouvelle routine')}</div></div>`)}
-    ${calendar()}
-    ${musclesCard(ws, msets)}
     ${doneNames.length ? group(t('Exercices'), `<ul class="cells">${doneNames.map((n) => { const r = W.exerciseRecords(ws, n, bw);
       return `<li class="cell tap" data-ex="${esc(n)}"><div class="grow"><span class="t">${esc(t(n))}</span><span class="s num">${t('1RM estimé')} ${fmt(r.e1rm, 1)} kg · ${r.sessions} ${t('séances')}</span></div>${icon('chevronRight', { cls: 'chev' })}</li>`; }).join('')}</ul>`) : ''}
-    ${group(t('Historique'), `<ul class="cells">${[...ws].reverse().slice(0, 20).map((w) => `<li class="cell tap" data-w="${esc(w.id)}"><div class="grow"><span class="t">${esc(t(w.name || w.dayName))}</span>
-      <span class="s num">${fmtDate(w.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${fmt(w.minutes || 0)} min · ${fmt(w.volume ?? W.workoutVolume(w, bw))} kg · ${W.doneSets(w)} ${t('séries')}</span></div>${icon('chevronRight', { cls: 'chev' })}</li>`).join('') || `<li class="empty">${t('Aucune séance.')}</li>`}</ul>`)}
-    ${group('', `<div class="cells"><div class="cell action" data-a="log-past" role="button">${icon('plus')} ${t('Saisir une séance passée')}</div></div>`)}
     ${group(t('Outils'), `<div class="cells"><div class="cell tap with-icon" data-a="plates"><span class="badge bg-teal">${icon('dumbbell')}</span><span class="grow">${t('Calculateur de disques')}</span>${icon('chevronRight', { cls: 'chev' })}</div></div>`,
       t("OMS 2020 : 150–300 min d'activité modérée/sem + renforcement ≥ 2 j/sem."))}`;
 
@@ -84,6 +132,7 @@ export function render(root, go) {
     if (a === 'learn') return go('learn', 'training');
     if (a === 'wizard') return openWizard(back);
     if (a === 'plates') return platesSheet();
+    if (a === 'cal') return calendarSheet(back);
     if (a === 'log-past') return editWorkout(null, back);
     if (a === 'new-routine') {
       const r = { id: uid(), name: t('Nouvelle routine'), folder: '', exercises: [] };
@@ -99,17 +148,23 @@ function musclesCard(ws, msets) {
   // En tête : d'abord les muscles délaissés (> 7 j), sinon ceux qui sont prêts, sinon conseil de repos.
   const of = (st) => S.MUSCLES.filter((m) => rec[m].status === st).map((m) => t(m)).join(', ');
   const todo = of('reprendre'), ready = of('pret');
-  const head = ws.length ? `<p class="rc-head">${todo ? t('À travailler en priorité : {list}', { list: todo }) : ready ? t('Prêts aujourd\'hui : {list}', { list: ready }) : t('Tous tes muscles récupèrent : jour de repos conseillé.')}</p>` : '';
+  const head = ws.length ? `<p class="rc-head">${icon('target')}<span>${todo ? t('<b>À travailler en priorité :</b> {list}', { list: todo }) : ready ? t('<b>Prêts aujourd\'hui :</b> {list}', { list: ready }) : t('Tous tes muscles récupèrent : jour de repos conseillé.')}</span></p>` : '';
   const rows = S.MUSCLES.map((m) => {
     const r = rec[m], n = msets[m] || 0;
     const when = r.days === null ? '' : ' · ' + (r.days === 0 ? t("aujourd'hui") : t('il y a {n} j', { n: r.days }));
     return `<div class="rc-row"><span class="rc-dot rc-${r.status}" aria-hidden="true"></span>
-      <span class="rc-name"><b>${t(m)}</b><small class="rc-${r.status}-t">${t(REC[r.status])}${when}</small></span>
-      <div class="bar-track" role="img" aria-label="${fmt(n, n % 1 ? 1 : 0)} ${t('séries')}"><div class="bar-fill ${n >= 10 ? 'ok' : ''}" style="width:${Math.min(100, (n / 20) * 100)}%"></div></div>
-      <span class="num">${fmt(n, n % 1 ? 1 : 0)}</span></div>`;
+      <span class="rc-name"><b>${t(m)}</b><small>${t(REC[r.status])}${when}</small></span>
+      <div class="v2-bar rc-bar" role="img" aria-label="${fmt(n, n % 1 ? 1 : 0)} ${t('séries')}"><i class="rc-${r.status}-b" style="width:${Math.min(100, (n / 12) * 100)}%"></i></div>
+      <span class="v2-num">${fmt(n, n % 1 ? 1 : 0)}</span></div>`;
   }).join('');
-  return group(t('Muscles · récupération'), `<div class="cells"><div class="vol rc">${head}${rows}</div></div>`,
-    t('Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).'));
+  return `<section class="v2-card rc"><div class="rc-top"><h2 class="rc-title">${t('Muscles · récupération')}</h2><span class="v2-sm">${t('7 jours')}</span></div>${head}${rows}
+    <p class="rc-foot">${t('Récupère : travaillé il y a moins de 48 h. Prêt : récupéré, travaillé cette semaine. À reprendre : rien depuis plus de 7 jours. Barre : séries des 7 derniers jours (secondaires = 0,5), cible 10–20 par semaine (Schoenfeld 2016, 2017).')}</p></section>`;
+}
+
+// Calendrier en feuille (bouton calendrier de l'en-tête).
+function calendarSheet(back) {
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Calendrier')}</h3></div><div class="body">${calendar()}</div>`, back);
+  s.addEventListener('click', (e) => { const c = e.target.closest('[data-cal]'); if (c) { month = c.dataset.cal; s.querySelector('.body').innerHTML = calendar(); } });
 }
 
 // Calendrier du mois : jours d'entraînement marqués.
@@ -140,14 +195,16 @@ function workoutDetail(id, back) {
   const w = state.workouts.find((x) => x.id === id);
   if (!w) return;
   const bw = latestWeight() || 0;
+  const sum = (ex) => { const d = ex.sets.filter((x) => x.done); if (!d.length) return '—';
+    const reps = [...new Set(d.map((x) => x.reps))], kg = Math.max(...d.map((x) => +x.kg || 0));
+    return `${d.length} × ${reps.length === 1 ? reps[0] : Math.min(...reps) + '–' + Math.max(...reps)}${kg ? ' · ' + fmt(kg, 1) + ' kg' : ''}`; };
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(w.name || w.dayName))}</h3></div>
-    <p class="footnote secondary" style="margin:-.5rem 0 1rem">${fmtDate(w.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-    <div class="cells stats" style="margin-bottom:1.25rem"><div><small>${t('Durée')}</small><b>${fmt(w.minutes || 0)} <span class="u">min</span></b></div>
-      <div><small>${t('Volume')}</small><b>${fmt(W.workoutVolume(w, bw))} <span class="u">kg</span></b></div><div><small>${t('Séries')}</small><b>${W.doneSets(w)}</b></div></div>
-    ${w.exercises.map((ex) => group(esc(t(ex.name)), `<ul class="cells">${ex.sets.filter((x) => x.done).map((x, j) => `<li class="cell"><span class="set-type static">${W.SET_LABEL[x.type] || j + 1}</span>
-      <span class="grow num">${x.kg ? fmt(x.kg, 1) + ' kg × ' : ''}${x.reps}${x.rir != null && x.rir !== '' ? ` · RIR ${x.rir}` : ''}</span></li>`).join('')}</ul>`, ex.note ? esc(ex.note) : '')).join('')}
-    ${group('', `<div class="cells"><div class="cell action" data-a="edit" role="button">${icon('pencil')} ${t('Modifier la séance')}</div></div>`)}
-    ${group('', `<div class="cells"><div class="cell action destructive" data-a="del">${t('Supprimer la séance')}</div></div>`)}`);
+    <p class="v2-sm wd-date">${fmtDate(w.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    <div class="wd-stats"><div class="v2-card"><b class="v2-num">${fmt(w.minutes || 0)} min</b><small>${t('Durée')}</small></div>
+      <div class="v2-card"><b class="v2-num">${fmt(W.workoutVolume(w, bw))}</b><small>kg</small></div><div class="v2-card"><b class="v2-num">${W.doneSets(w)}</b><small>${t('séries')}</small></div></div>
+    <div class="v2-card wd-list">${w.exercises.map((ex) => `<div class="v2-li wd-ex"><span class="grow"><span class="v2-lb" style="display:block">${esc(t(ex.name))}</span><span class="v2-sm num">${sum(ex)}</span>${ex.note ? `<span class="v2-sm" style="display:block">${esc(ex.note)}</span>` : ''}</span></div>`).join('')}</div>
+    <div class="v2-card wd-list"><button class="v2-li wd-edit" data-a="edit">${icon('pencil')}<span class="grow">${t('Modifier la séance')}</span>${icon('chevronRight', { cls: 'v2-chev' })}</button>
+      <button class="v2-li wd-del" data-a="del">${icon('trash')}<span class="grow">${t('Supprimer la séance')}</span></button></div>`);
   s.querySelector('[data-a=edit]').onclick = () => { s.close(); editWorkout(w, back); };
   s.querySelector('[data-a=del]').onclick = () => {
     if (!confirm(t('Supprimer cette séance ? (irréversible)'))) return;
@@ -172,9 +229,9 @@ function editWorkout(w, back) {
           <label class="we-in"><input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${x.kg ?? 0}" aria-label="kg"><span>kg</span></label>
           <label class="we-in"><input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${x.reps ?? 0}" aria-label="${t('reps')}"><span>${t('reps')}</span></label>
           <button class="icon-btn" data-rm-set="${i}:${j}" aria-label="${t('Retirer la série')}">${icon('trash')}</button></div>`).join('')}
-        <div class="cell action" data-add-set="${i}" role="button">${icon('plus')} ${t('Série')}</div></div>`)).join('')}
-      ${group('', `<div class="cells"><div class="cell action" data-a="add-ex" role="button">${icon('plus')} ${t('Ajouter un exercice')}</div></div>`)}
-      <button class="btn filled large" data-a="save">${t('Enregistrer')}</button>`;
+        <div class="cell we-add"><button class="btn wide" data-add-set="${i}">${icon('plus')} ${t('Série')}</button></div></div>`)).join('')}
+      <button class="btn plain wide we-addex" data-a="add-ex">${icon('plus')} ${t('Ajouter un exercice')}</button>
+      <button class="btn filled large wide v2-go" data-a="save">${t('Enregistrer')}</button>`;
   };
   s.addEventListener('input', (e) => {
     const el = e.target;
@@ -216,7 +273,8 @@ function editRoutine(r, back, { isNew = false } = {}) {
     if (isNew && !r.exercises.length && state.routines.includes(r)) { state.routines = state.routines.filter((x) => x !== r); save(); }
     back();
   };
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Routine')}</h3></div><div class="body"></div>`, onClose);
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Routine')}</h3></div><div class="body"></div>
+    <button class="btn filled large wide v2-go tr-start" data-a="start">${t('Démarrer la séance')}</button>`, onClose);
   const draw = () => {
     s.querySelector('.body').innerHTML = `
       ${group('', `<div class="cells">
@@ -252,6 +310,10 @@ function editRoutine(r, back, { isNew = false } = {}) {
         L.push({ name, muscle: info.muscle, secondary: info.secondary, type: info.type, upper: info.upper, sets: 3, repMin: 8, repMax: 12, rest: info.upper === false ? 150 : 90 });
         save(); draw(); // redessine la feuille ouverte (rouvrir editRoutine empilait une 2e feuille)
       });
+    }
+    if (el.dataset.a === 'start') {
+      if (!r.exercises.length) return toast(t('Ajoute au moins un exercice.'));
+      startWorkout(r); s.close(); return;
     }
     if (el.dataset.a === 'delr') {
       // Routine du programme daté : on prévient, puis on la retire aussi du programme (sinon ses jours affichaient « — »).

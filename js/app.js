@@ -24,7 +24,7 @@ import { startupNudges } from './install.js';
 // Toutes les vues routables. Le menu n'en montre que 4 ; les autres s'ouvrent depuis les écrans.
 const VIEWS = { today, weight, training, profile, cycle, learn, planning };
 // Ordre du canevas Parcours v2 : Journal, Sport, « + », Poids, Apprendre.
-const TABS = [['today', 'Journal', 'home'], ['training', 'Sport', 'training'], ['add'], ['weight', 'Poids', 'scale'], ['learn', 'Apprendre', 'book']];
+const TABS = [['today', 'Journal', 'home'], ['training', 'Séances', 'training'], ['add'], ['weight', 'Poids', 'scale'], ['learn', 'Apprendre', 'book']];
 const TAB_OF = { cycle: 'today', profile: 'today', planning: 'today' };
 const main = document.getElementById('view');
 const tabbar = document.querySelector('.tabbar');
