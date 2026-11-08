@@ -131,6 +131,7 @@ export function openTechnique(name, go) {
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
     <div class="lrn-hero ${m3d ? 'v3d' : ''}" style="--v3d-ok-label:${esc(JSON.stringify(t('Bon geste')))};--v3d-ko-label:${esc(JSON.stringify(t('Erreur')))}">${pictogram(name, 'big', state.profile?.sex)}${m3d?.worked?.length ? `<div class="v3d-worked"><b>${esc(t(m3d.worked[0]))}</b>${m3d.worked.slice(1).map((x) => `<span>${esc(t(x))}</span>`).join('')}</div>` : ''}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
       <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
+  s.querySelector('.sheet').classList.add('lrn-fiche'); // canevas apprendre-2 : scène fixe en haut, onglets qui défilent dessous
   if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); }).catch(() => {});
   const openDress = () => {
     const ds = sheet(`<div class="sheet-head"><h3 class="title2">${t('Choisir une tenue')}</h3></div>
