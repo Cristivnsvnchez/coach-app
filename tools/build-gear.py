@@ -118,14 +118,86 @@ def inc_frame(bm):
     box(bm, 0.05, 0.05, 0.55, 0, 0.42, 0.55, 0.006, rot=-0.35)
 make('TM_BenchIncline', [(inc_pads, PAD), (inc_frame, FRAME)])
 
+# ───── Machines ─────
+# Repère des poses (js/poses.js) : [côté, hauteur, avant] → Blender (x, -avant, hauteur). Origine de chaque machine : au sol
+# sous le bassin du pratiquant (placée par `gear.machine.at`). Parties mobiles : objets séparés, animés par js/gear3d.js.
+def P(x, y, z): return (x, -z, y)
+
+def tube(bm, a, b, r, seg=16):
+    """Tube entre deux points Blender."""
+    from mathutils import Vector
+    a, b = Vector(a), Vector(b); d = b - a; L = d.length
+    q = Vector((0, 0, 1)).rotation_difference(d.normalized())
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r, radius2=r, depth=L,
+                          matrix=Matrix.Translation((a + b) / 2) @ q.to_matrix().to_4x4())
+
+def pad(bm, sx, sy, sz, c, rot_x=0.0):
+    box(bm, sx, sy, sz, c[0], c[1], c[2], 0.025, rot=rot_x if rot_x else None)
+
+LP_ANG = math.radians(45)  # rail de la presse
+# Presse à cuisses inclinée : assise, dossier incliné, rails à 45° ; le chariot (plateau + disques) est un objet à part.
+def lp_pads(bm):
+    pad(bm, 0.42, 0.40, 0.07, P(0, 0.295, 0.0))                           # assise (dessus à 0,33 m)
+    L = 0.78; ang = math.radians(52)                                        # dossier, buste couché à ~52° de la verticale
+    c = (0, 0.20 + math.sin(ang) * L / 2, 0.33 + math.cos(ang) * L / 2 - 0.02)
+    pad(bm, 0.40, L, 0.07, c, rot_x=(math.pi / 2 - ang))  # monte vers l'arrière
+def lp_frame(bm):
+    for sx in (-0.26, 0.26):
+        tube(bm, P(sx, 0.03, -0.75), P(sx, 0.03, 1.55), 0.035)              # longerons au sol
+        tube(bm, P(sx, 0.03, 0.2), P(sx, 0.28, 0.2), 0.03)                  # pieds de l'assise
+        tube(bm, P(sx, 0.03, -0.6), P(sx, 0.62, -0.6), 0.03)                # montant du dossier
+        tube(bm, P(sx * 1.25, 0.55, 0.15), P(sx * 1.25, 1.75, 1.35), 0.04)  # rails à 45°
+        tube(bm, P(sx * 1.25, 1.75, 1.35), P(sx * 1.25, 0.03, 1.35), 0.04)  # montant avant
+        tube(bm, P(sx, 0.3, -0.05), P(sx * 1.25, 0.3, -0.05), 0.02)         # poignées
+        tube(bm, P(sx * 1.25, 0.3, -0.05), P(sx * 1.25, 0.3, 0.12), 0.017)
+make('TM_LegPress', [(lp_pads, PAD), (lp_frame, FRAME)])
+# Chariot : plateau (surface à l'origine, face vers le pratiquant = +Y Blender), glissières et disques derrière.
+def sled_plate(bm): box(bm, 0.62, 0.03, 0.48, 0, -0.015, 0, 0.008)
+def sled_frame(bm):
+    for sx in (-0.33, 0.33):
+        box(bm, 0.05, 0.22, 0.05, sx, -0.12, 0.0, 0.006)
+        cyl(bm, 0.025, sx, sx * 1.6, 16)
+def sled_plates(bm):
+    for sx in (-1, 1):
+        bm_m = Matrix.Translation((0, -0.14, 0.0))
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=40, radius1=0.2, radius2=0.2, depth=0.05,
+                              matrix=Matrix.Translation((sx * 0.43, -0.12, 0.0)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
+make('TM_LegPressSled', [(sled_plate, RUBBER), (sled_frame, FRAME), (sled_plates, RUBBER)])
+
+# Leg extension : siège, dossier presque droit, poignées ; le bras à rouleau pivote à hauteur du genou (objet à part).
+def le_pads(bm):
+    pad(bm, 0.42, 0.50, 0.08, P(0, 0.46, 0.05))                             # assise (dessus à 0,50 m)
+    pad(bm, 0.40, 0.08, 0.62, P(0, 0.86, -0.26), rot_x=math.radians(-8))    # dossier
+def le_frame(bm):
+    tube(bm, P(0, 0.03, -0.45), P(0, 0.03, 0.55), 0.035)
+    for sx in (-0.2, 0.2):
+        tube(bm, P(sx, 0.03, -0.45), P(sx * 1.4, 0.03, -0.45), 0.03); tube(bm, P(sx, 0.03, 0.45), P(sx * 1.4, 0.03, 0.45), 0.03)
+    tube(bm, P(0, 0.03, -0.05), P(0, 0.42, -0.05), 0.035)
+    tube(bm, P(0, 0.42, -0.3), P(0, 0.42, 0.3), 0.03)
+    tube(bm, P(0, 0.5, -0.3), P(0, 1.2, -0.36), 0.03)                       # montant du dossier
+    tube(bm, P(0.27, 0.42, 0.36), P(0.27, 0.62, 0.36), 0.03)                # support de l'axe
+    tube(bm, P(0.27, 0.42, 0.36), P(0.1, 0.42, 0.36), 0.025)
+    for sx in (-0.27, 0.27):
+        tube(bm, P(sx * 0.8, 0.45, -0.05), P(sx, 0.45, -0.05), 0.02); tube(bm, P(sx, 0.45, -0.05), P(sx, 0.45, 0.1), 0.017)
+make('TM_LegExt', [(le_pads, PAD), (le_frame, FRAME)])
+# Bras : axe à l'origine (côté gauche du siège, x = +0,27), levier vers le bas (-Z Blender), rouleau à 0,42 m.
+def lea_metal(bm):
+    tube(bm, (0.27, 0, 0), (0.27, 0, -0.42), 0.022); tube(bm, (0.27, 0, -0.42), (-0.2, 0, -0.42), 0.014)
+    cyl(bm, 0.035, 0.24, 0.31, 20)
+def lea_roller(bm):
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=24, radius1=0.055, radius2=0.055, depth=0.3, matrix=Matrix.Translation((0.02, 0, -0.42)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
+make('TM_LegExtArm', [(lea_metal, FRAME), (lea_roller, PAD)])
+
 # Rangés côte à côte pour la vérification visuelle (l'origine de chaque objet est remise à 0 avant l'export).
-layout = {'TM_Dumbbell': (-1.2, -1.2, 0.11), 'TM_Barbell': (0, -1.4, 0.225), 'TM_Kettlebell': (1.2, -1.2, 0.27), 'TM_Bench': (-0.6, 0.4, 0), 'TM_BenchIncline': (0.8, 0.4, 0)}
+layout = {'TM_Dumbbell': (-1.2, -1.2, 0.11), 'TM_Barbell': (0, -1.4, 0.225), 'TM_Kettlebell': (1.2, -1.2, 0.27), 'TM_Bench': (-0.6, 0.4, 0), 'TM_BenchIncline': (0.8, 0.4, 0),
+          'TM_LegPress': (-2.6, 1.5, 0), 'TM_LegPressSled': (-2.6, -0.1, 1.2), 'TM_LegExt': (2.4, 1.5, 0), 'TM_LegExtArm': (2.4, 1.14, 0.58)}
 for n, p in layout.items(): col.objects[n].location = p
 
 def export(path):
     saved = {o.name: o.location.copy() for o in col.objects}
     for o in col.objects: o.location = (0, 0, 0)
-    for o in bpy.context.view_layer.objects: o.select_set(o.name in col.objects)
+    for o in bpy.context.scene.objects:
+        if o is not None: o.select_set(o.name in col.objects)
     win = bpy.context.window_manager.windows[0]; area = next(a for a in win.screen.areas if a.type == 'VIEW_3D')
     with bpy.context.temp_override(window=win, area=area, screen=win.screen):  # opérateur lancé depuis l'addon MCP
       bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=True,

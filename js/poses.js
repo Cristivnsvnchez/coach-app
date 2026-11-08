@@ -15,7 +15,8 @@
 // - foot : appui au sol { x, z, heel, lift, yaw } : (x, z) = cheville quand le talon est posé, heel = talon levé en degrés
 //   (la pointe reste fixe au sol, les orteils restent à plat), lift = hauteur au-dessus du sol, yaw = pointe ouverte.
 //   Pied en l'air : { x, y, z, free: 1, plantar } (la cheville suit le tibia, plantar en degrés) ; avec `toe: 1`, (x, y, z)
-//   est la base des orteils, posée (dessus du pied sur un banc) : elle reste fixe et la cheville pivote autour.
+//   est la base des orteils, posée (dessus du pied sur un banc) : elle reste fixe et la cheville pivote autour ;
+//   avec `toeDir: [..]`, la plante reste à plat contre une plateforme (presse), orteils dans cette direction.
 // - thigh + shin : directions directes de la cuisse et du tibia ; kneeHint : direction du genou si ce n'est pas celle du pied.
 // - hand : cible du poignet ; chest : cible du poignet dans le repère du thorax ; arm + fore : directions directes ;
 //   elbowHint : direction de la pointe du coude ; palm : direction de la paume ; wrist : flexion du poignet (négatif = extension) ;
@@ -161,11 +162,21 @@ const dumbbellRow = { gear: { hold: 'dumbbellR', bench: { type: 'flat', at: [-0.
 
 const HIP_THRUST = { foot: flat(0.17, 0.36, 10), gripAt: 1, elbowHint: [0.7, 0.6, 0.3], palm: [0, -1, 0.2], grip: 1 };
 
+// Machines (tools/build-gear.py, js/gear3d.js), placées en [0, 0, 0] : bassin au-dessus de leur origine.
+const LP_FOOT = { x: 0.15, free: 1, toeDir: [0, 0.707, -0.707] }; // plante à plat sur le plateau à 45°
+const LEGPRESS = { hips: [0, 0.42, 0], torso: [0, 0.62, -0.78], pelvis: [0, 0.62, -0.78], neck: 14, kneeHint: [0.15, 0.7, -0.7],
+  gripAt: 1, hand: [0.33, 0.3, 0.03], elbowHint: [0.4, -0.2, -1], palm: [-0.2, -1, 0], grip: 1 };
+const LEGEXT = { hips: [0, 0.585, -0.06], torso: [0, 1, -0.14], neck: 0, thigh: [0.04, -0.06, 1], kneeHint: [0, 1, 0], // genou vers le haut
+  gripAt: 1, hand: [0.27, 0.47, 0.02], elbowHint: [0.3, 0, -1], palm: [-1, -0.3, 0], grip: 1 };
+
 export const POSES = {
   // Au sol, sur le dos : les pieds poussent une plateforme imaginaire ; le bassin reste au sol, seuls hanches et genoux bougent.
-  'Presse à cuisses': { beats: [[1, 1.0], [1, 0.15], [0, 1.7], [0, 0.25]], keys: [
-    pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.56, z: 0.24, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] }),
-    pose(SUPINE, armsOnFloor(), { foot: { x: 0.15, y: 0.67, z: 0.52, free: 1, plantar: -4 }, kneeHint: [0.1, 0.45, -0.9] })] },
+  // Presse inclinée à 45° : dos sur le dossier, pieds à plat sur le plateau, mains sur les poignées. Le plateau descend
+  // jusqu'à ~90° de genou puis remonte, genoux dans l'axe des pieds, sans verrouiller en haut.
+  // rail : point de la ligne du rail (plante des pieds en haut), [hauteur, avant].
+  'Presse à cuisses': { gear: { machine: { type: 'legpress', at: [0, 0, 0], rail: [1.14, 0.57] } }, beats: [[1, 1.6], [1, 0.2], [0, 1.2], [0, 0.4]], keys: [
+    pose(LEGPRESS, { foot: { ...LP_FOOT, y: 1.09, z: 0.52 } }),
+    pose(LEGPRESS, { foot: { ...LP_FOOT, y: 0.99, z: 0.42 } })] }, // pieds sur la ligne du rail (y − z = 0,57), hauts sur le plateau
   Squat: { ...backSquat, F: { 0: { chest: [0.46, 0.25, -0.1] }, 1: { chest: [0.46, 0.22, -0.08] } } }, // femme : barre un peu plus en arrière sur les trapèzes
   'Squat avant': frontSquat,
   'Squat overhead': overheadSquat,
@@ -174,9 +185,11 @@ export const POSES = {
   'Fentes bulgares': bulgarianBench,
   'Fentes marchées': { ...walkLunge, gear: { hold: 'dumbbells' } },
   // Assis au sol, en appui sur les mains : seule la jambe bouge, la cuisse reste fixe.
-  'Leg extension': { beats: [[1, 0.9], [1, 0.7], [0, 1.7], [0, 0.2]], keys: [
-    pose(SEAT_ON_HANDS, { thigh: [0.1, 0.62, 0.78], shin: [0.03, -0.72, 0.69], plantar: 4 }),
-    pose(SEAT_ON_HANDS, { thigh: [0.1, 0.62, 0.78], shin: [0.08, 0.5, 0.86], plantar: -4 })] },
+  // Leg extension : assis au fond du siège, genoux sur l'axe de la machine, rouleau sur le bas des tibias ; seule la
+  // jambe se tend, les mains tiennent les poignées.
+  'Leg extension': { gear: { machine: { type: 'legext', at: [0, 0, 0] } }, beats: [[1, 0.9], [1, 0.5], [0, 1.6], [0, 0.2]], keys: [
+    pose(LEGEXT, { shin: [0.02, -1, 0.12], plantar: 6 }),
+    pose(LEGEXT, { shin: [0.02, -0.08, 1], plantar: -2 })] }, // jambe tendue, sans hyperextension
   // Chaque répétition repart de la barre posée. Femme : bras plus courts, bassin un peu plus bas pour atteindre la barre.
   'Soulevé de terre': { ...deadlift, gear: { hold: 'bar', fromFloor: true }, F: { 0: { hips: [0, 0.545, -0.25], torso: [0, 0.52, 0.85] } } },
   'Soulevé de terre roumain': { ...rdl, gear: { hold: 'bar' } },
@@ -420,8 +433,10 @@ export function buildPoseClip(THREE, obj, def, name = 'pose') {
       d[S + 'UpLeg'] = frame(chainDir(S + 'UpLeg', S + 'Leg'), LEFT, thigh, kneeAxis);
       d[S + 'Leg'] = frame(chainDir(S + 'Leg', S + 'Foot'), LEFT, shin, kneeAxis);
       // Pied en l'air : la cheville suit le tibia, seule la flexion plantaire change (axe de la charnière du genou).
-      d[S + 'Foot'] = ground ? qFoot : d[S + 'Leg'].clone().multiply(rot(LEFT, f?.plantar ?? q.plantar ?? 14));
-      d[S + 'ToeBase'] = ground ? qYaw : f?.toe ? rot(LEFT, 180) : d[S + 'Foot']; // orteils à plat sur le banc, dessus vers le bas
+      // `toeDir` (pied en l'air) : la plante reste à plat sur une plateforme (presse), orteils dans cette direction.
+      const flatOn = f?.toeDir ? frame(F, LEFT, side(f.toeDir, sgn).normalize(), LEFT) : null;
+      d[S + 'Foot'] = ground ? qFoot : flatOn || d[S + 'Leg'].clone().multiply(rot(LEFT, f?.plantar ?? q.plantar ?? 14));
+      d[S + 'ToeBase'] = ground ? qYaw : f?.toe ? rot(LEFT, 180) : flatOn || d[S + 'Foot']; // orteils à plat sur le banc, dessus vers le bas
       // ── Bras ──
       const aRest = LEFT.clone().multiplyScalar(0).addScaledVector(U, sgn); // axe du coude au repos (bras en T) : flexion vers l'avant
       const rUp = chainDir(S + 'Arm', S + 'ForeArm'), rFo = chainDir(S + 'ForeArm', S + 'Hand');

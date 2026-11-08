@@ -70,7 +70,7 @@ export async function renderOne(ctx, name, sex) {
   const tv = new THREE.Vector3();
   let ground = Infinity;
   for (let i = 0; i < 24; i++) { mixer.setTime((clip.duration * i) / 24); obj.updateMatrixWorld(true);
-    for (const sk of skins) for (let k = 0; k < sk.geometry.attributes.position.count; k += 15) { sk.getVertexPosition(k, tv); tv.applyMatrix4(sk.matrixWorld); ground = Math.min(ground, tv.y); } }
+    for (const sk of skins) for (let k = 0; k < sk.geometry.attributes.position.count; k += 15) { sk.getVertexPosition(k, tv); tv.applyMatrix4(sk.matrixWorld); ground = Math.min(ground, tv.y); }  kit.update(); for (const p of kit.points()) ground = Math.min(ground, p.y); } // machine au sol
   if (Number.isFinite(ground)) obj.position.y -= ground;
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3(), N = 24, frames = [];

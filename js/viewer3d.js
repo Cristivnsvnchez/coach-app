@@ -170,7 +170,9 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, pos
     obj.updateMatrixWorld(true);
     obj.traverse((o) => { if (o.isBone) addPt(o.getWorldPosition(wp), MARGIN); });
     kit.update(); for (const p of kit.points()) addPt(p, 0.02);
-    gframes.push({ skin: skinMin(), feet: feetB.map((b) => b.getWorldPosition(new THREE.Vector3())) });
+    // Sol : la peau la plus basse, ou le matériel s'il descend plus bas (machine posée au sol, pratiquant assis au-dessus).
+    const gearLow = Math.min(Infinity, ...kit.points().map((p) => p.y));
+    gframes.push({ skin: Math.min(skinMin(), gearLow), feet: feetB.map((b) => b.getWorldPosition(new THREE.Vector3())) });
   };
   const NS = 24;
   if (anim) { for (let i = 0; i < NS; i++) { mixer.setTime(anim.duration * i / NS); samplePose(); } mixer.setTime(0); }
@@ -381,6 +383,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, pos
     azimuth(deg) { controls.autoRotate = false; const r = camera.position.clone().sub(controls.target), a = THREE.MathUtils.degToRad(deg);
       const h = Math.hypot(r.x, r.z); camera.position.set(controls.target.x + h * Math.sin(a), camera.position.y, controls.target.z + h * Math.cos(a)); controls.update(); },
   };
+  dev.kit = kit; // inspection du matériel (outils de développement)
   // Rendu d'une image à la demande (panneau en arrière-plan : requestAnimationFrame suspendu).
   dev.draw = () => { mixer.update(0); kit.update(); if (wrong && tab === 'mistakes') { if (wrong.a2 && act) { wrong.a2.time = act.time % wrong.a2.getClip().duration; wrong.m2.update(0); } wrong.k2.update(); wrong.gA.update(); wrong.gB.update(); }
     controls.update(); lights.rotation.y = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z); fit(); draw(); };

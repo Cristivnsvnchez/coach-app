@@ -54,7 +54,8 @@ const POSE_FAULT = {
   // Genoux vers l'intérieur (debout ou en fente, pas assis) : la charnière du genou vise un peu l'intérieur.
   kneeCave: (k) => { if ((k.hips?.[1] ?? 1) < 0.3) { // couché (presse) : seuls les genoux rentrent
       return k.kneeHint ? { ...k, kneeHint: norm([k.kneeHint[0] - 0.45, k.kneeHint[1], k.kneeHint[2]]) } : k; } // pieds moins ouverts, genoux vers l'intérieur, un peu moins profond
-    const o = eachSide(k, (x) => { if (x.foot && !x.foot.free) { x.foot = { ...x.foot, yaw: Math.min(x.foot.yaw ?? 8, 6) }; x.kneeHint = [-0.1, 0.05, 1]; } });
+    const o = eachSide(k, (x) => { if (x.foot && !x.foot.free) { x.foot = { ...x.foot, yaw: Math.min(x.foot.yaw ?? 8, 6) }; x.kneeHint = [-0.1, 0.05, 1]; }
+      else if (x.foot?.toeDir && (x.kneeHint || k.kneeHint)) { const h = x.kneeHint || k.kneeHint; x.kneeHint = norm([h[0] - 0.3, h[1], h[2]]); } }); // pieds sur un plateau (presse)
     if (o.hips && o.hips[1] < 0.7 && !k.L?.foot?.free && !k.R?.foot?.free) o.hips = [o.hips[0], o.hips[1] + 0.015, o.hips[2]]; // pas en fente arrière surélevée
     return o; },
   // Dos rond (buste penché, pas allongé) : le bassin reste plus droit que le buste → la colonne s'enroule ; tête basse.

@@ -9,7 +9,11 @@
 // - bench : { type: 'flat' | 'incline', at: [côté, hauteur, avant] } dans le repère des poses (js/poses.js, mètres pour 1,75 m),
 //   origine au sol sous le bassin au repos ; `yaw` en degrés (0 : banc dans l'axe du corps).
 
-const NAMES = { bar: 'TM_Barbell', barBack: 'TM_Barbell', dumbbell: 'TM_Dumbbell', kettlebell: 'TM_Kettlebell', flat: 'TM_Bench', incline: 'TM_BenchIncline' };
+const NAMES = { bar: 'TM_Barbell', barBack: 'TM_Barbell', dumbbell: 'TM_Dumbbell', kettlebell: 'TM_Kettlebell', flat: 'TM_Bench', incline: 'TM_BenchIncline',
+  legpress: 'TM_LegPress', legext: 'TM_LegExt' };
+// Machines : partie fixe posée comme un banc (`gear.machine = { type, at, yaw }`), parties mobiles animées depuis les os.
+const LEGPRESS_RAIL = Math.PI / 4; // le chariot glisse à 45° (tools/build-gear.py)
+const LEGEXT_PIVOT = [0, 0.58, 0.38]; // axe du bras, à hauteur du genou (repère des poses, machine en [0, 0, 0])
 
 // Centre de la prise et axe de la poignée, depuis les os de la main (poing fermé autour de la poignée).
 export function gripOf(THREE, B, S, out = { c: new THREE.Vector3(), axis: new THREE.Vector3(), dir: new THREE.Vector3() }) {
@@ -88,6 +92,23 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
       holder.add(bench);
     }
   }
+  // Machine : partie fixe comme un banc ; repère machine (position + orientation) gardé pour les parties mobiles.
+  let mach = null, machLocal = null;
+  const machQ = new THREE.Quaternion(), toMachine = (p) => p.clone().sub(mach.position).applyQuaternion(machQ.clone().invert());
+  const fromMachine = (v) => v.clone().applyQuaternion(machQ).add(mach.position);
+  let sled = null, railO = null, railD = null, legArm = null;
+  if (gear.machine && fr) {
+    mach = add(NAMES[gear.machine.type]);
+    if (mach) {
+      const [x, y, z] = gear.machine.at, w = new THREE.Vector3().copy(fr.origin).addScaledVector(fr.R, x / fr.s).addScaledVector(fr.U, y / fr.s).addScaledVector(fr.F, z / fr.s);
+      machLocal = obj.worldToLocal(w.clone()); mach.position.copy(w);
+      machQ.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fr.F.clone().applyAxisAngle(fr.U, ((gear.machine.yaw || 0) * Math.PI) / 180)); mach.quaternion.copy(machQ);
+      holder.add(mach);
+      if (gear.machine.type === 'legpress') { sled = add('TM_LegPressSled'); if (sled) holder.add(sled); }
+      if (gear.machine.type === 'legext') { legArm = add('TM_LegExtArm'); if (legArm) holder.add(legArm); }
+    }
+  }
+  const ankleMid = () => B.LeftFoot.getWorldPosition(new THREE.Vector3()).add(B.RightFoot.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
   const gA = gripOf(THREE, B, 'Left'), gB = { c: new THREE.Vector3(), axis: new THREE.Vector3(), dir: new THREE.Vector3() };
   const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), m4 = new THREE.Matrix4();
   // Oriente un objet dont l'axe est X (barre, poignée) sur `axis`, avec `up` comme direction secondaire (Y local).
@@ -99,6 +120,27 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   const update = () => {
     obj.updateMatrixWorld(true);
     if (bench) bench.position.copy(obj.localToWorld(benchLocal.clone()));
+    if (mach) {
+      mach.position.copy(obj.localToWorld(machLocal.clone()));
+      if (sled) { // chariot de la presse : son plateau reste contre la plante des pieds, il glisse le long du rail
+        railD ||= new THREE.Vector3(0, Math.sin(LEGPRESS_RAIL), Math.cos(LEGPRESS_RAIL)).applyQuaternion(machQ);
+        const sole = ankleMid().addScaledVector(railD, 0.07);
+        // Ligne du rail : passe par la plante des pieds (point donné dans le repère de la machine, `gear.machine.rail` = [haut, avant]).
+        railO ||= new THREE.Vector3(0, gear.machine.rail[0], gear.machine.rail[1]); const O = fromMachine(railO);
+        sled.position.copy(O).addScaledVector(railD, sole.sub(O).dot(railD));
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(machQ); up.addScaledVector(railD, -up.dot(railD)).normalize();
+        const xx = new THREE.Vector3().crossVectors(up, railD);
+        sled.quaternion.setFromRotationMatrix(m4.makeBasis(xx, up, railD));
+      }
+      if (legArm) { // leg extension : le bras tourne autour de l'axe du genou, le rouleau sur le bas des tibias
+        const pivot = fromMachine(new THREE.Vector3(-LEGEXT_PIVOT[0], LEGEXT_PIVOT[1], LEGEXT_PIVOT[2]));
+        const shin = B.LeftFoot.getWorldPosition(new THREE.Vector3()).sub(B.LeftLeg.getWorldPosition(new THREE.Vector3())).normalize();
+        const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(machQ).cross(shin).normalize(); // devant du tibia
+        const target = toMachine(ankleMid().addScaledVector(shin, -0.06).addScaledVector(fwd, 0.065).sub(pivot).add(mach.position));
+        legArm.position.copy(pivot);
+        legArm.quaternion.copy(machQ).multiply(new THREE.Quaternion().setFromAxisAngle(X, Math.atan2(-target.z, -target.y)));
+      }
+    }
     for (const it of items) {
       const m = it.mesh; if (!m) continue;
       if (it.kind === 'db') {
@@ -123,5 +165,5 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   const box = new THREE.Box3();
   const points = () => { const out = []; for (const m of meshes) { box.setFromObject(m); out.push(box.min.clone(), box.max.clone(), new THREE.Vector3(box.min.x, box.max.y, box.max.z), new THREE.Vector3(box.max.x, box.max.y, box.min.z)); } return out; };
   const dispose = () => { holder.removeFromParent(); };
-  return { update, points, meshes, bench, holder, dispose };
+  return { update, points, meshes, bench, holder, dispose, debug: () => ({ sled: sled?.position.toArray(), ankle: ankleMid().toArray(), mach: mach?.position.toArray(), railD: railD?.toArray() }) };
 }
