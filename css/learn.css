@@ -111,3 +111,13 @@
 .v3d-worked > * { padding: 6px 11px; border-radius: 999px; font-size: .78rem; line-height: 1.1; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .v3d-worked b { background: linear-gradient(100deg, #ff6210, #ffb13b); color: #17110a; font-weight: 700; }
 .v3d-worked span { background: rgba(255, 255, 255, .12); color: rgba(255, 255, 255, .86); font-weight: 600; }
+
+/* Onglet Erreurs : écran partagé (bon geste en haut, erreur en bas). Carte plus haute pour que chaque corps reste lisible. */
+.lrn-hero.v3d.v3d-split-on { height: min(150vw, 640px); }
+.lrn-hero .v3d-split .v3d-ok, .lrn-hero .v3d-split .v3d-ko { width: auto !important; height: 32px !important; display: inline-flex !important; align-items: center; gap: 6px;
+  padding: 0 12px 0 8px; border-radius: 16px !important; right: auto !important; left: 14px; font-size: 13px; font-weight: 600; letter-spacing: .01em; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.lrn-hero .v3d-split .v3d-ok svg, .lrn-hero .v3d-split .v3d-ko svg { width: 16px; height: 16px; }
+.lrn-hero .v3d-split .v3d-ok::after { content: var(--v3d-ok-label, ''); color: #7DF0AE; }
+.lrn-hero .v3d-split .v3d-ko::after { content: var(--v3d-ko-label, ''); color: #FF9A9A; }
+.lrn-hero .v3d-split .v3d-ok { top: 56px !important; } /* sous les pastilles de muscles ; le bouton tenue reste libre à droite */
+.lrn-hero .v3d-split .v3d-ko { top: calc(50% + 12px) !important; }

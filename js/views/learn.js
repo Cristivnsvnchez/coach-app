@@ -13,7 +13,7 @@ import { openExercise } from './exsheets.js';
 register({
   en: { 'Apprends les bons mouvements': 'Learn the right movements', 'Glisse pour tourner': 'Swipe to rotate', 'Apprendre les mouvements': 'Learn the movements', 'Rechercher un mouvement': 'Search a movement',
     'À découvrir': 'Discover', 'Voir la technique': 'See the technique', 'Débutant': 'Beginner', 'Intermédiaire': 'Intermediate', 'Avancé': 'Advanced',
-    'Étapes': 'Steps', 'Erreurs': 'Mistakes', 'Conseils': 'Tips', 'Voir mes records': 'See my records', 'Ajouter à ma séance': 'Add to my workout',
+    'Étapes': 'Steps', 'Erreurs': 'Mistakes', 'Bon geste': 'Good form', 'Erreur': 'Mistake', 'Conseils': 'Tips', 'Voir mes records': 'See my records', 'Ajouter à ma séance': 'Add to my workout',
     'Ajouté à ta séance': 'Added to your workout', 'Maîtrise': 'Mastery', '{n}/8 séances': '{n}/8 workouts', 'Haut du corps': 'Upper body', 'Bas du corps': 'Lower body',
     'Technique': 'Technique', 'Aucun mouvement trouvé.': 'No movement found.', 'Tous les niveaux': 'All levels', 'Niveau': 'Level',
     'Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.': 'General guidance: if you feel pain, stop and ask a professional.',
@@ -23,7 +23,7 @@ register({
     'Toutes les catégories': 'All categories', 'Catégorie': 'Category', 'Jambes': 'Legs', 'Abdos': 'Abs', 'Cardio': 'Cardio', 'Haltéro': 'Weightlifting', 'Mobilité': 'Mobility' },
   nl: { 'Apprends les bons mouvements': 'Leer de juiste bewegingen', 'Glisse pour tourner': 'Veeg om te draaien', 'Apprendre les mouvements': 'Bewegingen leren', 'Rechercher un mouvement': 'Zoek een beweging',
     'À découvrir': 'Ontdek', 'Voir la technique': 'Bekijk de techniek', 'Débutant': 'Beginner', 'Intermédiaire': 'Gevorderd', 'Avancé': 'Expert',
-    'Étapes': 'Stappen', 'Erreurs': 'Fouten', 'Conseils': 'Tips', 'Voir mes records': 'Mijn records bekijken', 'Ajouter à ma séance': 'Toevoegen aan mijn training',
+    'Étapes': 'Stappen', 'Erreurs': 'Fouten', 'Bon geste': 'Goede uitvoering', 'Erreur': 'Fout', 'Conseils': 'Tips', 'Voir mes records': 'Mijn records bekijken', 'Ajouter à ma séance': 'Toevoegen aan mijn training',
     'Ajouté à ta séance': 'Toegevoegd aan je training', 'Maîtrise': 'Beheersing', '{n}/8 séances': '{n}/8 trainingen', 'Haut du corps': 'Bovenlichaam', 'Bas du corps': 'Onderlichaam',
     'Technique': 'Techniek', 'Aucun mouvement trouvé.': 'Geen beweging gevonden.', 'Tous les niveaux': 'Alle niveaus', 'Niveau': 'Niveau',
     'Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.': 'Algemene richtlijnen: stop bij pijn en vraag advies aan een professional.',
@@ -128,7 +128,7 @@ export function openTechnique(name, go) {
   const m3d = model3D(name, sex);
   let dispose = () => {}, setOutfit = () => {}, setMode = () => {};
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(name))}</h3></div>
-    <div class="lrn-hero ${m3d ? 'v3d' : ''}">${pictogram(name, 'big', state.profile?.sex)}${m3d?.worked?.length ? `<div class="v3d-worked"><b>${esc(t(m3d.worked[0]))}</b>${m3d.worked.slice(1).map((x) => `<span>${esc(t(x))}</span>`).join('')}</div>` : ''}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
+    <div class="lrn-hero ${m3d ? 'v3d' : ''}" style="--v3d-ok-label:${esc(JSON.stringify(t('Bon geste')))};--v3d-ko-label:${esc(JSON.stringify(t('Erreur')))}">${pictogram(name, 'big', state.profile?.sex)}${m3d?.worked?.length ? `<div class="v3d-worked"><b>${esc(t(m3d.worked[0]))}</b>${m3d.worked.slice(1).map((x) => `<span>${esc(t(x))}</span>`).join('')}</div>` : ''}${m3d ? `<span class="v3d-hint">${icon('swap')} ${t('Glisse pour tourner')}</span>
       <button class="icon-btn round v3d-dress" aria-label="${t('Habiller')}" data-dress>${icon('shirt')}</button>` : ''}</div><div class="body"></div>`, () => dispose());
   if (m3d) mount3D(s.querySelector('.lrn-hero'), m3d, outfits[outfitIdx]).then((d) => { dispose = d.dispose; setOutfit = d.setOutfit; setMode = d.setMode; setMode(tab); }).catch(() => {});
   const openDress = () => {
