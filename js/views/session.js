@@ -10,6 +10,7 @@ import { t, register, locale } from '../i18n.js';
 import { trainingNote } from '../cycle.js';
 import { schedule } from '../planner.js';
 import { pickExercise, openExercise, platesSheet } from './exsheets.js';
+import { wake, unlockAudio, restBeep } from '../cues.js';
 
 register({
   en: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cycle: an easier session is advised. You can drop one set per exercise.',
@@ -45,6 +46,7 @@ export function clearActive() { active = null; restEnd = 0; prevRecords = {}; pe
 
 export function persist() {
   try { active ? localStorage.setItem(ACTIVE_KEY, JSON.stringify(active)) : localStorage.removeItem(ACTIVE_KEY); } catch {}
+  wake?.set(!!active); // écran allumé pendant toute la séance, relâché à la fin
 }
 
 const bw = () => latestWeight() || 0;
@@ -103,7 +105,7 @@ function tick() {
       if (arc) arc.setAttribute('stroke-dasharray', `${(RC * left / Math.max(1, restTotal)).toFixed(1)} ${RC.toFixed(1)}`);
     }
   }
-  if (restEnd && left <= 0) { restEnd = 0; navigator.vibrate?.([200, 100, 200]); toast(t('Repos terminé')); }
+  if (restEnd && left <= 0) { restEnd = 0; navigator.vibrate?.([200, 100, 200]); restBeep(); toast(t('Repos terminé')); }
 }
 
 const RC = 2 * Math.PI * 20;
@@ -122,6 +124,7 @@ function recordPill(text) {
 
 export function renderSession(root, go, back) {
   if (!Object.keys(prevRecords).length) loadRecords();
+  wake?.set(true);
   const vol = W.workoutVolume(active, bw()), sets = W.doneSets(active);
   const ssIndex = {}; let ssN = 0;
   for (const ex of active.exercises) if (ex.supersetId && !(ex.supersetId in ssIndex)) ssIndex[ex.supersetId] = ssN++;
@@ -238,6 +241,8 @@ function exerciseCard(ex, i, ssIndex) {
 }
 
 function onClick(e, root, go, back) {
+  unlockAudio(); // iOS : le son de fin de repos n'est permis qu'après un toucher
+  wake?.set(true); // redemandé au toucher si le système l'a refusé au démarrage
   const el = e.target.closest('[data-a]');
   if (!el) return;
   const a = el.dataset.a, i = +el.dataset.i, j = +el.dataset.j;
@@ -261,7 +266,7 @@ function onClick(e, root, go, back) {
   }
   if (a === 'finish') return finish(root, go, back);
   if (a === 'skip') { restEnd = 0; tick(); return; }
-  if (a === 'rest-' || a === 'rest+') { restEnd = Math.max(Date.now(), restEnd + (a === 'rest+' ? 15000 : -15000)); restTotal = Math.max(restTotal, (restEnd - Date.now()) / 1000); return tick(); }
+  if (a === 'rest-' || a === 'rest+') { if (!restEnd) return; restEnd = Math.max(Date.now(), restEnd + (a === 'rest+' ? 15000 : -15000)); restTotal = Math.max(restTotal, (restEnd - Date.now()) / 1000); return tick(); }
   if (a === 'add-ex') return pickExercise((name) => { active.exercises.push(sessionExercise({ name })); loadRecords(); keep(); });
   if (a === 'info') return openExercise(ex.name);
   if (a === 'type') { const s = ex.sets[j]; s.type = W.SET_TYPES[(W.SET_TYPES.indexOf(s.type || 'normal') + 1) % W.SET_TYPES.length]; return keep(); }
