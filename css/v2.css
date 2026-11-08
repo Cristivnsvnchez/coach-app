@@ -451,3 +451,23 @@ html.tm .sheet:has(.fs-bar) .sheet-close { left: calc(16px + var(--safe-l)); rig
 .fs-ok svg.ic { width: 14px; height: 14px; stroke-width: 3; }
 .fs-upd { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 15px; }
 .fs-drop { color: var(--a-danger) !important; margin-top: 4px; font-weight: 600; }
+
+/* ----- Apprendre (canevas apprendre-1 à 4) ----- */
+.lrn-title { margin: 8px 0 2px; }
+.lrn-sub { margin: 0 0 14px; font-size: 15px; }
+html.tm .lrn-search { height: 50px; border-radius: 16px; background: var(--a-card); border: 1px solid var(--a-line); box-shadow: none; margin-bottom: 14px; }
+html.tm .lrn-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0; }
+html.tm .lrn-list > .lrn-group-head, html.tm .lrn-list > .empty { grid-column: 1 / -1; font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--a-ink2); margin: 8px 4px 0; }
+html.tm .lrn-card { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 10px 12px; border-radius: 24px; background: var(--a-card); box-shadow: 0 6px 18px rgba(0, 0, 0, .05); border: 2px solid transparent; position: relative; min-width: 0; }
+html.tm .lrn-card:focus-visible, html.tm .lrn-card:hover { border-color: var(--a-deep); }
+html.tm .lrn-card .lrn-pic-box { width: 100%; height: auto; aspect-ratio: 5 / 4; border-radius: 16px; background: radial-gradient(80% 80% at 50% 40%, #fff, var(--a-tint)); display: grid; place-items: center; overflow: hidden; }
+@media (prefers-color-scheme: dark) { html.tm .lrn-card .lrn-pic-box { background: radial-gradient(80% 80% at 50% 40%, rgba(255,255,255,.12), var(--a-tint)); } }
+html.tm .lrn-card .lrn-info { display: grid; gap: 4px; min-width: 0; padding: 0 2px; }
+html.tm .lrn-card .lrn-name { font-weight: 600; font-size: 15px; line-height: 1.2; }
+html.tm .lrn-card .lrn-muscles { font-size: 12px; color: var(--a-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.tm .lrn-card .lrn-track { height: 5px; border-radius: 3px; background: rgba(20, 20, 24, .08); }
+html.tm .lrn-card .lrn-fill { background: var(--a-food); border-radius: 3px; }
+html.tm .lrn-card .lrn-lvl { position: absolute; top: 16px; left: 16px; font-size: 11px; padding: 3px 8px; border-radius: 10px; background: rgba(255, 255, 255, .85); color: var(--a-deep); }
+@media (prefers-color-scheme: dark) { html.tm .lrn-card .lrn-lvl { background: rgba(0, 0, 0, .45); color: #cfdcff; } }
+/* Fiche technique (feuille) : boutons d'action au format du canevas */
+html.tm .lrn-actions .btn.filled.large { position: relative; padding: 0 64px 0 24px; }

@@ -88,7 +88,8 @@ export function render(root, go, from) {
     }).join('');
   };
   // Onglet du menu : pas de retour ; ouvert depuis Sport (« Apprendre les mouvements ») : « ‹ Sport ».
-  root.innerHTML = `${nav(t('Apprends les bons mouvements'), from === 'training' ? { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Sport')}</button>` } : {})}
+  root.innerHTML = `${nav(t('Apprendre'), { large: false, ...(from === 'training' ? { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Séances')}</button>` } : {}) })}
+    <h1 class="large-title lrn-title">${t('Apprendre')}</h1><p class="v2-sm lrn-sub">${t('Apprends les bons mouvements')}</p>
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
     <section class="lrn-day tm-hero">${shape({ cls: 'lrn-day-shape' })}
       <small>${t('À découvrir')}</small><h2>${esc(t(day.name))}</h2>
