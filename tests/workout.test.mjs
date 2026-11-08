@@ -63,3 +63,12 @@ test('premier lancement : les routines par défaut sont créées', async () => {
   store.load();
   assert.ok(store.state.routines.length >= 3);
 });
+
+test('notes épinglées : texte seulement, rogné, 300 caractères max', () => {
+  assert.deepEqual(W.cleanNotes(null), {});
+  assert.deepEqual(W.cleanNotes(['x']), {});
+  const n = W.cleanNotes({ Squat: '  siège cran 4  ', Vide: '   ', Objet: { a: 1 }, Long: 'x'.repeat(400), '': 'sans nom' });
+  assert.deepEqual(Object.keys(n), ['Squat', 'Long']);
+  assert.equal(n.Squat, 'siège cran 4');
+  assert.equal(n.Long.length, 300);
+});

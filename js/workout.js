@@ -163,3 +163,15 @@ export function migrateProgram(program) {
   return program.days.map((d, i) => ({ id: 'r' + i + '-' + Math.random().toString(36).slice(2, 7), name: d.name, folder: program.name,
     exercises: d.exercises.map((e) => ({ ...e, rest: e.upper ? 90 : 150 })) }));
 }
+
+// Notes épinglées par exercice ({ nom: texte }) : chaînes seulement, rognées, 300 caractères max (import de fichier).
+export function cleanNotes(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof v !== 'string' || !k || k.length > 120) continue;
+    const txt = v.trim().slice(0, 300);
+    if (txt) out[k] = txt;
+  }
+  return out;
+}

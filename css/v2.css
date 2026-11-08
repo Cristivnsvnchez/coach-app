@@ -394,6 +394,9 @@ html.tm .sheet .we-in span { font-size: 13px; color: var(--a-ink2); }
 .se-ch .ex-name { display: block; padding: 0; border: 0; background: none; font: inherit; font-size: 17px; font-weight: 600; color: var(--a-ink); text-align: left; cursor: pointer; }
 .se-restlink { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
 .se-card .ex-why { margin: 0 4px 8px; font-size: 13px; color: var(--a-ink2); }
+.se-pin { display: flex; align-items: flex-start; gap: 8px; width: calc(100% - 8px); margin: 0 4px 10px; padding: 9px 12px; border: 0; border-radius: 12px; background: var(--a-fill); color: var(--a-ink); font: inherit; font-size: 13.5px; line-height: 1.35; text-align: left; cursor: pointer; }
+.se-pin .ic { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--a-deep); }
+.se-pin span { min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
 .se-grid { display: grid; gap: 4px; }
 .se-row { display: grid; grid-template-columns: 30px 1fr 64px 52px 34px; align-items: center; gap: 8px; height: 46px; border-radius: 12px; padding: 0 6px; position: relative; font-variant-numeric: tabular-nums; }
 .se-grid.rir .se-row { grid-template-columns: 26px 1fr 56px 44px 38px 34px; }

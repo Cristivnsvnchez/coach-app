@@ -22,7 +22,8 @@ register({
     'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Workout started {h} h ago. Did you forget it?', 'Continuer': 'Continue',
     'Séance enregistrée': 'Workout saved', 'Séance enregistrée · prochaine : {n}, {d}': 'Workout saved · next: {n}, {d}',
     'Revenir au Journal': 'Back to Journal', '{n} séries faites': '{n} sets done', 'précédent {kg} kg': 'last {kg} kg', 'Repos': 'Rest', 'Nouveau record · {kg} kg × {r}': 'New record · {kg} kg × {r}',
-    'Repos · série {n} à {kg} kg': 'Rest · set {n} at {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets' },
+    'Repos · série {n} à {kg} kg': 'Rest · set {n} at {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets',
+    'Note épinglée': 'Pinned note', 'Gardée pour toutes les prochaines séances de cet exercice.': 'Kept for every future session of this exercise.', 'Ex. : siège cran 4, prise serrée': 'E.g. seat notch 4, close grip', 'Effacer la note': 'Clear note', 'Note épinglée enregistrée': 'Pinned note saved', 'Note épinglée effacée': 'Pinned note cleared', 'Modifier la note épinglée': 'Edit pinned note' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
@@ -32,7 +33,8 @@ register({
     'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Training {h} u geleden gestart. Vergeten?', 'Continuer': 'Doorgaan',
     'Séance enregistrée': 'Training opgeslagen', 'Séance enregistrée · prochaine : {n}, {d}': 'Training opgeslagen · volgende: {n}, {d}',
     'Revenir au Journal': 'Terug naar Dagboek', '{n} séries faites': '{n} sets gedaan', 'précédent {kg} kg': 'vorige {kg} kg', 'Repos': 'Rust', 'Nouveau record · {kg} kg × {r}': 'Nieuw record · {kg} kg × {r}',
-    'Repos · série {n} à {kg} kg': 'Rust · set {n} met {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets' },
+    'Repos · série {n} à {kg} kg': 'Rust · set {n} met {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets',
+    'Note épinglée': 'Vastgezette notitie', 'Gardée pour toutes les prochaines séances de cet exercice.': 'Bewaard voor alle volgende trainingen van deze oefening.', 'Ex. : siège cran 4, prise serrée': 'Bijv. zitting stand 4, smalle greep', 'Effacer la note': 'Notitie wissen', 'Note épinglée enregistrée': 'Vastgezette notitie opgeslagen', 'Note épinglée effacée': 'Vastgezette notitie gewist', 'Modifier la note épinglée': 'Vastgezette notitie bewerken' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -217,6 +219,7 @@ function exerciseCard(ex, i, ssIndex) {
           <span class="v2-sm"><button class="se-restlink" data-a="rest-cfg" data-i="${i}">${t('Repos')} ${ex.rest ? mmss(ex.rest) : t('Aucun')}</button> · ${esc(ex.repMin)}–${esc(ex.repMax)} ${t('reps')} · ${esc(t(ex.muscle))}${color ? ` · <span style="color:${color}">${t('Superset')}</span>` : ''}</span></div>
         <button class="v2-cb" data-a="menu" data-i="${i}" aria-label="${t('Options')}">${icon('more')}</button></div>
       ${ex.why ? `<p class="ex-why">${icon('chart')} ${esc(t(ex.why, ex.whyVars))}</p>` : ''}
+      ${state.exerciseNotes?.[ex.name] ? `<button class="se-pin" data-a="pin" data-i="${i}" aria-label="${t('Modifier la note épinglée')}">${icon('pin')}<span>${esc(state.exerciseNotes[ex.name])}</span></button>` : ''}
       ${ex.note || ex.showNote ? `<textarea class="ex-note input" rows="1" data-note="${i}" placeholder="${t('Ajouter une note…')}" aria-label="${t('Note')}">${esc(ex.note || '')}</textarea>` : ''}
       <div class="se-grid ${rir ? 'rir' : ''}">
         <div class="se-row head"><span>${t('Série')}</span><span>${t('Précédent')}</span>${hasKg ? `<span>${ex.type === 'assisted_bw' ? t('Aide') : ex.type === 'weighted_bw' ? '+kg' : 'kg'}</span>` : '<span></span>'}<span>${isDur ? 's' : t('reps')}</span>${rir ? `<span>${t('RIR')}</span>` : ''}<span></span></div>
@@ -273,6 +276,7 @@ function onClick(e, root, go, back) {
   if (a === 'prev') { const p = prevFor(W.previousSets(state.workouts, ex.name), ex.sets, j); if (p) { Object.assign(ex.sets[j], { kg: p.kg, reps: p.reps }); keep(); } return; }
   if (a === 'add-set') { const last = ex.sets[ex.sets.length - 1] || { kg: 0, reps: ex.repMin, rir: 2 }; ex.sets.push({ ...last, type: 'normal', done: false }); return keep(); }
   if (a === 'rest-cfg') return restSheet(ex, keep);
+  if (a === 'pin') return pinSheet(ex, keep);
   if (a === 'stale-ok') { active.staleOk = true; return keep(); }
   if (a === 'done') {
     const s = ex.sets[j];
@@ -320,6 +324,7 @@ function exerciseMenu(i, keep) {
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${esc(t(ex.name))}</h3></div>
     ${group('', `<ul class="cells">
       <li class="cell tap with-icon" data-m="note"><span class="badge">${icon('pencil')}</span><span class="grow">${t('Note')}</span></li>
+      <li class="cell tap with-icon" data-m="pin"><span class="badge">${icon('pin')}</span><span class="grow">${t('Note épinglée')}</span></li>
       <li class="cell tap with-icon" data-m="rir"><span class="badge">${icon('chart')}</span><span class="grow">${state.settings.showRir ? t('Masquer la colonne RIR') : t('Afficher la colonne RIR')}</span></li>
       <li class="cell tap with-icon" data-m="warmup"><span class="badge bg-orange">${icon('flame')}</span><span class="grow">${t('Ajouter les séries d\'échauffement')}</span></li>
       <li class="cell tap with-icon" data-m="plates"><span class="badge bg-blue">${icon('dumbbell')}</span><span class="grow">${t('Calculateur de disques')}</span></li>
@@ -340,6 +345,7 @@ function exerciseMenu(i, keep) {
     }
     if (m === 'plates') { s.close(); return platesSheet(top); }
     if (m === 'note') ex.showNote = true;
+    if (m === 'pin') { s.close(); return pinSheet(ex, keep); }
     if (m === 'rir') { state.settings.showRir = !state.settings.showRir; save(); }
     if (m === 'superset') {
       if (ex.supersetId) { const id = ex.supersetId; list.forEach((x) => { if (x.supersetId === id) x.supersetId = null; }); }
@@ -376,6 +382,29 @@ function nextSessionText() {
   const r = state.routines.find((x) => x.id === ev.routineId); if (!r) return '';
   const day = new Date(ev.date + 'T12:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short' });
   return t('Séance enregistrée · prochaine : {n}, {d}', { n: t(r.name), d: day });
+}
+
+// Note épinglée : gardée par exercice (state.exerciseNotes), affichée à chaque séance (réglages machine, prise…).
+function pinSheet(ex, keep) {
+  const cur = state.exerciseNotes?.[ex.name] || '';
+  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Note épinglée')}</h3></div>
+    <p class="footnote secondary" style="margin:-.5rem 0 1rem">${esc(t(ex.name))} · ${t('Gardée pour toutes les prochaines séances de cet exercice.')}</p>
+    ${group('', `<div class="cells"><label class="cell field" style="display:block"><textarea class="input" name="pin" rows="3" maxlength="300" placeholder="${t('Ex. : siège cran 4, prise serrée')}" aria-label="${t('Note épinglée')}" style="width:100%">${esc(cur)}</textarea></label></div>`)}
+    <button class="btn filled large" data-a="ok">${t('Enregistrer')}</button>
+    ${cur ? `<button class="btn plain large destructive" data-a="clear" style="margin-top:.5rem">${t('Effacer la note')}</button>` : ''}`);
+  const done = (txt) => {
+    state.exerciseNotes = state.exerciseNotes || {};
+    const before = state.exerciseNotes[ex.name];
+    if (txt) state.exerciseNotes[ex.name] = txt; else delete state.exerciseNotes[ex.name];
+    save(); s.close(); keep();
+    if (txt) toast(t('Note épinglée enregistrée'));
+    else toast(t('Note épinglée effacée'), { undo: () => { state.exerciseNotes[ex.name] = before; save(); keep(); } });
+  };
+  s.addEventListener('click', (e) => {
+    if (e.target.closest('[data-a=ok]')) return done(s.querySelector('[name=pin]').value.trim().slice(0, 300));
+    if (e.target.closest('[data-a=clear]')) return done('');
+  });
+  s.querySelector('[name=pin]').focus();
 }
 
 function endSession(back) { active = null; persist(); restEnd = 0; prevRecords = {}; back(); }
