@@ -38,6 +38,8 @@ export function pathArrow(THREE, path, color, { offset = null, radius = 0.009 } 
   if (path.length < 3) return { group, dispose() {} };
   let far = 0, fd = 0; path.forEach((p, i) => { const d = p.distanceTo(path[0]); if (d > fd) { fd = d; far = i; } });
   if (fd < 0.06) return { group, dispose() {} }; // presque immobile : pas de flèche
+  let len = 0; for (let i = 1; i < path.length; i++) len += path[i].distanceTo(path[i - 1]);
+  if (len > 4.5 * fd) return { group, dispose() {} }; // trajet en boucle (course, sauts) : une flèche serait illisible
   const pts = path.slice(0, far + 1).map((p) => (offset ? p.clone().add(offset) : p.clone()));
   // Points trop proches retirés (la courbe reste lisse).
   const clean = [pts[0]]; for (const p of pts) if (p.distanceTo(clean[clean.length - 1]) > 0.02) clean.push(p);

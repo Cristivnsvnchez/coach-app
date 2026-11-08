@@ -10,10 +10,12 @@
 //   origine au sol sous le bassin au repos ; `yaw` en degrés (0 : banc dans l'axe du corps).
 
 const NAMES = { bar: 'TM_Barbell', barBack: 'TM_Barbell', dumbbell: 'TM_Dumbbell', kettlebell: 'TM_Kettlebell', flat: 'TM_Bench', incline: 'TM_BenchIncline',
-  legpress: 'TM_LegPress', legext: 'TM_LegExt' };
+  legpress: 'TM_LegPress', legext: 'TM_LegExt', legcurl: 'TM_LegCurl', tower: 'TM_CableTower', latpulldown: 'TM_LatPulldown', seatedrow: 'TM_SeatedRow',
+  pullup: 'TM_PullupBar', dips: 'TM_DipStation', treadmill: 'TM_Treadmill' };
 // Machines : partie fixe posée comme un banc (`gear.machine = { type, at, yaw }`), parties mobiles animées depuis les os.
 const LEGPRESS_RAIL = Math.PI / 4; // le chariot glisse à 45° (tools/build-gear.py)
 const LEGEXT_PIVOT = [0, 0.58, 0.38]; // axe du bras, à hauteur du genou (repère des poses, machine en [0, 0, 0])
+const LEGCURL_PIVOT = [0, 0.66, -0.45]; // leg curl allongé : axe au genou, derrière le bassin
 
 // Centre de la prise et axe de la poignée, depuis les os de la main (poing fermé autour de la poignée).
 export function gripOf(THREE, B, S, out = { c: new THREE.Vector3(), axis: new THREE.Vector3(), dir: new THREE.Vector3() }) {
@@ -79,10 +81,18 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   if (h === 'dumbbells' || h === 'dumbbellR') items.push({ kind: 'db', S: 'Right', mesh: add(NAMES.dumbbell) });
   if (h === 'dumbbells' || h === 'dumbbellL') items.push({ kind: 'db', S: 'Left', mesh: add(NAMES.dumbbell) });
   if (h === 'kettlebell') items.push({ kind: 'kb', mesh: add(NAMES.kettlebell) });
+  if (h === 'latbar') items.push({ kind: 'bar', mesh: add('TM_LatBar') }); // barre de tirage, tenue comme une barre
+  if (h === 'vhandle') items.push({ kind: 'vh', mesh: add('TM_VHandle') });
+  if (h === 'rope') for (const S of ['Left', 'Right']) items.push({ kind: 'rope', S, mesh: add('TM_RopeEnd') });
+  if (h === 'handles') for (const S of ['Left', 'Right']) items.push({ kind: 'dh', S, mesh: add('TM_DHandle') });
   for (const it of items) if (it.mesh) holder.add(it.mesh);
   // Banc : repère des poses (clip.userData.frame) → monde, au moment de la construction ; ensuite il suit le corps.
   let bench = null, benchLocal = null;
-  const fr = clip?.userData?.frame;
+  // Repère des poses : celui du clip par poses, sinon (clip Mixamo) le corps tel que normé par la visionneuse
+  // (bassin au-dessus de l'origine, regard vers +Z, droite du personnage vers −X, mètres).
+  const fr = clip?.userData?.frame || (() => { obj.updateMatrixWorld(true); const o = obj.getWorldPosition(new THREE.Vector3());
+    return { origin: new THREE.Vector3(o.x, 0, o.z), s: 1, R: new THREE.Vector3(-1, 0, 0), U: new THREE.Vector3(0, 1, 0), F: new THREE.Vector3(0, 0, 1) }; })();
+  const poseToWorld = ([x, y, z]) => new THREE.Vector3().copy(fr.origin).addScaledVector(fr.R, x / fr.s).addScaledVector(fr.U, y / fr.s).addScaledVector(fr.F, z / fr.s);
   if (gear.bench && fr) {
     bench = add(NAMES[gear.bench.type]);
     if (bench) {
@@ -96,18 +106,23 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   let mach = null, machLocal = null;
   const machQ = new THREE.Quaternion(), toMachine = (p) => p.clone().sub(mach.position).applyQuaternion(machQ.clone().invert());
   const fromMachine = (v) => v.clone().applyQuaternion(machQ).add(mach.position);
-  let sled = null, railO = null, railD = null, legArm = null;
-  if (gear.machine && fr) {
-    mach = add(NAMES[gear.machine.type]);
-    if (mach) {
-      const [x, y, z] = gear.machine.at, w = new THREE.Vector3().copy(fr.origin).addScaledVector(fr.R, x / fr.s).addScaledVector(fr.U, y / fr.s).addScaledVector(fr.F, z / fr.s);
-      machLocal = obj.worldToLocal(w.clone()); mach.position.copy(w);
-      machQ.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fr.F.clone().applyAxisAngle(fr.U, ((gear.machine.yaw || 0) * Math.PI) / 180)); mach.quaternion.copy(machQ);
-      holder.add(mach);
-      if (gear.machine.type === 'legpress') { sled = add('TM_LegPressSled'); if (sled) holder.add(sled); }
-      if (gear.machine.type === 'legext') { legArm = add('TM_LegExtArm'); if (legArm) holder.add(legArm); }
-    }
-  }
+  let sled = null, railO = null, railD = null, legArm = null, armUp = false, armPivot = null;
+  const statics = []; // [mesh, position dans le repère du corps] : machines supplémentaires (deux poulies du vis-à-vis…)
+  [].concat(gear.machine || []).forEach((M, i) => {
+    const m = add(NAMES[M.type]); if (!m) return;
+    const w = poseToWorld(M.at), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), fr.F.clone().applyAxisAngle(fr.U, ((M.yaw || 0) * Math.PI) / 180));
+    m.position.copy(w); m.quaternion.copy(q); holder.add(m);
+    if (i) { statics.push([m, obj.worldToLocal(w.clone())]); return; }
+    mach = m; machLocal = obj.worldToLocal(w.clone()); machQ.copy(q);
+    if (M.type === 'legpress') { sled = add('TM_LegPressSled'); if (sled) holder.add(sled); }
+    if (M.type === 'legext') { legArm = add('TM_LegExtArm'); armPivot = LEGEXT_PIVOT; }
+    if (M.type === 'legcurl') { legArm = add('TM_LegCurlArm'); armPivot = LEGCURL_PIVOT; armUp = true; }
+    if (legArm) holder.add(legArm);
+  });
+  // Câbles : de la poulie (repère des poses) au poing ('L', 'R') ou au milieu des deux ('mid').
+  const cableMat = new THREE.MeshStandardMaterial({ color: 0x1b1c1f, roughness: 0.5, metalness: 0.6 });
+  const cables = (gear.cables || []).map((c) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1, 6), cableMat); m.castShadow = true; holder.add(m);
+    return { m, to: c.to, from: obj.worldToLocal(poseToWorld(c.from)) }; });
   const ankleMid = () => B.LeftFoot.getWorldPosition(new THREE.Vector3()).add(B.RightFoot.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
   const gA = gripOf(THREE, B, 'Left'), gB = { c: new THREE.Vector3(), axis: new THREE.Vector3(), dir: new THREE.Vector3() };
   const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), m4 = new THREE.Matrix4();
@@ -120,6 +135,7 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   const update = () => {
     obj.updateMatrixWorld(true);
     if (bench) bench.position.copy(obj.localToWorld(benchLocal.clone()));
+    for (const [m, l] of statics) m.position.copy(obj.localToWorld(l.clone()));
     if (mach) {
       mach.position.copy(obj.localToWorld(machLocal.clone()));
       if (sled) { // chariot de la presse : son plateau reste contre la plante des pieds, il glisse le long du rail
@@ -132,20 +148,34 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
         const xx = new THREE.Vector3().crossVectors(up, railD);
         sled.quaternion.setFromRotationMatrix(m4.makeBasis(xx, up, railD));
       }
-      if (legArm) { // leg extension : le bras tourne autour de l'axe du genou, le rouleau sur le bas des tibias
-        const pivot = fromMachine(new THREE.Vector3(-LEGEXT_PIVOT[0], LEGEXT_PIVOT[1], LEGEXT_PIVOT[2]));
+      if (legArm) { // leg extension / leg curl : le bras tourne autour de l'axe du genou, le rouleau sur le bas des jambes
+        const pivot = fromMachine(new THREE.Vector3(-armPivot[0], armPivot[1], armPivot[2]));
         const shin = B.LeftFoot.getWorldPosition(new THREE.Vector3()).sub(B.LeftLeg.getWorldPosition(new THREE.Vector3())).normalize();
-        const fwd = new THREE.Vector3(1, 0, 0).applyQuaternion(machQ).cross(shin).normalize(); // devant du tibia
-        const target = toMachine(ankleMid().addScaledVector(shin, -0.06).addScaledVector(fwd, 0.065).sub(pivot).add(mach.position));
+        const side = new THREE.Vector3(1, 0, 0).applyQuaternion(machQ).cross(shin).normalize(); // devant du tibia (assis), arrière du mollet (allongé)
+        const target = toMachine(ankleMid().addScaledVector(shin, -0.06).addScaledVector(side, 0.065).sub(pivot).add(mach.position));
         legArm.position.copy(pivot);
-        legArm.quaternion.copy(machQ).multiply(new THREE.Quaternion().setFromAxisAngle(X, Math.atan2(-target.z, -target.y)));
+        const a = armUp ? Math.atan2(target.z, target.y) : Math.atan2(-target.z, -target.y); // levier vers le bas (assis) ou vers le haut (allongé)
+        legArm.quaternion.copy(machQ).multiply(new THREE.Quaternion().setFromAxisAngle(X, a));
       }
+    }
+    for (const c of cables) { // câble tendu de la poulie au poing
+      const from = obj.localToWorld(c.from.clone());
+      const to = c.to === 'mid' ? gripOf(THREE, B, 'Left').c.add(gripOf(THREE, B, 'Right').c).multiplyScalar(0.5) : gripOf(THREE, B, c.to === 'L' ? 'Left' : 'Right').c;
+      const d = to.clone().sub(from), L = d.length();
+      c.m.position.copy(from).addScaledVector(d, 0.5); c.m.scale.set(1, Math.max(L, 0.001), 1); c.m.quaternion.setFromUnitVectors(Y, d.normalize());
     }
     for (const it of items) {
       const m = it.mesh; if (!m) continue;
       if (it.kind === 'db') {
         const g = gripOf(THREE, B, it.S, gB);
         m.position.copy(g.c); orient(m, g.axis, g.dir.clone().negate());
+      } else if (it.kind === 'rope' || it.kind === 'dh') { // bout de corde / poignée simple dans le poing, étrier vers le câble
+        const g = gripOf(THREE, B, it.S, gB); m.position.copy(g.c);
+        const cab = cables.find((c) => c.to === (it.S === 'Left' ? 'L' : 'R') || c.to === 'mid');
+        orient(m, g.axis, cab ? obj.localToWorld(cab.from.clone()).sub(g.c) : g.dir.clone().negate());
+      } else if (it.kind === 'vh') { // poignée en V : au milieu des poings, poignées dans les mains
+        const a = gripOf(THREE, B, 'Left', gA), b = gripOf(THREE, B, 'Right', gB);
+        m.position.addVectors(a.c, b.c).multiplyScalar(0.5); orient(m, tmp.subVectors(b.c, a.c), a.axis.clone().add(b.axis).negate());
       } else if (it.kind === 'barFront') { // squat avant : posée sur l'avant des épaules, les doigts dessous
         const { c, axis, up } = barOnFront(THREE, B); m.position.copy(c); orient(m, axis, up);
       } else if (it.kind === 'bar' || it.kind === 'barBack' || it.kind === 'kb') { // tenue par les deux poings (sur le dos : voir barOnBack)
@@ -164,6 +194,6 @@ export function attachGear(THREE, gearGltf, obj, gear, clip) {
   // Points extrêmes du matériel (cadrage de la caméra) : bouts de barre avec le rayon des disques, banc.
   const box = new THREE.Box3();
   const points = () => { const out = []; for (const m of meshes) { box.setFromObject(m); out.push(box.min.clone(), box.max.clone(), new THREE.Vector3(box.min.x, box.max.y, box.max.z), new THREE.Vector3(box.max.x, box.max.y, box.min.z)); } return out; };
-  const dispose = () => { holder.removeFromParent(); };
+  const dispose = () => { holder.removeFromParent(); cables.forEach((c) => c.m.geometry.dispose()); cableMat.dispose(); };
   return { update, points, meshes, bench, holder, dispose, debug: () => ({ sled: sled?.position.toArray(), ankle: ankleMid().toArray(), mach: mach?.position.toArray(), railD: railD?.toArray() }) };
 }

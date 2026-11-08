@@ -106,6 +106,7 @@ const ONE_SIDED = new Set(['Squat pistol', 'Curl haltères', 'Crunch vélo', 'Fo
 // js/poses.js (`gear`), à côté des poses qu'il contraint (banc sous le dos, barre entre des mains à écart fixe).
 const GEAR = {
   'Curl haltères': { hold: 'dumbbells' }, 'Élévations frontales': { hold: 'dumbbells' }, 'Kettlebell swing': { hold: 'kettlebell' },
+  'Tapis de course': { machine: { type: 'treadmill', at: [0, -0.152, 0] } }, // la bande est à 15 cm du sol
 };
 // Muscle (nom FR de exercises.js) → os du squelette Mixamo, intensité de la lueur [face avant, face arrière] :
 // un os porte plusieurs muscles (cuisse : quadriceps devant, ischios derrière ; bras : biceps devant, triceps derrière).

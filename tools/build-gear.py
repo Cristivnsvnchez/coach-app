@@ -188,9 +188,102 @@ def lea_roller(bm):
     bmesh.ops.create_cone(bm, cap_ends=True, segments=24, radius1=0.055, radius2=0.055, depth=0.3, matrix=Matrix.Translation((0.02, 0, -0.42)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
 make('TM_LegExtArm', [(lea_metal, FRAME), (lea_roller, PAD)])
 
+# Leg curl allongé : coussin incliné (bassin plus haut que la poitrine), poignées devant ; bras à rouleau au genou.
+def lc_pads(bm):
+    pad(bm, 0.36, 1.05, 0.08, P(0, 0.555, 0.42), rot_x=math.radians(-6))  # coussin du buste et du bassin, dessus ~0,6 m
+def lc_frame(bm):
+    tube(bm, P(0, 0.03, -0.55), P(0, 0.03, 1.1), 0.035)
+    for z in (-0.5, 1.0): tube(bm, P(-0.25, 0.03, z), P(0.25, 0.03, z), 0.03)
+    for z in (-0.25, 0.85): tube(bm, P(0, 0.03, z), P(0, 0.5, z), 0.035)
+    tube(bm, P(0.27, 0.42, -0.15), P(0.27, 0.66, -0.15), 0.03)              # support de l'axe (genou)
+    for sx in (-0.24, 0.24): tube(bm, P(sx, 0.47, 0.85), P(sx, 0.47, 1.0), 0.018)   # poignées
+make('TM_LegCurl', [(lc_pads, PAD), (lc_frame, FRAME)])
+def lca_metal(bm):
+    tube(bm, (0.27, 0, 0), (0.27, 0, 0.40), 0.022); tube(bm, (0.27, 0, 0.40), (-0.2, 0, 0.40), 0.014); cyl(bm, 0.035, 0.24, 0.31, 20)
+def lca_roller(bm):
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=24, radius1=0.05, radius2=0.05, depth=0.3, matrix=Matrix.Translation((0.02, 0, 0.40)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
+make('TM_LegCurlArm', [(lca_metal, FRAME), (lca_roller, PAD)])  # levier vers le haut (+Z Blender) au repos
+
+# Poulie : colonne avec pile de charges ; l'origine est au sol sous la poulie (sa hauteur est réglée par `gear.cables`).
+def tw_frame(bm):
+    for sx in (-0.22, 0.22):
+        tube(bm, (sx, 0, 0.02), (sx, 0, 2.15), 0.035)
+        tube(bm, (sx, -0.25, 0.02), (sx, 0.25, 0.02), 0.03)
+    tube(bm, (-0.22, 0, 2.15), (0.22, 0, 2.15), 0.035)
+def tw_stack(bm):
+    for i in range(12): box(bm, 0.3, 0.12, 0.05, 0, 0.0, 0.1 + i * 0.055, 0.006)
+make('TM_CableTower', [(tw_frame, FRAME), (tw_stack, RUBBER)])
+
+# Tirage vertical : siège, cale-cuisses, tour avec poulie haute ; la barre (TM_LatBar) est tenue à deux mains.
+def lp2_pads(bm):
+    pad(bm, 0.42, 0.42, 0.08, P(0, 0.46, 0.0))                              # assise (dessus à 0,50 m)
+    for sx in (-0.13, 0.13): bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=0.055, radius2=0.055, depth=0.24,
+                                                   matrix=Matrix.Translation(P(sx, 0.72, 0.2)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
+def lp2_frame(bm):
+    tube(bm, P(0, 0.03, -0.45), P(0, 0.03, 0.6), 0.035); tube(bm, P(0, 0.03, -0.45), P(0, 2.3, -0.45), 0.045)
+    tube(bm, P(0, 2.3, -0.45), P(0, 2.3, 0.15), 0.04); tube(bm, P(0, 0.03, 0.0), P(0, 0.42, 0.0), 0.035)
+    tube(bm, P(0, 0.42, 0.2), P(0, 0.72, 0.2), 0.03); tube(bm, P(-0.3, 0.03, 0.6), P(0.3, 0.03, 0.6), 0.03); tube(bm, P(-0.3, 0.03, -0.45), P(0.3, 0.03, -0.45), 0.03)
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=0.06, radius2=0.06, depth=0.04, matrix=Matrix.Translation(P(0, 2.25, 0.12)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
+def lp2_stack(bm):
+    for i in range(10): box(bm, 0.3, 0.12, 0.05, 0, 0.45, 0.15 + i * 0.055, 0.006)
+make('TM_LatPulldown', [(lp2_pads, PAD), (lp2_frame, FRAME), (lp2_stack, RUBBER)])
+def latbar(bm):  # barre de tirage coudée, 1,2 m, le long de X, origine au centre
+    tube(bm, (-0.38, 0, 0), (0.38, 0, 0), 0.014)
+    for sx in (-1, 1): tube(bm, (sx * 0.38, 0, 0), (sx * 0.6, 0, -0.07), 0.014)
+    box(bm, 0.05, 0.03, 0.03, 0, 0, 0.02, 0.004)
+make('TM_LatBar', [(latbar, STEEL)])
+
+# Tirage horizontal : siège bas, cale-pieds, poulie basse devant ; poignée en V (TM_VHandle) à deux mains.
+def sr_pads(bm): pad(bm, 0.36, 0.5, 0.08, P(0, 0.30, -0.05))
+def sr_frame(bm):
+    tube(bm, P(0, 0.03, -0.45), P(0, 0.03, 1.15), 0.04)
+    for z in (-0.4, 1.1): tube(bm, P(-0.3, 0.03, z), P(0.3, 0.03, z), 0.03)
+    tube(bm, P(0, 0.03, -0.05), P(0, 0.26, -0.05), 0.035)
+    box(bm, 0.42, 0.04, 0.3, 0, -0.84, 0.22, 0.006, rot=math.radians(-21))   # cale-pieds incliné vers l'arrière
+    tube(bm, P(0, 0.03, 1.1), P(0, 1.1, 1.1), 0.045)
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=0.06, radius2=0.06, depth=0.04, matrix=Matrix.Translation(P(0, 0.5, 1.05)) @ Matrix.Rotation(math.pi / 2, 4, 'Y'))
+make('TM_SeatedRow', [(sr_pads, PAD), (sr_frame, FRAME)])
+def vhandle(bm):  # poignées parallèles écartées de 10 cm, le long de X, origine au milieu
+    for sx in (-0.05, 0.05): tube(bm, (sx, 0, -0.07), (sx, 0, 0.07), 0.016)
+    tube(bm, (-0.05, 0, 0.07), (0, 0, 0.15), 0.012); tube(bm, (0.05, 0, 0.07), (0, 0, 0.15), 0.012)
+make('TM_VHandle', [(vhandle, STEEL)])
+def dhandle(bm):  # poignée simple : manche le long de X, étrier en triangle
+    tube(bm, (-0.06, 0, 0), (0.06, 0, 0), 0.016); tube(bm, (-0.06, 0, 0), (0, 0, 0.1), 0.008); tube(bm, (0.06, 0, 0), (0, 0, 0.1), 0.008)
+make('TM_DHandle', [(dhandle, STEEL)])
+def rope_end(bm):  # bout de corde (tenu dans le poing) : manchon + bouchon
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=14, radius1=0.018, radius2=0.018, depth=0.14, matrix=Matrix.Rotation(math.pi / 2, 4, 'Y'))
+    bmesh.ops.create_uvsphere(bm, u_segments=14, v_segments=8, radius=0.03, matrix=Matrix.Translation((0.08, 0, 0)))
+make('TM_RopeEnd', [(rope_end, RUBBER)])
+
+# Barre de traction (axe à 2,08 m) et barres à dips parallèles (axe à 0,88 m) : stations fixes.
+def pu_frame(bm):
+    for sx in (-0.65, 0.65):
+        tube(bm, P(sx, 0.03, -0.3), P(sx, 2.1, -0.3), 0.045); tube(bm, P(sx, 0.03, -0.75), P(sx, 0.03, 0.3), 0.035)
+        tube(bm, P(sx, 2.1, -0.3), P(sx, 2.1, 0.02), 0.035)
+    tube(bm, P(-0.7, 2.08, 0.02), P(0.7, 2.08, 0.02), 0.016)
+make('TM_PullupBar', [(pu_frame, FRAME)])
+def dip_frame(bm):
+    for sx in (-0.29, 0.29):
+        tube(bm, P(sx, 0.88, -0.3), P(sx, 0.88, 0.4), 0.022)
+        for z in (-0.25, 0.35): tube(bm, P(sx, 0.03, z), P(sx, 0.88, z), 0.035)
+        tube(bm, P(sx, 0.03, -0.45), P(sx, 0.03, 0.45), 0.03)
+make('TM_DipStation', [(dip_frame, FRAME)])
+
+# Tapis de course : plateau, bande, montants et console devant.
+def tm_body(bm):
+    box(bm, 0.82, 1.9, 0.12, 0, -0.1, 0.08, 0.02)
+    for sx in (-0.38, 0.38): tube(bm, (sx, -1.0, 0.12), (sx, -1.05, 1.15), 0.035)
+    box(bm, 0.8, 0.3, 0.12, 0, -1.08, 1.2, 0.03)
+    for sx in (-0.38, 0.38): tube(bm, (sx, -0.95, 1.0), (sx, -0.55, 1.0), 0.02)
+def tm_belt(bm): box(bm, 0.56, 1.7, 0.012, 0, -0.1, 0.146, 0.002)
+make('TM_Treadmill', [(tm_body, FRAME), (tm_belt, RUBBER)])
+
 # Rangés côte à côte pour la vérification visuelle (l'origine de chaque objet est remise à 0 avant l'export).
 layout = {'TM_Dumbbell': (-1.2, -1.2, 0.11), 'TM_Barbell': (0, -1.4, 0.225), 'TM_Kettlebell': (1.2, -1.2, 0.27), 'TM_Bench': (-0.6, 0.4, 0), 'TM_BenchIncline': (0.8, 0.4, 0),
-          'TM_LegPress': (-2.6, 1.5, 0), 'TM_LegPressSled': (-2.6, -0.1, 1.2), 'TM_LegExt': (2.4, 1.5, 0), 'TM_LegExtArm': (2.4, 1.14, 0.58)}
+          'TM_LegPress': (-2.6, 1.5, 0), 'TM_LegPressSled': (-2.6, -0.1, 1.2), 'TM_LegExt': (2.4, 1.5, 0), 'TM_LegExtArm': (2.4, 1.14, 0.58),
+          'TM_LegCurl': (-2.6, 4.0, 0), 'TM_LegCurlArm': (-2.6, 4.15, 0.62), 'TM_CableTower': (0, 4.0, 0), 'TM_LatPulldown': (2.4, 4.0, 0), 'TM_LatBar': (2.4, 3.5, 1.6),
+          'TM_SeatedRow': (-2.6, 6.5, 0), 'TM_VHandle': (-2.6, 5.6, 0.5), 'TM_DHandle': (-1.2, 5.6, 0.5), 'TM_RopeEnd': (-1.0, 5.6, 0.5),
+          'TM_PullupBar': (0, 6.5, 0), 'TM_DipStation': (2.4, 6.5, 0), 'TM_Treadmill': (0, 9.0, 0)}
 for n, p in layout.items(): col.objects[n].location = p
 
 def export(path):
