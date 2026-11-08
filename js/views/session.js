@@ -5,7 +5,6 @@ import * as W from '../workout.js';
 import { state, save, today, uid, latestWeight } from '../store.js';
 import { findExercise } from '../exercises.js';
 import { esc, fmt, toast, sheet, group } from '../ui.js';
-import { shape } from '../theme.js';
 import { icon } from '../icons.js';
 import { t, register, locale } from '../i18n.js';
 import { trainingNote } from '../cycle.js';
@@ -20,7 +19,9 @@ register({
     'Aucune série validée : terminer sans enregistrer la séance ?': 'No set logged: finish without saving the workout?', 'Abandonner sans enregistrer': 'Discard without saving',
     'Abandonner': 'Discard', 'Terminer la séance': 'Finish workout', 'Temps de repos': 'Rest time', 'Aucun': 'None',
     'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Workout started {h} h ago. Did you forget it?', 'Continuer': 'Continue',
-    'Séance enregistrée': 'Workout saved', 'Séance enregistrée · prochaine : {n}, {d}': 'Workout saved · next: {n}, {d}' },
+    'Séance enregistrée': 'Workout saved', 'Séance enregistrée · prochaine : {n}, {d}': 'Workout saved · next: {n}, {d}',
+    'Revenir au Journal': 'Back to Journal', '{n} séries faites': '{n} sets done', 'précédent {kg} kg': 'last {kg} kg', 'Repos': 'Rest', 'Nouveau record · {kg} kg × {r}': 'New record · {kg} kg × {r}',
+    'Repos · série {n} à {kg} kg': 'Rest · set {n} at {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets' },
   nl: { 'Cycle : séance plus douce conseillée. Tu peux retirer une série par exercice.': 'Cyclus: een rustigere training wordt aangeraden. Je kunt één set per oefening schrappen.',
     'Retirer une série par exercice': 'Eén set per oefening schrappen', 'Cycle : écoute tes sensations aujourd\'hui, adapte si besoin.': 'Cyclus: luister vandaag naar je lichaam en pas aan indien nodig.',
     'Voir mon cycle': 'Mijn cyclus bekijken', 'Séries retirées': 'Sets geschrapt',
@@ -28,7 +29,9 @@ register({
     'Aucune série validée : terminer sans enregistrer la séance ?': 'Geen set afgevinkt: training beëindigen zonder op te slaan?', 'Abandonner sans enregistrer': 'Verwerpen zonder op te slaan',
     'Abandonner': 'Afbreken', 'Terminer la séance': 'Training afronden', 'Temps de repos': 'Rusttijd', 'Aucun': 'Geen',
     'Séance commencée il y a {h} h. Tu l\'as oubliée ?': 'Training {h} u geleden gestart. Vergeten?', 'Continuer': 'Doorgaan',
-    'Séance enregistrée': 'Training opgeslagen', 'Séance enregistrée · prochaine : {n}, {d}': 'Training opgeslagen · volgende: {n}, {d}' },
+    'Séance enregistrée': 'Training opgeslagen', 'Séance enregistrée · prochaine : {n}, {d}': 'Training opgeslagen · volgende: {n}, {d}',
+    'Revenir au Journal': 'Terug naar Dagboek', '{n} séries faites': '{n} sets gedaan', 'précédent {kg} kg': 'vorige {kg} kg', 'Repos': 'Rust', 'Nouveau record · {kg} kg × {r}': 'Nieuw record · {kg} kg × {r}',
+    'Repos · série {n} à {kg} kg': 'Rust · set {n} met {kg} kg', '1 record': '1 record', '{n} records': '{n} records', '{n} séries': '{n} sets' },
 });
 
 const ACTIVE_KEY = 'coach.active';
@@ -96,13 +99,26 @@ function tick() {
     rest.hidden = left <= 0;
     if (left > 0) {
       rest.querySelector('.rest-t').textContent = mmss(left);
-      rest.querySelector('.rest-bar').style.width = `${(left / restTotal) * 100}%`;
+      const arc = rest.querySelector('.rest-arc');
+      if (arc) arc.setAttribute('stroke-dasharray', `${(RC * left / Math.max(1, restTotal)).toFixed(1)} ${RC.toFixed(1)}`);
     }
   }
   if (restEnd && left <= 0) { restEnd = 0; navigator.vibrate?.([200, 100, 200]); toast(t('Repos terminé')); }
 }
 
-function startRest(sec) { restTotal = sec; restEnd = Date.now() + sec * 1000; tick(); }
+const RC = 2 * Math.PI * 20;
+let restInfo = '';
+function startRest(sec, info = '') { restTotal = sec; restInfo = info; restEnd = Date.now() + sec * 1000; const r = document.querySelector('.rest small'); if (r) r.textContent = info; tick(); }
+
+// Pilule « Nouveau record » (canevas seance-4) : orange, en bas, 3 s.
+function recordPill(text) {
+  document.querySelector('.se-pr')?.remove();
+  const el = document.createElement('div');
+  el.className = 'se-pr'; el.setAttribute('role', 'status');
+  el.innerHTML = `${icon('trophy')}<span>${esc(text)}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
 
 export function renderSession(root, go, back) {
   if (!Object.keys(prevRecords).length) loadRecords();
@@ -112,31 +128,32 @@ export function renderSession(root, go, back) {
 
   const total = active.exercises.reduce((n, ex) => n + ex.sets.length, 0);
   const pct = total ? Math.round((sets / total) * 100) : 0;
+  // Exercice ouvert : celui touché, sinon le premier qui n'est pas terminé (les autres sont repliés).
+  const firstOpen = active.exercises.findIndex((ex) => !ex.sets.length || ex.sets.some((x) => !x.done));
+  if (active.open == null || !active.exercises[active.open]) active.open = firstOpen < 0 ? 0 : firstOpen;
   root.innerHTML = `
-    <header class="se-top"><button class="btn plain" data-a="discard">${t('Abandonner')}</button>
-      <button class="btn filled se-finish" data-a="finish">${t('Terminer')}</button></header>
-    <section class="tm-hero se-hero">${shape({ cls: 'se-shape' })}
-      <p class="se-kicker">${t('Séance en cours')}</p>
-      <h1 class="se-title">${esc(t(active.name))}</h1>
-      <div class="se-big num" data-live="dur">${hms(Date.now() - active.start)}</div>
-      <div class="se-stats">
+    <section class="v2-hero se-hero2"><div class="v2-blobs" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+      <div class="v2-top se-top2"><button class="v2-cb glass" data-a="leave" aria-label="${t('Revenir au Journal')}">${icon('chevronLeft')}</button>
+        <button class="se-term" data-a="finish">${t('Terminer')}</button></div>
+      <p class="se-k">${esc(t(active.name))} · ${t('Séance en cours')}</p>
+      <div class="se-nums"><div><b class="num" data-live="dur">${hms(Date.now() - active.start)}</b><small>${t('Durée')}</small></div>
         <div><b class="num">${fmt(vol)}</b><small>${t('kg soulevés')}</small></div>
-        <div><b class="num">${sets}<span>/${total}</span></b><small>${t('séries faites')}</small></div>
-        <div><b class="num">${active.exercises.length}</b><small>${t('Exercices')}</small></div></div>
+        <div><b class="num">${sets}</b><small>${t('séries faites')}</small></div></div>
       <div class="se-prog" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${t('séries faites')}"><i style="width:${pct}%"></i></div>
     </section>
+    <div class="v2-leaf se-leaf">
     ${active.deload ? `<p class="footnote tint se-note">${t('Semaine de décharge : volume réduit (~60 %).')}</p>` : ''}
     ${Date.now() - active.start > 12 * 3600000 && !active.staleOk ? `<div class="cy-banner" role="note"><span>${t('Séance commencée il y a {h} h. Tu l\'as oubliée ?', { h: Math.floor((Date.now() - active.start) / 3600000) })}</span>
       <div class="row"><button class="btn pill" data-a="discard">${t('Abandonner')}</button><button class="link" data-a="stale-ok">${t('Continuer')}</button></div></div>` : ''}
     ${cycleBanner()}
-    <div class="rest" hidden role="timer"><div class="rest-bar"></div>
-      <button class="icon-btn" data-a="rest-" aria-label="−15 s">−15</button>
-      <span>${icon('timer')}<span class="rest-t num"></span></span>
-      <button class="icon-btn" data-a="rest+" aria-label="+15 s">+15</button>
-      <button class="btn plain" data-a="skip">${t('Passer')}</button></div>
-    ${active.exercises.map((ex, i) => exerciseCard(ex, i, ssIndex)).join('')}
+    ${active.exercises.map((ex, i) => (i === active.open ? exerciseCard(ex, i, ssIndex) : miniCard(ex, i, ssIndex))).join('')}
     <button class="btn large wide se-add" data-a="add-ex">${icon('plus')} ${t('Ajouter un exercice')}</button>
-    <p class="group-foot center">${t('Touche le numéro d\'une série pour changer son type (É = échauffement, D = drop set, F = échec). Touche « Précédent » pour recopier.')}</p>`;
+    <p class="group-foot center">${t('Touche le numéro d\'une série pour changer son type (É = échauffement, D = drop set, F = échec). Touche « Précédent » pour recopier.')}</p>
+    </div>
+    <div class="rest se-rest" hidden role="timer"><button class="se-rring" data-a="skip" aria-label="${t('Passer')}"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="5"/>
+        <circle class="rest-arc" cx="24" cy="24" r="20" fill="none" stroke="var(--a-warm)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 24 24)"/></svg></button>
+      <div class="grow"><b class="rest-t num"></b><small>${esc(restInfo)}</small></div>
+      <button class="se-rbtn" data-a="rest-" aria-label="−15 s">−15</button><button class="se-rbtn" data-a="rest+" aria-label="+15 s">+15</button></div>`;
 
   if (!ticker) ticker = setInterval(tick, 1000);
   tick();
@@ -172,6 +189,18 @@ function cycleBanner() {
     <button class="link" data-a="cy-open">${t('Voir mon cycle')}</button></div></div>`;
 }
 
+// Exercice replié (canevas seance-2) : pictogramme, nom, séries prévues et charge précédente.
+function miniCard(ex, i, ssIndex) {
+  const prev = W.previousSets(state.workouts, ex.name).filter((x) => x.type !== 'warmup');
+  const color = ex.supersetId ? SS_COLORS[ssIndex[ex.supersetId] % SS_COLORS.length] : null;
+  const nDone = ex.sets.filter((x) => x.done).length, complete = ex.sets.length > 0 && nDone === ex.sets.length;
+  const reps = ex.sets.find((x) => x.type !== 'warmup')?.reps ?? ex.repMin;
+  return `<button class="v2-card v2-row se-mini ${complete ? 'complete' : ''}" data-a="open" data-i="${i}" ${color ? `style="--ss:${color}"` : ''}>
+    <span class="v2-av">${icon(complete ? 'check' : 'training')}</span><span class="grow"><span class="v2-lb" style="display:block">${esc(t(ex.name))}</span>
+    <span class="v2-sm num">${complete ? t('{n} séries faites', { n: nDone }) : `${ex.sets.length} × ${reps}${prev[0]?.kg ? ' · ' + t('précédent {kg} kg', { kg: fmt(prev[0].kg, prev[0].kg % 1 ? 1 : 0) }) : ''}`}</span></span>
+    ${icon('chevronRight', { cls: 'v2-chev' })}</button>`;
+}
+
 function exerciseCard(ex, i, ssIndex) {
   const prev = W.previousSets(state.workouts, ex.name);
   const cols = W.EX_TYPES[ex.type]?.cols || ['kg', 'reps'];
@@ -180,39 +209,32 @@ function exerciseCard(ex, i, ssIndex) {
   const rir = !!state.settings.showRir;
   let normalN = 0;
   const color = ex.supersetId ? SS_COLORS[ssIndex[ex.supersetId] % SS_COLORS.length] : null;
-  const nDone = ex.sets.filter((x) => x.done).length, complete = ex.sets.length > 0 && nDone === ex.sets.length;
-  return `<section class="group ex-card se-ex ${complete ? 'complete' : ''}" ${color ? `style="--ss:${color}"` : ''}>
-    <div class="cells ${color ? 'superset' : ''}">
-      <div class="ex-head">
-        <span class="se-num" aria-hidden="true">${complete ? icon('check') : i + 1}</span>
-        <button class="ex-name" data-a="info" data-i="${i}"><span class="headline">${esc(t(ex.name))}</span>
-          <span class="footnote secondary">${esc(ex.repMin)}–${esc(ex.repMax)} ${t('reps')} · ${esc(t(ex.muscle))}${color ? ` · <span style="color:${color}">${t('Superset')}</span>` : ''}</span></button>
-        <span class="se-count num">${nDone}/${ex.sets.length}</span>
-        <button class="icon-btn" data-a="menu" data-i="${i}" aria-label="${t('Options')}">${icon('more')}</button>
-      </div>
+  return `<section class="v2-card se-card ${color ? 'superset' : ''}" ${color ? `style="--ss:${color}"` : ''}>
+      <div class="se-ch"><div class="grow"><button class="ex-name" data-a="info" data-i="${i}">${esc(t(ex.name))}</button>
+          <span class="v2-sm"><button class="se-restlink" data-a="rest-cfg" data-i="${i}">${t('Repos')} ${ex.rest ? mmss(ex.rest) : t('Aucun')}</button> · ${esc(ex.repMin)}–${esc(ex.repMax)} ${t('reps')} · ${esc(t(ex.muscle))}${color ? ` · <span style="color:${color}">${t('Superset')}</span>` : ''}</span></div>
+        <button class="v2-cb" data-a="menu" data-i="${i}" aria-label="${t('Options')}">${icon('more')}</button></div>
       ${ex.why ? `<p class="ex-why">${icon('chart')} ${esc(t(ex.why, ex.whyVars))}</p>` : ''}
       ${ex.note || ex.showNote ? `<textarea class="ex-note input" rows="1" data-note="${i}" placeholder="${t('Ajouter une note…')}" aria-label="${t('Note')}">${esc(ex.note || '')}</textarea>` : ''}
-      <div class="sets s2 ${rir ? 'with-rir' : ''}">
-        <div class="set head"><span>${t('Série')}</span><span>${t('Précédent')}</span>${hasKg ? `<span>${ex.type === 'assisted_bw' ? t('Aide') : ex.type === 'weighted_bw' ? '+kg' : 'kg'}</span>` : '<span></span>'}<span>${isDur ? 's' : t('reps')}</span>${rir ? `<span>${t('RIR')}</span>` : ''}<span></span></div>
+      <div class="se-grid ${rir ? 'rir' : ''}">
+        <div class="se-row head"><span>${t('Série')}</span><span>${t('Précédent')}</span>${hasKg ? `<span>${ex.type === 'assisted_bw' ? t('Aide') : ex.type === 'weighted_bw' ? '+kg' : 'kg'}</span>` : '<span></span>'}<span>${isDur ? 's' : t('reps')}</span>${rir ? `<span>${t('RIR')}</span>` : ''}<span></span></div>
         ${ex.sets.map((s, j) => {
           const label = W.SET_LABEL[s.type] || String(++normalN);
           const p = prevFor(prev, ex.sets, j);
           const prs = s.done ? W.setPRs(pr, ex, s, bw()) : [];
-          const prevTxt = p ? (isDur ? `${p.reps} s` : hasKg ? `${fmt(p.kg, p.kg % 1 ? 1 : 0)}×${p.reps}` : `×${p.reps}`) : '—';
-          return `<div class="set ${s.done ? 'done' : ''} t-${esc(s.type)}">
+          const prevTxt = p ? (isDur ? `${p.reps} s` : hasKg ? `${fmt(p.kg, p.kg % 1 ? 1 : 0)} × ${p.reps}` : `× ${p.reps}`) : '—';
+          return `<div class="se-row ${s.done ? 'done' : ''} t-${esc(s.type)}">
             <button class="set-type" data-a="type" data-i="${i}" data-j="${j}" aria-label="${t('Type de série')}">${label}</button>
             <button class="prev" data-a="prev" data-i="${i}" data-j="${j}" ${p ? '' : 'disabled'}>${prevTxt}</button>
             ${hasKg ? `<input type="number" inputmode="decimal" step="0.5" data-i="${i}" data-j="${j}" data-k="kg" value="${esc(s.kg)}" aria-label="kg">` : '<span></span>'}
             <input type="number" inputmode="numeric" data-i="${i}" data-j="${j}" data-k="reps" value="${esc(s.reps)}" aria-label="${isDur ? 's' : t('reps')}">
             ${rir ? `<input type="number" inputmode="numeric" min="0" max="5" data-i="${i}" data-j="${j}" data-k="rir" value="${esc(s.rir)}" aria-label="${t('RIR')}">` : ''}
-            <button class="check" data-a="done" data-i="${i}" data-j="${j}" aria-label="${t('Série faite')}" aria-pressed="${s.done}"><span class="ring-o">${s.done ? icon('check') : ''}</span></button>
-            ${prs.length ? `<span class="pr-badge">${icon('trophy')} PR</span>` : ''}
+            <button class="se-chk" data-a="done" data-i="${i}" data-j="${j}" aria-label="${t('Série faite')}" aria-pressed="${s.done}">${s.done ? icon('check') : ''}</button>
+            ${prs.length ? `<span class="pr-badge">${icon('trophy')}</span>` : ''}
           </div>`;
         }).join('')}
       </div>
-      <div class="row ex-actions"><button class="btn plain" data-a="add-set" data-i="${i}">${icon('plus')} ${t('Série')}</button>
-        <button class="btn plain" data-a="rest-cfg" data-i="${i}">${icon('timer')} ${mmss(ex.rest)}</button></div>
-    </div></section>`;
+      <button class="btn wide se-addset" data-a="add-set" data-i="${i}">${icon('plus')} ${t('Série')}</button>
+    </section>`;
 }
 
 function onClick(e, root, go, back) {
@@ -223,6 +245,8 @@ function onClick(e, root, go, back) {
   const keep = () => { persist(); const y = root.scrollTop; renderSession(root, go, back); root.scrollTop = y; };
 
   if (a === 'cy-open') return go('cycle');
+  if (a === 'leave') return go('today');
+  if (a === 'open') { active.open = i; return keep(); }
   if (a === 'cy-ease') { // retire la dernière série de travail non faite de chaque exercice (au moins 1 série restante)
     for (const x of active.exercises) {
       const idx = x.sets.map((q, k) => (q.type !== 'warmup' && !q.done ? k : -1)).filter((k) => k >= 0);
@@ -251,11 +275,14 @@ function onClick(e, root, go, back) {
     keep();
     if (s.done) {
       const prs = W.setPRs(prevRecords[ex.name] || {}, ex, s, bw());
-      if (prs.length) { toast(t('Nouveau record !')); navigator.vibrate?.([30, 50, 30]); }
+      if (prs.length) { recordPill(t('Nouveau record · {kg} kg × {r}', { kg: fmt(s.kg, s.kg % 1 ? 1 : 0), r: s.reps })); navigator.vibrate?.([30, 50, 30]); }
       // Pas de repos avant un drop set ; en superset, repos seulement après le dernier exercice du groupe.
       const next = ex.sets[j + 1];
       const lastOfSuperset = !ex.supersetId || active.exercises[i + 1]?.supersetId !== ex.supersetId;
-      if (next?.type !== 'drop' && lastOfSuperset && ex.rest > 0) startRest(ex.rest);
+      const nx = next || null;
+      if (next?.type !== 'drop' && lastOfSuperset && ex.rest > 0) startRest(ex.rest, nx ? t('Repos · série {n} à {kg} kg', { n: j + 2, kg: fmt(nx.kg, nx.kg % 1 ? 1 : 0) }) : t('Repos'));
+      // Toutes les séries faites : l'exercice suivant s'ouvre.
+      if (ex.sets.every((x) => x.done)) { const k = active.exercises.findIndex((x, n) => n > i && x.sets.some((q) => !q.done)); if (k >= 0) { active.open = k; keep(); } }
     }
     return;
   }
@@ -363,15 +390,22 @@ function finish(root, go, back) {
   const routine = state.routines.find((r) => r.id === active.routineId);
   const differs = W.routineDiffers(routine, active);
   const PRL = { maxKg: 'Charge max', e1rm: '1RM estimé', bestSet: 'Meilleure série', maxReps: 'Reps max' };
-  const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Terminer la séance')}</h3></div>
-    <div class="cells stats" style="margin-bottom:1.25rem"><div><small>${t('Durée')}</small><b>${minutes} <span class="u">min</span></b></div>
-      <div><small>${t('Volume')}</small><b>${fmt(vol)} <span class="u">kg</span></b></div><div><small>${t('Séries')}</small><b>${sets}</b></div></div>
-    <p class="footnote secondary center" style="margin:-.5rem 0 1rem">${t('Séance n° {n}', { n: state.workouts.length + 1 })}</p>
-    ${prs.length ? group(t('Records'), `<ul class="cells">${prs.map((p) => `<li class="cell with-icon"><span class="badge bg-orange">${icon('trophy')}</span><div class="grow"><span class="t">${esc(t(p.name))}</span><span class="s">${p.kinds.map((k) => t(PRL[k])).join(' · ')}</span></div></li>`).join('')}</ul>`) : ''}
-    ${group('', `<div class="cells"><label class="cell field"><span>${t('Nom')}</span><input name="wname" value="${esc(t(active.name))}"></label>
-      ${differs ? `<div class="cell toggle-row"><span class="grow subhead">${t('Mettre à jour la routine avec cette séance')}</span><label class="switch"><input type="checkbox" name="upd" checked><span></span></label></div>` : ''}</div>`)}
-    <button class="btn filled large" data-a="save">${t('Enregistrer la séance')}</button>
-    <div style="margin-top:1rem">${group('', `<div class="cells"><div class="cell action destructive" data-a="drop" role="button">${t('Abandonner sans enregistrer')}</div></div>`)}</div>`);
+  const best = (name) => { const ex = active.exercises.find((x) => x.name === name); const d = ex?.sets.filter((x) => x.done) || [];
+    const top = d.reduce((m, x) => ((+x.kg || 0) > (+m?.kg || 0) ? x : m), d[0]); return top ? `${fmt(top.kg, top.kg % 1 ? 1 : 0)} kg × ${top.reps}` : ''; };
+  const now = new Date();
+  const s = sheet(`<div class="fs-bar"><span class="fs-bar-t">${t('Terminer la séance')}</span></div>
+    <input class="fs-name" name="wname" value="${esc(t(active.name))}" aria-label="${t('Nom')}">
+    <p class="v2-sm fs-date">${now.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' })} · ${now.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })} · ${t('Séance n° {n}', { n: state.workouts.length + 1 })}</p>
+    <div class="wd-stats"><div class="v2-card"><b class="v2-num">${minutes} min</b><small>${t('Durée')}</small></div>
+      <div class="v2-card"><b class="v2-num">${fmt(vol)}</b><small>${t('kg soulevés')}</small></div><div class="v2-card"><b class="v2-num">${sets}</b><small>${t('séries')}</small></div></div>
+    ${prs.length ? `<div class="fs-pr"><span class="fs-pr-ic">${icon('trophy')}</span><div><b>${t(prs.length === 1 ? '1 record' : '{n} records', { n: prs.length })}</b>
+      ${prs.map((p) => `<span class="v2-sm" style="display:block">${esc(t(p.name))} ${best(p.name)} · ${p.kinds.map((k) => t(PRL[k])).join(' · ')}</span>`).join('')}</div></div>` : ''}
+    <div class="v2-card wd-list">${active.exercises.filter((ex) => ex.sets.some((x) => x.done)).map((ex) => { const d = ex.sets.filter((x) => x.done);
+      return `<div class="v2-li fs-ex"><span class="fs-ok">${icon('check')}</span><span class="grow"><span class="v2-lb" style="display:block">${esc(t(ex.name))}</span>
+        <span class="v2-sm num">${t('{n} séries', { n: d.length })} · ${fmt(W.workoutVolume({ exercises: [{ ...ex, sets: d }] }, bw()))} kg</span></span></div>`; }).join('')}</div>
+    ${differs ? `<div class="v2-card fs-upd"><span class="grow">${t('Mettre à jour la routine avec cette séance')}</span><label class="switch"><input type="checkbox" name="upd" checked><span></span></label></div>` : ''}
+    <button class="btn filled large wide v2-go" data-a="save">${t('Enregistrer la séance')}</button>
+    <button class="btn plain wide fs-drop" data-a="drop">${t('Abandonner')}</button>`);
   // On doit toujours pouvoir sortir sans enregistrer (la croix, elle, ramène à la séance en cours).
   s.querySelector('[data-a=drop]').onclick = () => {
     if (!confirm(t('Abandonner la séance ?'))) return;
