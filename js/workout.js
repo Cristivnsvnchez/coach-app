@@ -182,3 +182,20 @@ export function toggleStopwatch(sw, i, j, now) {
   if (sw && sw.i === i && sw.j === j) return { sw: null, fill: { i, j, sec: Math.max(1, Math.round((now - sw.start) / 1000)) } };
   return { sw: { i, j, start: now }, fill: null }; // autre série : l'ancien chrono est abandonné
 }
+
+// Records par nombre de reps : pour chaque nombre de reps fait (1 à 20), la charge la plus lourde et sa date.
+// Séries validées hors échauffement ; exercices au poids du corps pur ou assistés exclus (pas de charge à battre).
+export function repRecords(workouts, name, bw = 0) {
+  const best = new Map();
+  for (const w of workouts) {
+    const ex = w.exercises.find((e) => e.name === name);
+    if (!ex || ex.type === 'bodyweight' || ex.type === 'assisted_bw' || ex.type === 'duration') continue;
+    for (const s of ex.sets.filter(counts)) {
+      const reps = Math.round(Number(s.reps) || 0), kg = effectiveLoad(ex, s, bw);
+      if (reps < 1 || reps > 20 || kg <= 0) continue;
+      const cur = best.get(reps);
+      if (!cur || kg > cur.kg) best.set(reps, { reps, kg, date: w.date }); // à égalité, la première fois compte
+    }
+  }
+  return [...best.values()].sort((a, b) => a.reps - b.reps);
+}

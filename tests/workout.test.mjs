@@ -83,3 +83,17 @@ test('chrono de série : démarre, s\'arrête sur la même série, calculé depu
   assert.deepEqual(c, { sw: { i: 0, j: 2, start: t0 + 5000 }, fill: null });
   assert.equal(W.toggleStopwatch(a.sw, 0, 1, t0 + 100).fill.sec, 1); // jamais 0 s
 });
+
+test('records par nombre de reps : charge la plus lourde par nombre de reps, avec sa date', () => {
+  const hist = [
+    wk('2026-01-01', [set(60, 10, 'warmup'), set(100, 5), set(90, 8)]),
+    wk('2026-01-08', [set(105, 5), set(90, 8), set(80, 10), set(110, 5, 'normal', false)]),
+  ];
+  assert.deepEqual(W.repRecords(hist, 'Squat'), [
+    { reps: 5, kg: 105, date: '2026-01-08' },
+    { reps: 8, kg: 90, date: '2026-01-01' }, // égalité : la première fois
+    { reps: 10, kg: 80, date: '2026-01-08' }, // échauffement à 10 reps ignoré
+  ]);
+  assert.deepEqual(W.repRecords([wk('2026-01-01', [set(0, 12)], { type: 'bodyweight' })], 'Squat'), []);
+  assert.deepEqual(W.repRecords([wk('2026-01-01', [set(10, 6)], { type: 'weighted_bw' })], 'Squat', 80), [{ reps: 6, kg: 90, date: '2026-01-01' }]);
+});

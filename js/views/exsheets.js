@@ -8,7 +8,8 @@ import { icon } from '../icons.js';
 import { t, register } from '../i18n.js';
 import { getTechnique } from '../technique.js';
 
-register({ en: { 'Technique': 'Technique' }, nl: { 'Technique': 'Techniek' } });
+register({ en: { 'Technique': 'Technique', 'Records par nombre de reps': 'Records by rep count', '{n} rep': '{n} rep', '{n} reps': '{n} reps', 'La charge la plus lourde soulevée pour chaque nombre de reps.': 'The heaviest load lifted for each rep count.' },
+  nl: { 'Technique': 'Techniek', 'Records par nombre de reps': 'Records per aantal herhalingen', '{n} rep': '{n} herhaling', '{n} reps': '{n} herhalingen', 'La charge la plus lourde soulevée pour chaque nombre de reps.': 'Het zwaarste gewicht per aantal herhalingen.' } });
 
 const TYPE_LABEL = { weight_reps: 'Charge + reps', bodyweight: 'Poids du corps', weighted_bw: 'Poids du corps lesté', assisted_bw: 'Poids du corps assisté', duration: 'Durée' };
 
@@ -68,6 +69,7 @@ export function openExercise(name) {
   const draw = () => {
     const info = findExercise(name, state.customExercises) || {};
     const r = W.exerciseRecords(state.workouts, name, bw);
+    const byReps = W.repRecords(state.workouts, name, bw);
     const since = range ? Date.now() - range * 86400000 : 0;
     const pts = W.exerciseSeries(state.workouts, name, metric, bw).filter((p) => parseDate(p.date) >= since);
     const hist = state.workouts.filter((w) => w.exercises.some((e) => e.name === name)).slice(-15).reverse();
@@ -85,6 +87,7 @@ export function openExercise(name) {
         <li class="cell"><span class="grow">${t('Meilleure série (kg × reps)')}</span><span class="val">${fmt(r.bestSet)} kg</span></li>
         <li class="cell"><span class="grow">${t('Meilleur volume en une séance')}</span><span class="val">${fmt(r.bestSession)} kg</span></li>
         <li class="cell"><span class="grow">${t('Reps max')}</span><span class="val">${fmt(r.maxReps)}</span></li></ul>`, t('Hors séries d\'échauffement. 1RM estimé : formule d\'Epley.'))}
+      ${byReps.length ? group(t('Records par nombre de reps'), `<ul class="cells">${byReps.map((x) => `<li class="cell"><div class="grow"><span class="t">${t(x.reps === 1 ? '{n} rep' : '{n} reps', { n: x.reps })}</span><span class="s">${fmtDate(x.date, { day: 'numeric', month: 'short', year: '2-digit' })}</span></div><span class="val num">${fmt(x.kg, x.kg % 1 ? 1 : 0)} kg</span></li>`).join('')}</ul>`, t('La charge la plus lourde soulevée pour chaque nombre de reps.')) : ''}
       ${group(t('Historique'), `<ul class="cells">${hist.map((w) => {
         const ex = w.exercises.find((e) => e.name === name);
         return `<li class="cell"><div class="grow"><span class="t">${fmtDate(w.date, { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}</span>
