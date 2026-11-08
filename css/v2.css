@@ -558,3 +558,15 @@ html.tm .pf-app .pal-srf.on { border-color: var(--a-deep); }
 html.tm .pf-app .pal-srf-thumb { width: 100%; height: 64px; border-radius: 16px; }
 html.tm .pf-app .pal-srf b { display: block; font-size: 16px; }
 html.tm .pf-app .pal-srf small { font-size: 13px; color: var(--a-ink2); }
+
+/* Sombre : le bleu profond sert de texte/icône → version claire lisible sur fond sombre */
+@media (prefers-color-scheme: dark) {
+  .tr-act .v2-lb, .tr-act .v2-av, .tr-day span.plan, .tr-day span.today, .wd-edit, .we-addex, .wt-next .v2-av, .cy-av-t, .pl-chips .pl-plus, html.tm .pl-chips .pl-plus,
+  .af-recent .chip:first-child, .rc .rc-head svg.ic, .pl-shopcard .v2-av, html.tm .tabbar button.on { color: #9db8ff !important; }
+  .tr-day span.today { box-shadow: inset 0 0 0 2px #9db8ff; }
+  .tr-day span.done.today { color: #fff !important; box-shadow: none; }
+  .se-term, .tr-go, .wg-win-btn { color: var(--a-deep) !important; }
+  .se-row.done { background: color-mix(in srgb, var(--a-food) 16%, transparent); }
+  .lrn-card .lrn-lvl { color: #cfdcff; }
+}
+@media (prefers-color-scheme: dark) { .v2-cbs .v2-cb:not(.glass), .v2-cb:not(.glass) { background: rgba(255, 255, 255, .1); color: var(--a-ink); } }
