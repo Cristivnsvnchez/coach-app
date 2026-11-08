@@ -133,6 +133,10 @@ function cleanFields(out) {
   const int = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Math.round(Number(v)) || d));
   out.cycle.cycleLen = int(out.cycle.cycleLen, 18, 45, 28);
   out.cycle.periodLen = int(out.cycle.periodLen, 1, 12, 5);
+  // Dates du cycle : seulement des 'YYYY-MM-DD' (une date piégée passerait les comparaisons de chaînes).
+  const DAY = /^\d{4}-\d{2}-\d{2}$/;
+  out.cycle.periods = out.cycle.periods.filter((p) => p && typeof p === 'object' && DAY.test(p.start) && (p.end == null || p.end === '' || DAY.test(p.end)));
+  out.cycle.logs = Object.fromEntries(Object.entries(out.cycle.logs).filter(([d]) => DAY.test(d)));
   const meals = (a) => objs(a).map((m) => fix(m, ['foodId', 'id'], MACROS));
   out.routines = objs(out.routines).map((r) => { fix(r, ['id'], []); r.exercises = objs(r.exercises).map(fixExercise); return r; });
   out.workouts = objs(out.workouts).map((w) => { fix(w, ['id', 'routineId'], ['minutes']); w.exercises = objs(w.exercises).map(fixExercise); return w; });

@@ -46,6 +46,15 @@ test('import : durées du cycle entières et bornées (18–45 j, 1–12 j)', as
   assert.deepEqual(await len('29.6', 4), [30, 4]);
 });
 
+test('import : périodes et notes du cycle limitées aux dates AAAA-MM-JJ', async () => {
+  store.replace({ profile: {}, logs: {}, cycle: { enabled: true,
+    periods: [{ start: X }, { start: '2026-10-01', end: X }, { start: '2026-10-01', end: '2026-10-05' }, { start: '2026-11-01' }, null],
+    logs: { [X]: { flow: 'light' }, '2026-11-02': { flow: 'light' } } } });
+  await flushAll();
+  assert.deepEqual(store.state.cycle.periods, [{ start: '2026-10-01', end: '2026-10-05' }, { start: '2026-11-01' }]);
+  assert.deepEqual(Object.keys(store.state.cycle.logs), ['2026-11-02']);
+});
+
 test('import sain : les valeurs légitimes restent identiques', async () => {
   const routine = { id: 'r0-ab1c2', name: 'Push <A>', folder: 'Mes routines', exercises: [
     { name: 'Développé couché', muscle: 'Pectoraux', type: 'weight_reps', sets: 3, repMin: 8, repMax: 12, rest: 90, upper: true, supersetId: null }] };
