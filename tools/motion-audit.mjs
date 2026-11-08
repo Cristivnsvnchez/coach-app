@@ -35,7 +35,7 @@ const parse = (f) => {
   return cache.get(f);
 };
 
-const N = 60; // instants échantillonnés par clip
+const N = +(process.env.AUDIT_N || 60); // instants échantillonnés par clip (AUDIT_N=240 : contrôle fin entre les images)
 const v = () => new THREE.Vector3();
 
 

@@ -102,7 +102,7 @@ const curlKeys = (top, elbowFront = 0.07, extra = {}) => [
   pose(STAND, { neck: 0, arm: [0.2, -1, elbowFront], fore: top, grip: 1 }, extra)];
 // Curl alterné, paume vers le haut (supination) : un bras puis l'autre.
 const CURL_UP = { arm: [0.2, -1, 0.08], fore: [0.06, 0.8, 0.6], palm: [-0.25, 0.75, -0.65], grip: 1 };
-const altCurl = { gear: { hold: 'dumbbells' }, beats: [[1, 0.9], [1, 0.2], [0, 1.3], [0, 0.2], [2, 0.9], [2, 0.2], [0, 1.3], [0, 0.2]], keys: [
+const altCurl = { gear: { hold: 'dumbbells' }, beats: [[1, 1.0], [1, 0.2], [0, 1.3], [0, 0.2], [2, 1.0], [2, 0.2], [0, 1.3], [0, 0.2]], keys: [
   pose(STAND, { neck: 0, ...DB_DOWN, palm: [-1, 0, 0.1] }), // paumes face aux cuisses en bas, supination en montant
   pose(STAND, { neck: 0, L: { ...DB_DOWN, palm: [-1, 0, 0.1] }, R: CURL_UP }),
   pose(STAND, { neck: 0, R: { ...DB_DOWN, palm: [-1, 0, 0.1] }, L: CURL_UP })] };
