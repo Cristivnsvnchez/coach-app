@@ -510,3 +510,33 @@ html.tm .pl-row .pl-check { width: 26px; height: 26px; }
 .pl-shop-actions { display: grid; gap: 8px; margin-top: 14px; }
 html.tm .pl-chips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
 html.tm .pl-chips .chip { padding: 0 12px; }
+
+/* ----- Cycle (canevas cycle-1 à 4) ----- */
+.cy-v2 { padding-bottom: 64px; }
+.cy-v2 .v2-top { margin-bottom: 14px; }
+.cy-v2-row { display: flex; align-items: center; gap: 12px; }
+.cy-v2-k { margin: 0; font-size: 13px; font-weight: 500; opacity: .9; }
+.cy-v2-k::first-letter { text-transform: uppercase; }
+.cy-v2-t { margin: 4px 0 2px; font-family: var(--display); font-size: 38px; font-weight: 600; letter-spacing: -.04em; line-height: 1; }
+.cy-v2-s { margin: 0; font-size: 15px; opacity: .92; }
+.cy-ring span { display: grid; place-content: center; text-align: center; line-height: 1.05; }
+.cy-ring b { font-family: var(--display); font-size: 26px; font-weight: 600; letter-spacing: -.03em; }
+.cy-ring small { font-size: 11px; opacity: .85; }
+.cy-leaf { padding-bottom: calc(var(--tabbar-h) + 2rem); }
+.cy-fx2 { align-items: flex-start; }
+.cy-fx2 p { margin: 4px 0 0; color: var(--a-ink2); }
+.cy-av-t { background: var(--a-tint); color: var(--a-deep); }
+.cy-av-w { background: var(--a-water-bg); color: var(--a-water); }
+.cy-disc { align-items: flex-start; gap: 10px; color: var(--a-ink2); margin: 0 4px; }
+.cy-disc svg.ic { width: 18px; height: 18px; flex: none; }
+html.tm .cy-leaf .cy-card { background: var(--a-card); border-radius: 24px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); border: 0; }
+html.tm .cy-leaf .cy-month { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.03em; text-transform: capitalize; }
+html.tm .cy-leaf .cy-day.k-period:not(.pred) { background: var(--a-cycle); color: #fff; }
+html.tm .cy-leaf .cy-day.k-fertile { background: var(--a-fert-bg); color: var(--a-fert); }
+html.tm .cy-leaf .cy-day.k-pms { background: var(--a-warm-bg); color: var(--a-spm); }
+html.tm .cy-leaf .cy-day.today { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--a-fert); }
+html.tm .cy-leaf .cy-day.k-period.pred { box-shadow: inset 0 0 0 1.5px var(--a-cycle); background: none; color: var(--a-cycle); border-style: dashed; }
+html.tm .cy-leaf .cy-day.pred:not(.k-period) { box-shadow: none; border: 0; outline: 0; }
+html.tm .cy-leaf .cy-day.pred.today:not(.k-period) { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--a-fert); }
+html.tm .cy-leaf .cy-day.k-period.pred { box-shadow: none; border: 1.5px dashed var(--a-cycle); }
+html.tm .cy-leaf .cy-tiles > div { background: var(--a-card); border-radius: 24px; box-shadow: 0 6px 18px rgba(0, 0, 0, .05); border: 0; }

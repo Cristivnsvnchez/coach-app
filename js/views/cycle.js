@@ -9,6 +9,10 @@ import { t, register, locale } from '../i18n.js';
 
 register({
   en: {
+    'Règles': 'Period', 'Phase fertile': 'Fertile phase', 'Phase folliculaire': 'Follicular phase', 'Phase ovulatoire': 'Ovulatory phase', 'Phase lutéale': 'Luteal phase', 'Sous contraception': 'On contraception',
+    'Ovulation probable vers le {d}': 'Ovulation likely around {d}', 'J{n}': 'D{n}', 'sur {n}': 'of {n}', 'Règles ≈ {d}': 'Period ≈ {d}', 'Cycle moyen {n} j': 'Average cycle {n} d',
+    'Entraînement': 'Training', 'Poids': 'Weight', "Pas d'ajustement nécessaire : entraîne-toi selon tes sensations. (McNulty 2020)": 'No adjustment needed: train by feel. (McNulty 2020)',
+    "Pas de rétention d'eau attendue cette semaine. La tendance lisse les écarts.": 'No water retention expected this week. The trend smooths out swings.', "Noter aujourd'hui": 'Log today', 'Options': 'Options',
     'Disponible pour les utilisatrices': 'Available for female users',
     'Le suivi du cycle est réservé aux profils féminins.': 'Cycle tracking is for female profiles only.',
     'Retour': 'Back',
@@ -59,6 +63,10 @@ register({
     'Cycle ±{n} j': '±{n} d',
   },
   nl: {
+    'Règles': 'Menstruatie', 'Phase fertile': 'Vruchtbare fase', 'Phase folliculaire': 'Folliculaire fase', 'Phase ovulatoire': 'Ovulatiefase', 'Phase lutéale': 'Luteale fase', 'Sous contraception': 'Met anticonceptie',
+    'Ovulation probable vers le {d}': 'Ovulatie waarschijnlijk rond {d}', 'J{n}': 'D{n}', 'sur {n}': 'van {n}', 'Règles ≈ {d}': 'Menstruatie ≈ {d}', 'Cycle moyen {n} j': 'Gemiddelde cyclus {n} d',
+    'Entraînement': 'Training', 'Poids': 'Gewicht', "Pas d'ajustement nécessaire : entraîne-toi selon tes sensations. (McNulty 2020)": 'Geen aanpassing nodig: train op gevoel. (McNulty 2020)',
+    "Pas de rétention d'eau attendue cette semaine. La tendance lisse les écarts.": 'Geen vochtretentie verwacht deze week. De trend vlakt schommelingen af.', "Noter aujourd'hui": 'Vandaag noteren', 'Options': 'Opties',
     'Disponible pour les utilisatrices': 'Beschikbaar voor vrouwelijke gebruikers',
     'Le suivi du cycle est réservé aux profils féminins.': 'Cyclusregistratie is alleen voor vrouwelijke profielen.',
     'Retour': 'Terug',
@@ -154,13 +162,19 @@ export function render(root, go) {
   const ov = C.nextOvulation(c, td);
   const heroTitle = ph ? t(PHASE_KEY[ph.phase], { n: ph.day }) : t('Cycle');
   const until = (d) => t('dans {n} j', { n: diff(td, d) });
-  const hero = `<section class="cy-hero" aria-label="${t('Cycle')}">
-    <p class="cy-hero-k">${t('Aujourd\'hui')}</p>
-    <h2 class="cy-hero-t">${esc(heroTitle)}</h2>
-    <div class="cy-hero-rows">
-      ${ov ? `<div><small>${t('Prochaine ovulation')}</small><b>${fmtDate(ov)}</b><span>${until(ov)}</span></div>` : ''}
-      ${nextP ? `<div><small>${t('Prochaines règles')}</small><b>${fmtDate(nextP)}${sd ? ` <i>${t('Cycle ±{n} j', { n: sd })}</i>` : ''}</b><span>${until(nextP)}</span></div>` : ''}
-    </div></section>`;
+  const R = 38, CC = 2 * Math.PI * R, L = C.avgCycleLen(c);
+  const big = ph ? (ph.isPeriod ? t('Règles') : ph.fertile ? t('Phase fertile') : t({ folliculaire: 'Phase folliculaire', ovulatoire: 'Phase ovulatoire', 'lutéale': 'Phase lutéale', hormonale: 'Sous contraception' }[ph.phase] || 'Cycle')) : t('Cycle');
+  const hero = `<section class="v2-hero cy-v2" aria-label="${t('Cycle')}"><div class="v2-blobs cycle" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+    <div class="v2-top"><button class="v2-cb glass" data-a="back" aria-label="${t('Retour')}">${icon('chevronLeft')}</button>
+      <button class="v2-cb glass" data-a="off-menu" aria-label="${t('Options')}">${icon('more')}</button></div>
+    <div class="cy-v2-row"><div class="grow"><p class="cy-v2-k">${t('Cycle')} · ${esc(fmtDate(td, { weekday: 'long', day: 'numeric', month: 'short' }))}</p>
+      <h1 class="cy-v2-t">${esc(big)}</h1>
+      ${ov && !c.hormonal ? `<p class="cy-v2-s">${t('Ovulation probable vers le {d}', { d: fmtDate(ov, { day: 'numeric', month: 'short' }) })}</p>` : ph ? `<p class="cy-v2-s">${esc(heroTitle)}</p>` : ''}</div>
+      ${ph ? `<div class="v2-ring cy-ring"><svg viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="${R}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="8"/>
+        <circle cx="46" cy="46" r="${R}" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(CC * Math.min(1, ph.day / L)).toFixed(1)} ${CC.toFixed(1)}"/></svg>
+        <span><b>${t('J{n}', { n: ph.day })}</b><small>${t('sur {n}', { n: L })}</small></span></div>` : ''}</div>
+    <div class="jr-pills">${nextP ? `<span class="v2-pill">${t('Règles ≈ {d}', { d: fmtDate(nextP, { day: 'numeric', month: 'short' }) })}${sd ? ' ±' + sd + ' j' : ''}</span>` : ''}<span class="v2-pill">${t('Cycle moyen {n} j', { n: L })}</span></div>
+    </section>`;
 
   // Calendrier du mois, lundi → dimanche
   const [Y, M] = month.split('-').map(Number);
@@ -204,18 +218,18 @@ export function render(root, go) {
     wNote = wNote || C.weightNote(c, d);
     if (!tNote && i > 0) tNote = C.trainingNote(c, d) === 'listen' ? 'listen' : null;
   }
-  const effects = [wNote === 'retention' ? `<li class="cy-fx"><span class="cy-dot"></span>${t('Poids : rétention d\'eau probable (~+0,5 kg), sans lien avec la masse grasse. (Kanellakis 2023)')}</li>` : '',
-    tNote ? `<li class="cy-fx"><span class="cy-dot"></span>${t('Séance : écoute tes sensations, adapte charge et volume si besoin. (McNulty 2020)')}</li>` : ''].join('');
-  const fxHtml = `<section class="cy-card"><h3 class="cy-h">${t('Effets cette semaine')}</h3>
-    <ul class="cy-fxs">${effects || `<li class="footnote secondary">${t('Rien de particulier prévu cette semaine.')}</li>`}</ul></section>`;
+  const fxHtml = `<div class="v2-card v2-row cy-fx2"><span class="v2-av cy-av-t">${icon('training')}</span><div class="grow"><b class="v2-lb">${t('Entraînement')}</b>
+      <p class="v2-sm">${tNote ? t('Séance : écoute tes sensations, adapte charge et volume si besoin. (McNulty 2020)') : t('Pas d\'ajustement nécessaire : entraîne-toi selon tes sensations. (McNulty 2020)')}</p></div></div>
+    <div class="v2-card v2-row cy-fx2"><span class="v2-av cy-av-w">${icon('scale')}</span><div class="grow"><b class="v2-lb">${t('Poids')}</b>
+      <p class="v2-sm">${wNote === 'retention' ? t('Poids : rétention d\'eau probable (~+0,5 kg), sans lien avec la masse grasse. (Kanellakis 2023)') : t('Pas de rétention d\'eau attendue cette semaine. La tendance lisse les écarts.')}</p></div></div>`;
 
   const AL = { irregular: 'Cycles irréguliers (moins de 21 ou plus de 35 jours en moyenne) : parles-en à un professionnel de santé.', amenorrhea: 'Plus de 90 jours sans règles : consulte un professionnel de santé.' };
   const alertsHtml = C.alerts(c, td).map((a) => `<p class="cy-alert" role="alert">${t(AL[a])}</p>`).join('');
 
-  root.innerHTML = `${nav(t('Cycle'), { left: `<button class="btn plain" data-a="back">${icon('chevronLeft')} ${t('Retour')}</button>` })}
-    <div class="cy">${hero}${alertsHtml}${calendar}${tiles}${fxHtml}
-      <button class="btn filled large" data-a="log">${t('Noter mes règles')}</button>
-      <p class="group-foot center">${t('Estimation par la méthode calendrier : ce n\'est pas une contraception.')}</p>
+  root.innerHTML = `${hero}<div class="v2-leaf cy cy-leaf">${alertsHtml}${fxHtml}
+      <p class="v2-row cy-disc">${icon('info')}<span class="v2-sm">${t('Estimation par la méthode calendrier : ce n\'est pas une contraception.')}</span></p>
+      <button class="btn filled large wide v2-go" data-a="log">${t('Noter aujourd\'hui')}</button>
+      ${calendar}${tiles}
       <button class="btn plain destructive cy-off" data-a="off">${t('Désactiver le suivi')}</button></div>`;
 
   root.onclick = (e) => {
@@ -227,6 +241,7 @@ export function render(root, go) {
     if (d) return openLog(d.dataset.day, keep);
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'back') return go('today');
+    if (a === 'off-menu') return root.querySelector('.cy-off')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (a === 'log') return openLog(td, keep);
     if (a === 'off' && confirm(t('Désactiver le suivi') + ' ?')) { c.enabled = false; save(); keep(); }
   };
