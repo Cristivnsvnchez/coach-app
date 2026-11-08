@@ -208,8 +208,8 @@ export function render(root, go) {
     <div class="cy-grid" role="grid"><div class="cy-wk">${wk.map((w) => `<span>${esc(w)}</span>`).join('')}</div>
       <div class="cy-days">${cells}</div></div></section>`;
 
-  const tiles = `<div class="cy-tiles"><div><small>${t('Durée moyenne du cycle')}</small><b>${t('{n} j', { n: C.avgCycleLen(c) })}</b></div>
-    <div><small>${t('Durée moyenne des règles')}</small><b>${t('{n} j', { n: C.avgPeriodLen(c) })}</b></div></div>`;
+  const tiles = `<div class="cy-tiles"><div><small>${t('Durée moyenne du cycle')}</small><b>${t('{n} j', { n: esc(C.avgCycleLen(c)) })}</b></div>
+    <div><small>${t('Durée moyenne des règles')}</small><b>${t('{n} j', { n: esc(C.avgPeriodLen(c)) })}</b></div></div>`;
 
   // Effets de la semaine
   let wNote = null, tNote = C.trainingNote(c, td);
@@ -252,9 +252,9 @@ function renderOnboarding(root, go) {
   const c = state.cycle;
   root.innerHTML = `${nav(t('Suivre mon cycle'), { left: `<button class="btn plain" data-a="back">${icon('chevronLeft')} ${t('Retour')}</button>` })}
     <div class="cy"><form>${group('', `<div class="cells">
-      <label class="cell field"><span>${t('Début des dernières règles')}</span><input name="last" type="date" max="${today()}" required value="${c.periods?.slice(-1)[0]?.start || ''}"></label>
-      <label class="cell field"><span>${t('Durée du cycle (jours)')}</span><input name="cl" type="number" inputmode="numeric" min="18" max="45" value="${c.cycleLen || 28}"></label>
-      <label class="cell field"><span>${t('Durée des règles (jours)')}</span><input name="pl" type="number" inputmode="numeric" min="1" max="12" value="${c.periodLen || 5}"></label>
+      <label class="cell field"><span>${t('Début des dernières règles')}</span><input name="last" type="date" max="${today()}" required value="${esc(c.periods?.slice(-1)[0]?.start || '')}"></label>
+      <label class="cell field"><span>${t('Durée du cycle (jours)')}</span><input name="cl" type="number" inputmode="numeric" min="18" max="45" value="${esc(c.cycleLen || 28)}"></label>
+      <label class="cell field"><span>${t('Durée des règles (jours)')}</span><input name="pl" type="number" inputmode="numeric" min="1" max="12" value="${esc(c.periodLen || 5)}"></label>
       <div class="cell toggle-row"><span class="grow">${t('Contraception hormonale')}</span><label class="switch"><input type="checkbox" name="hor" ${c.hormonal ? 'checked' : ''}><span></span></label></div></div>`,
       t('Les données restent sur ton téléphone. Estimation par la méthode calendrier : ce n\'est pas une contraception.'))}
       <button class="btn filled large">${t('Activer le suivi')}</button></form></div>`;

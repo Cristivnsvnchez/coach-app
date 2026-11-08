@@ -3,7 +3,7 @@ import { load, state, flush, save, dayLog, today as todayIso } from './store.js'
 import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { applyTheme, applyScheme, wordmark } from './theme.js';
-import { banner, sheetPop, sheet, toast, fmt } from './ui.js';
+import { banner, sheetPop, sheet, toast, fmt, esc } from './ui.js';
 import './i18n/nl-base.js'; // traductions néerlandaises des textes existants
 import './i18n/extra.js'; // compléments EN + NL (tests/i18n-scan.mjs)
 import * as today from './views/today.js';
@@ -99,7 +99,7 @@ function quickAdd() {
   const plan = plannedWorkout(todayIso());
   const s = sheet(`<div class="sheet-head"><h3 class="title2">${t('Ajouter')}</h3></div>
     <div class="qa-grid">${card('meal', 'leaf', t('Un repas'), t('{m} en cours', { m: t(MEAL_LABEL[mealNow()]) }))}${card('weigh', 'scale', t('Une pesée'), lastTxt)}
-      ${card('train', 'training', t('Une séance'), plan ? t('{n} prévue', { n: plan }) : t('Démarrer ou reprendre'))}${card('water', 'drop', t('De l\'eau'), t('{v} L sur {g} L', { v: fmt(log.water / 1000, 1), g: fmt(goal, 1) }))}</div>
+      ${card('train', 'training', t('Une séance'), plan ? t('{n} prévue', { n: esc(plan) }) : t('Démarrer ou reprendre'))}${card('water', 'drop', t('De l\'eau'), t('{v} L sur {g} L', { v: fmt(log.water / 1000, 1), g: fmt(goal, 1) }))}</div>
     <button class="btn plain qa-cancel" data-q="cancel">${t('Annuler')}</button>`);
   s.addEventListener('click', (e) => {
     const q = e.target.closest('[data-q]')?.dataset.q; if (!q) return;
