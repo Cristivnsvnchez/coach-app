@@ -91,7 +91,6 @@ export function render(root, go, from) {
   root.innerHTML = `${nav(t('Apprends les bons mouvements'), from === 'training' ? { left: `<button class="btn plain" data-back>${icon('chevronLeft')} ${t('Sport')}</button>` } : {})}
     <label class="searchbar lrn-search">${icon('search')}<input type="search" name="q" value="${esc(q)}" placeholder="${t('Rechercher un mouvement')}" autocomplete="off" aria-label="${t('Rechercher un mouvement')}"></label>
     <section class="lrn-day tm-hero">${shape({ cls: 'lrn-day-shape' })}
-      <span class="lrn-day-3d">${pictogram(day.name, '', sex)}</span>
       <small>${t('À découvrir')}</small><h2>${esc(t(day.name))}</h2>
       <p>${esc([day.muscle, ...day.secondary].map((m) => t(m)).join(' · '))}</p>
       <button class="btn lrn-day-btn" data-open="${esc(day.name)}">${t('Voir la technique')} ${icon('chevronRight')}</button></section>
@@ -104,9 +103,7 @@ export function render(root, go, from) {
     <ul class="lrn-list"></ul>
     <p class="group-foot">${t('Repères généraux : en cas de douleur, arrête et demande l\'avis d\'un professionnel.')}</p>`;
   draw();
-  const m3d = model3D(day.name, sex), stage = root.querySelector('.lrn-day-3d');
-  if (m3d && stage) mount3D(stage, m3d, outfitsFor(sex)[Math.min(state.settings.outfit || 0, 2)], { showcase: true })
-    .then((d) => { if (stage.isConnected) showcase = d; else d.dispose(); }).catch(() => {}); // échec : la figure reste affichée
+  // Bannière sans personnage (demande de l'utilisateur) : titre, muscles et bouton seulement.
   root.querySelector('[name=q]').oninput = (e) => { q = e.target.value; draw(); };
   root.onclick = (e) => {
     if (e.target.closest('[data-back]')) return go('training');

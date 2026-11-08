@@ -96,10 +96,10 @@
 
 /* Carte « Geste du jour » : fond de la palette (forme floue granuleuse, comme l'aperçu du Profil) + avatar 3D animé à droite,
    posé sur un sol suggéré (lueur douce en bas) avec son ombre de contact. */
-.lrn-day { min-height: 214px; }
+.lrn-day { min-height: 0; }
 .lrn-day::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 38%; z-index: 0; pointer-events: none;
   background: radial-gradient(60% 70% at 74% 100%, rgba(255, 255, 255, .16), transparent 70%); }
-.lrn-day h2, .lrn-day p { max-width: 55%; }
+.lrn-day h2, .lrn-day p { max-width: 100%; }
 .tm-hero.lrn-day > .lrn-day-3d { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; z-index: 1; pointer-events: none; display: grid; place-items: center; }
 .lrn-day-3d canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
 .lrn-day-3d .lrn-3d { width: 150px; height: 150px; }
