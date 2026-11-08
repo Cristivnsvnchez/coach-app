@@ -186,7 +186,8 @@ export const POSES = {
     { hips: [0, 0.115, 0], torso: [0, 0, 1], neck: -18, thigh: [0.05, -0.02, -1], shin: [0.03, 0.85, -0.52], plantar: 12, kneeHint: [0, -1, 0], hand: [0.2, 0.11, 0.64], elbowHint: [1, -0.1, -0.2], palm: [-0.2, -1, 0], grip: 0.2 }] },
   // Hip thrust : haut du dos sur le banc (en travers), pieds à plat, barre sur le pli des hanches. En haut, tibias
   // verticaux et épaules-hanches-genoux alignés ; le bassin redescend en pivotant autour des omoplates posées.
-  'Hip thrust': { gear: { hold: 'bar', bench: { type: 'flat', at: [0, 0, -0.6], yaw: 90 } }, beats: [[1, 0.9], [1, 0.6], [0, 1.3], [0, 0.25]], keys: [
+  // Femme : brassière épaisse sur le haut du dos, bassin 2 cm plus bas en bas du mouvement pour garder le contact avec le banc.
+  'Hip thrust': { F: { 0: { hips: [0, 0.24, -0.15], hand: [0.3, 0.38, -0.08] } }, gear: { hold: 'bar', bench: { type: 'flat', at: [0, 0, -0.6], yaw: 90 } }, beats: [[1, 0.9], [1, 0.6], [0, 1.3], [0, 0.25]], keys: [
     { ...HIP_THRUST, hips: [0, 0.26, -0.15], torso: [0, 0.71, -0.7], pelvis: [0, 0.71, -0.7], neck: 12, hand: [0.3, 0.4, -0.08] },
     { ...HIP_THRUST, hips: [0, 0.55, -0.07], torso: [0, 0.08, -1], pelvis: [0, 0.08, -1], neck: 28, hand: [0.3, 0.69, 0.0] }] },
   'Mollets debout': { beats: [[1, 0.8], [1, 0.8], [0, 1.2], [0, 0.2]], keys: [

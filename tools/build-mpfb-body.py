@@ -219,3 +219,221 @@ def dress(body, arm, tag, female=False):
         o.matrix_parent_inverse = arm.matrix_world.inverted()
         o.modifiers.new('Armature', 'ARMATURE').object = arm
     return arm, parts
+
+
+# ───── Brassière de sport ajustée (remplace la bande découpée par des plans) ─────
+# La première version (garment() avec xcut) coupait en travers de l'aisselle : des sommets liés au bras tiraient le
+# tissu (plis sur les épaules), 6 mm d'épaisseur laissaient ressortir le relief de la poitrine, sans bretelles.
+# Ici : bande du dessous de poitrine jusqu'au haut du buste (elle couvre le trou laissé dans le corps par l'ancienne),
+# coupée le long du pli de l'aisselle (rien qui appartienne au bras), larges bretelles par-dessus les trapèzes, creux
+# entre les seins comblé (le tissu passe d'un sein à l'autre), surface lissée puis gonflée, poids du bras retirés.
+def sports_bra(body, old_top, arm, tag, strap_x=0.088, strap_w=0.036, strap_c=1.27, strap_lo=1.27, arm_cut=0.3, inflate=0.005):
+    """`old_top` : l'ancienne bande (elle couvre le trou du corps sous la brassière) ; les bretelles viennent du corps."""
+    from mathutils import Vector
+    mw = body.matrix_world; inv = mw.inverted()
+    # 1. Bretelles : rubans de 3,6 cm plaqués sur la peau (lancer de rayons vers le corps), du haut de la bande devant,
+    #    par-dessus le trapèze, jusqu'au haut de la bande dans le dos. Poids : ceux du sommet du corps le plus proche.
+    import math
+    from mathutils.bvhtree import BVHTree
+    from mathutils.kdtree import KDTree
+    dg = bpy.context.evaluated_depsgraph_get()
+    arm.data.pose_position = 'REST'; bpy.context.view_layer.update()
+    tree = BVHTree.FromObject(body, dg)  # repère objet du corps
+    kd = KDTree(len(body.data.vertices))
+    for v in body.data.vertices: kd.insert(v.co, v.index)
+    kd.balance()
+    inv_b = mw.inverted()
+    me = bpy.data.meshes.new(tag + '_Straps'); verts, faces, src = [], [], []
+    for sx in (-1, 1):
+        x = sx * strap_x
+        rows = []
+        for k in range(25):
+            th = math.radians(-100 + 200 * k / 24)  # -100° : devant, 0° : au-dessus, +100° : derrière
+            d = Vector((0, -math.cos(th), math.sin(th)))  # Blender : l'avant du corps est -Y
+            ctr = Vector((x, -0.02, strap_c))
+            hit = tree.ray_cast(inv_b @ (ctr + d * 0.4), (inv_b.to_3x3() @ -d).normalized())
+            if hit[0] is None: continue
+            p = mw @ hit[0]; n = (mw.to_3x3() @ hit[1]).normalized()
+            if p.z < strap_lo: continue  # sous le haut de la bande : la bande couvre déjà
+            rows.append((p, n, hit[0]))
+        for i, (p, n, pl) in enumerate(rows):
+            t = (rows[min(i + 1, len(rows) - 1)][0] - rows[max(i - 1, 0)][0]).normalized()
+            w = t.cross(n).normalized() * (strap_w / 2)
+            base = len(verts)
+            for off in (-1, 0, 1):
+                verts.append(inv @ (p + w * off + n * inflate * 1.4)); src.append(kd.find(pl + (inv_b.to_3x3() @ (w * off)))[1])
+            if i: faces += [(base - 3, base - 2, base + 1, base), (base - 2, base - 1, base + 2, base + 1)]
+    arm.data.pose_position = 'POSE'; bpy.context.view_layer.update()
+    me.from_pydata([v for v in verts], [], faces); me.update()
+    st = bpy.data.objects.new(tag + '_Straps', me)
+    for c in body.users_collection: c.objects.link(st)
+    st.matrix_world = mw.copy()
+    for g in body.vertex_groups: st.vertex_groups.new(name=g.name)
+    for vi, bi in enumerate(src):
+        for e in body.data.vertices[bi].groups: st.vertex_groups[e.group].add([vi], e.weight, 'REPLACE')
+    # 2. Bande : copie de l'ancienne, puis réunion avec les bretelles.
+    o = old_top.copy(); o.data = old_top.data.copy(); o.name = tag + '_Top2'
+    for c in old_top.users_collection: c.objects.link(o)
+    for m in list(o.modifiers): o.modifiers.remove(m)
+    [st.data.materials.append(m) for m in o.data.materials]
+    win = bpy.context.window_manager.windows[0]; area = next(a for a in win.screen.areas if a.type == 'VIEW_3D')
+    for x in bpy.context.view_layer.objects: x.select_set(False)
+    o.hide_set(False); st.hide_set(False); o.select_set(True); st.select_set(True); bpy.context.view_layer.objects.active = o
+    with bpy.context.temp_override(window=win, area=area, screen=win.screen, active_object=o, selected_editable_objects=[o, st]):
+        bpy.ops.object.join()
+    mwo = o.matrix_world; inv = mwo.inverted()
+    arm_groups = {g.index for g in o.vertex_groups if g.name.split(':')[-1].startswith(('LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'LeftHand', 'RightHand'))}
+    bm = bmesh.new(); bm.from_mesh(o.data); dl = bm.verts.layers.deform.verify()
+    # Rien du bras lui-même au-delà du pli de l'aisselle (la bande, elle, couvre tout le trou du corps : on ne la coupe pas).
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if any(sum(w for g, w in v[dl].items() if g in arm_groups) > arm_cut and abs((mwo @ v.co).x) > 0.17 for v in f.verts)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.004)  # soude bretelles et bande là où elles se touchent
+    # 3. Creux entre les seins comblé : par tranches de 1,5 cm, la face avant poussée jusqu'à l'enveloppe convexe.
+    front = [v for v in bm.verts if (mwo @ v.co).y < -0.02 and (mwo @ v.co).z < 1.27]
+    bins = {}
+    for v in front: bins.setdefault(int((mwo @ v.co).z / 0.015), []).append(v)
+    for vs in bins.values():
+        pts = sorted(((mwo @ v.co).x, (mwo @ v.co).y) for v in vs)
+        hull = []
+        for p in pts:
+            while len(hull) >= 2 and (hull[-1][0] - hull[-2][0]) * (p[1] - hull[-2][1]) - (hull[-1][1] - hull[-2][1]) * (p[0] - hull[-2][0]) <= 0: hull.pop()
+            hull.append(p)
+        for v in vs:
+            p = mwo @ v.co
+            for a, b in zip(hull, hull[1:]):
+                if a[0] <= p.x <= b[0]:
+                    y = a[1] + (b[1] - a[1]) * ((p.x - a[0]) / ((b[0] - a[0]) or 1))
+                    if y < p.y: v.co = inv @ Vector((p.x, y, p.z))
+                    break
+    bm.normal_update()
+    # 4. Lissage (efface le relief anatomique sous le tissu), bords gardés en place, puis épaisseur.
+    inner = [v for v in bm.verts if not v.is_boundary]
+    for _ in range(14): bmesh.ops.smooth_vert(bm, verts=inner, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.normal_update()
+    for v in bm.verts: v.co += v.normal * inflate
+    bm.to_mesh(o.data); bm.free(); o.data.update()
+    for p in o.data.polygons: p.use_smooth = True
+    # 5. Poids : ni bras ni main (le tissu suit le thorax et les clavicules), normalisés.
+    for g in [g for g in o.vertex_groups if g.index in arm_groups]: o.vertex_groups.remove(g)
+    for v in o.data.vertices:
+        tot = sum(e.weight for e in v.groups)
+        if tot > 0:
+            for e in v.groups: e.weight /= tot
+    o.modifiers.new('Armature', 'ARMATURE').object = arm
+    return o
+
+
+def bra_ring(body, old_top, arm, tag, rows=10, cols=72, z_lo=1.09, z_front=1.302, z_side=1.25, inflate=0.006,
+             strap_x=0.088, strap_w=0.042):
+    """Brassière en anneau régulier : pour chaque hauteur et chaque angle autour du buste, un rayon tiré de l'extérieur
+    vers l'axe du corps trouve la surface (corps, ou ancienne bande là où le corps est troué). Chaque rangée est
+    remplacée par son enveloppe convexe (le tissu ne suit ni le creux entre les seins ni le sillon du dos), puis gonflée.
+    Bord haut à hauteur constante, au-dessus du trou laissé dans le corps par l'ancienne bande. Bretelles en rubans."""
+    import math
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    from mathutils.kdtree import KDTree
+    dg = bpy.context.evaluated_depsgraph_get()
+    arm.data.pose_position = 'REST'; bpy.context.view_layer.update()
+    trees = []
+    for ob in (body, old_top):
+        trees.append((ob, BVHTree.FromObject(ob, dg)))
+    def cast(p0, d):  # premier contact (le plus proche de l'origine du rayon) sur le corps ou l'ancienne bande
+        best = None
+        for ob, tr in trees:
+            mw = ob.matrix_world; inv = mw.inverted()
+            hit = tr.ray_cast(inv @ p0, (inv.to_3x3() @ d).normalized())
+            if hit[0] is not None:
+                w = mw @ hit[0]
+                if best is None or (w - p0).length < (best - p0).length: best = w
+        return best
+    # Poids : sommet le plus proche du corps ou de l'ancienne bande (qui a les poids du thorax là où le corps est troué).
+    src = []
+    for ob in (body, old_top):
+        for v in ob.data.vertices: src.append((ob.matrix_world @ v.co, ob, v.index))
+    kd = KDTree(len(src))
+    for i, (p, _, _) in enumerate(src): kd.insert(p, i)
+    kd.balance()
+    armish = lambda n: n.split(':')[-1].startswith(('LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'LeftHand', 'RightHand'))
+    def top_z(a):  # devant / derrière haut, sous les bras plus bas
+        return z_side if abs(math.sin(a)) > 0.93 else z_front  # plus bas seulement sous les bras (hors du trou du corps)
+    grid = []
+    for r in range(rows):
+        row = []
+        for c in range(cols):
+            a = 2 * math.pi * c / cols  # 0 : devant (-Y), π/2 : côté gauche (+X)
+            z = z_lo + (top_z(a) - z_lo) * r / (rows - 1)
+            d = Vector((math.sin(a), -math.cos(a), 0))
+            ctr = Vector((0, -0.015, z))
+            p = cast(ctr, d)  # de l'axe vers l'extérieur : le premier contact est le torse, jamais le bras
+            row.append(p if p is not None and (p - ctr).length < 0.2 else None)  # plus loin : le rayon est passé sous l'aisselle
+        for c in range(cols):  # trous : moyenne des voisins valides de la rangée (rayon interpolé)
+            if row[c] is None:
+                k1 = next(k for k in range(1, cols) if row[(c - k) % cols] is not None); k2 = next(k for k in range(1, cols) if row[(c + k) % cols] is not None)
+                a_, b_ = row[(c - k1) % cols], row[(c + k2) % cols]; ang = 2 * math.pi * c / cols
+                rad = ((a_.xy - Vector((0, -0.015))).length * k2 + (b_.xy - Vector((0, -0.015))).length * k1) / (k1 + k2)
+                row[c] = Vector((math.sin(ang) * rad, -0.015 - math.cos(ang) * rad, a_.z))
+        # Enveloppe convexe de la rangée (vue de dessus), chaque point repoussé radialement sur elle.
+        pts = [(q.x, q.y) for q in row]
+        hull = sorted(set(pts))
+        def cross(o, a_, b_): return (a_[0] - o[0]) * (b_[1] - o[1]) - (a_[1] - o[1]) * (b_[0] - o[0])
+        lo_, hi_ = [], []
+        for q in hull:
+            while len(lo_) >= 2 and cross(lo_[-2], lo_[-1], q) <= 0: lo_.pop()
+            lo_.append(q)
+        for q in reversed(hull):
+            while len(hi_) >= 2 and cross(hi_[-2], hi_[-1], q) <= 0: hi_.pop()
+            hi_.append(q)
+        poly = lo_[:-1] + hi_[:-1]
+        cx, cy = 0.0, -0.015
+        for c, q in enumerate(row):
+            dx, dy = q.x - cx, q.y - cy; L = math.hypot(dx, dy) or 1; ux, uy = dx / L, dy / L
+            best = L
+            for i in range(len(poly)):  # intersection du rayon avec le polygone convexe
+                (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % len(poly)]
+                ex, ey = x2 - x1, y2 - y1; den = ux * ey - uy * ex
+                if abs(den) < 1e-9: continue
+                t = ((x1 - cx) * ey - (y1 - cy) * ex) / den; s = ((x1 - cx) * uy - (y1 - cy) * ux) / den
+                if t > 0 and -1e-6 <= s <= 1 + 1e-6: best = max(best, t)
+            hem = inflate + 0.012 * max(0.0, (r - (rows - 3)) / 2) * (1 - abs(math.sin(2 * math.pi * c / cols)))  # ourlet épais devant/derrière
+            row[c] = Vector((cx + ux * (best + hem), cy + uy * (best + hem), q.z))
+        grid.append(row)
+    arm.data.pose_position = 'POSE'; bpy.context.view_layer.update()
+    verts = [p for row in grid for p in row]
+    faces = [(r * cols + c, r * cols + (c + 1) % cols, (r + 1) * cols + (c + 1) % cols, (r + 1) * cols + c) for r in range(rows - 1) for c in range(cols)]
+    # Bretelles : rubans du haut de la bande devant, par-dessus le trapèze, jusqu'au haut de la bande derrière.
+    for sx in (-1, 1):
+        x = sx * strap_x; ribbon = []
+        for k in range(29):
+            th = math.radians(-105 + 210 * k / 28)
+            d = Vector((0, -math.cos(th), math.sin(th)))
+            p = cast(Vector((x, -0.02, 1.27)) + d * 0.4, -d)
+            if p is not None and p.z >= 1.306: ribbon.append(p)  # départ au bord de la bande (pas dessous)
+        for i, p in enumerate(ribbon):
+            t = (ribbon[min(i + 1, len(ribbon) - 1)] - ribbon[max(i - 1, 0)]).normalized()
+            n = Vector((0, p.y + 0.02, p.z - 1.27)).normalized()
+            w = t.cross(n).normalized() * (strap_w / 2)
+            base = len(verts)
+            verts += [p + w + n * inflate * 3.2, p + n * inflate * 3.8, p - w + n * inflate * 3.2]  # assez loin de la peau pour l'épaule levée
+            if i: faces += [(base - 3, base - 2, base + 1, base), (base - 2, base - 1, base + 2, base + 1)]
+    me = bpy.data.meshes.new(tag + '_Bra'); me.from_pydata(verts, [], faces); me.update()
+    for p in me.polygons: p.use_smooth = True
+    o = bpy.data.objects.new(tag + '_Bra', me)
+    for c in old_top.users_collection: c.objects.link(o)
+    o.data.materials.append(old_top.data.materials[0])
+    groups = {}
+    for i, p in enumerate(verts):
+        acc = {}
+        for (q, j, dist) in kd.find_n(p, 4):
+            _, ob, vi = src[j]; wt = 1 / (dist + 1e-4)
+            for e in ob.data.vertices[vi].groups:
+                nm = ob.vertex_groups[e.group].name
+                if armish(nm): continue
+                acc[nm] = acc.get(nm, 0) + e.weight * wt
+        tot = sum(acc.values()) or 1
+        for nm, w in acc.items():
+            if nm not in groups: groups[nm] = o.vertex_groups.new(name=nm)
+            groups[nm].add([i], w / tot, 'REPLACE')
+    o.parent = arm; o.matrix_parent_inverse = arm.matrix_world.inverted()  # sommets donnés en coordonnées monde
+    o.modifiers.new('Armature', 'ARMATURE').object = arm
+    return o
