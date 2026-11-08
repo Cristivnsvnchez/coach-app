@@ -31,7 +31,7 @@ export async function mount3D(box, { url, anim: animUrl, clip, muscles = {}, mis
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.setClearColor(0x1e1f22, 0); // fond : dégradé gris studio de la carte (CSS), transparent en vitrine
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; // une seule ombre : la lampe principale
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // une seule ombre (lampe principale) ; PCF simple : PCFSoft tachait le sol sur iPhone
 
   // Studio façon « mannequin d'argile » : lumière principale chaude en 3/4 avant, deux contre-jours froids qui détourent
   // la silhouette, un peu de lumière d'ambiance, sol gris sombre qui reçoit une ombre douce et se fond dans le fond.

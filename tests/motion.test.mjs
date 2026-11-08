@@ -79,3 +79,18 @@ test('biomécanique : cheville, le pied reste dans l\'axe du tibia sur tous les 
   const bad = rows.flatMap((r) => r.bio['pied/tibia : écart d\'orientation'] ? [`${r.name} ${r.sex} ${r.bio['pied/tibia : écart d\'orientation'].value}°`] : []);
   assert.deepEqual(bad, []);
 });
+
+// Onglet Erreurs : la faute (js/mistakes3d.js) est un vrai mouvement, humainement possible, et elle se voit.
+const faultRows = await auditAll(['M', 'F'], { fault: true });
+test('erreurs : la version fautive respecte quand même les limites du corps et du matériel', () => {
+  const bad = faultRows.flatMap((r) => Object.entries(r.bio).map(([k, e]) => `${r.name} ${r.sex} (${r.fault}) — ${k} : ${e.value}`));
+  assert.deepEqual(bad, []);
+});
+test('erreurs : la faute se voit (un os du corps s\'écarte d\'au moins 3 cm du bon geste)', () => {
+  const ok = new Map(rows.map((r) => [r.name + r.sex, r]));
+  const bad = faultRows.filter((f) => { const r = ok.get(f.name + f.sex);
+    const n = Math.min(f.trackPath.length, r.trackPath.length); let d = 0;
+    for (let i = 0; i < n; i++) for (let k = 0; k < f.trackPath[i].length; k++) d = Math.max(d, f.trackPath[i][k].distanceTo(r.trackPath[i][k]));
+    return d < 0.03; }).map((f) => `${f.name} ${f.sex} (${f.fault})`);
+  assert.deepEqual(bad, []);
+});

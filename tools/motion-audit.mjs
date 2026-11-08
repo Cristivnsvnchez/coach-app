@@ -11,6 +11,7 @@ import { LIBRARY } from '../js/exercises.js';
 import { prepareClip, landingBox } from '../js/motion-fix.js';
 import { buildPoseClip } from '../js/poses.js';
 import { limitJoints } from '../js/joint-limits.js';
+import { faultyClip, FAULTS } from '../js/mistakes3d.js';
 import { gripOf, barOnBack, barOnFront, tube } from '../js/gear3d.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -270,11 +271,15 @@ function gearPoints(gear, B) {
   return pts.filter((q) => grips.every((g) => g.distanceTo(q) > 0.07));
 }
 
-export async function auditOne(name, sex = 'M') {
+// `fault` : version fautive de l'onglet Erreurs (js/mistakes3d.js), qui doit rester humainement possible.
+const HB_track = (obj, n) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && o.name.replace(/^mixamorig:?/, '') === n) b = o; }); return b; };
+export async function auditOne(name, sex = 'M', { fault = false } = {}) {
   const m = model3D(name, sex); if (!m) return null;
   const body = await parse(m.url), anim = m.anim ? await parse(m.anim) : null;
   const obj = clone(body.scene);
-  const clip = m.pose ? buildPoseClip(THREE, obj, m.pose, m.clip) : limitJoints(THREE, prepareClip(anim?.animations[0] || body.animations[0], sex), obj, { symmetric: m.symmetric }); // mêmes corrections que la visionneuse
+  const raw = anim?.animations[0] || body.animations[0];
+  const clip = m.pose ? buildPoseClip(THREE, obj, fault ? m.faultPose : m.pose, m.clip)
+    : limitJoints(THREE, prepareClip(fault ? faultyClip(THREE, raw, m.fault) : raw, sex), obj, { symmetric: m.symmetric }); // mêmes corrections que la visionneuse
   const bone = (re) => { let b = null; obj.traverse((o) => { if (!b && o.isBone && re.test(o.name)) b = o; }); return b; };
   const bones = []; obj.traverse((o) => { if (o.isBone) bones.push(o); });
   // Normalisation identique à la visionneuse : 1,75 m de la tête aux orteils, pieds au sol, centré.
@@ -308,6 +313,8 @@ export async function auditOne(name, sex = 'M') {
   const frames = [], seq = [];
   // Squat : la barre tenue par les poings doit reposer sur les trapèzes (pas devant ni au-dessus de la nuque).
   const HB = {}; obj.traverse((o) => { if (o.isBone) HB[o.name.replace(/^mixamorig:?/, '')] ||= o; });
+  // Os suivis pour juger si la faute se voit : celui de la faute (flèche), plus quelques repères du corps.
+  const trackBones = m.fault ? [...new Set([FAULTS[m.fault].track, 'Neck', 'Spine1', 'Hips', 'RightLeg', 'RightForeArm'])].map((n) => HB_track(obj, n)).filter(Boolean) : [], trackPath = [];
   let gripGap = 0; const barGrip = []; let clash = { d: 0, where: '' }, rackGap = 0, openHand = 0;
   for (let i = 0; i <= N; i++) {
     // i = N : juste avant la fin (setTime(duration) retombe sur 0 en boucle) pour mesurer le raccord.
@@ -315,6 +322,7 @@ export async function auditOne(name, sex = 'M') {
     const p = (b) => b.getWorldPosition(v());
     frames.push({ all: bones.map(p), feet: feet.map(p), hips: p(hips), lh: p(lh), rh: p(rh), ls: p(ls), rs: p(rs), skin: skinMin(), bench: bench ? benchLow() : null });
     seq.push(measure(BN, REST));
+    if (trackBones.length) trackPath.push(trackBones.map((b) => b.getWorldPosition(v())));
     if (m.gear?.hold) { const caps = capsules(HB); for (const q of gearPoints(m.gear, HB)) for (const c of caps) { const dd = depthIn(q, c); if (dd > clash.d) { clash = { d: dd, where: c.nm + ' @' + i }; } } }
     if (m.gear?.hold === 'bar' || m.gear?.hold === 'barBack') { const a = gripOf(THREE, HB, 'Left').c, b = gripOf(THREE, HB, 'Right').c; barGrip.push({ w: a.distanceTo(b), y: (a.y + b.y) / 2 }); }
     // Prise : chaque main qui tient une poignée a les doigts enroulés autour (rayon du « tube » des doigts ≤ 3,5 cm,
@@ -378,20 +386,21 @@ export async function auditOne(name, sex = 'M') {
   if (rackGap > 0.06) bio['squat avant : doigts loin de la barre (m)'] = { value: +rackGap.toFixed(3), limit: 0.06, n: 1 };
   if (gripGap > 0.04) bio['barre hors des trapèzes (m)'] = { value: +gripGap.toFixed(3), limit: 0.04, n: 1 };
   const r = (x, d = 2) => +x.toFixed(d);
-  return { name, sex, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, gear: m.gear, duration: r(clip.duration),
+  return { name, sex, fault: fault ? m.fault : null, faultKind: m.fault, trackPath, clip: m.clip, authored: !!m.pose, ikError: r(clip.userData?.ikError ?? 0), equipment: m.equipment, gear: m.gear, duration: r(clip.duration),
     bodyMin: r(bodyMin, 3), feetMin: r(feetMin, 3), slide: slideT ? r(slide / slideT, 3) : 0, drift: r(drift), loop: r(loop, 3),
     gripMin: r(Math.min(...grip)), gripMax: r(Math.max(...grip)), handShoulderMax: r(handShoulder), skinLow: r(skinLow, 3), skinAir: r(skinHigh - skinLow), boxTop: box ? r(box.top) : null, bio, angles: seq.map((f) => f.m) };
 }
 
-export async function auditAll(sexes = ['M', 'F']) {
+export async function auditAll(sexes = ['M', 'F'], opts = {}) {
   const out = [];
-  for (const sex of sexes) for (const e of LIBRARY) { const a = await auditOne(e.name, sex); if (a) out.push(a); }
+  for (const sex of sexes) for (const e of LIBRARY) { const a = await auditOne(e.name, sex, opts); if (a) out.push(a); }
   return out;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const only = process.argv.find((x) => x.startsWith('--only='))?.slice(7).split(',');
-  const rows = only ? (await Promise.all(only.map((n) => auditOne(n, process.argv.includes('--f') ? 'F' : 'M')))).filter(Boolean) : await auditAll(process.argv.includes('--f') ? ['F'] : ['M']);
+  const opts = { fault: process.argv.includes('--fault') };
+  const rows = only ? (await Promise.all(only.map((n) => auditOne(n, process.argv.includes('--f') ? 'F' : 'M', opts)))).filter(Boolean) : await auditAll(process.argv.includes('--f') ? ['F'] : ['M'], opts);
   if (process.argv.includes('--bio')) {
     for (const r of rows) {
       const ks = Object.entries(r.bio);

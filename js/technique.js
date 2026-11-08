@@ -3,6 +3,7 @@
 // en cas de douleur ou de pathologie, demander l'avis d'un professionnel de santé.
 import { LIBRARY } from './exercises.js';
 import { POSES as POSES3D } from './poses.js';
+import { faultOf, faultyPose } from './mistakes3d.js';
 
 export const LEVELS = ['debutant', 'intermediaire', 'avance'];
 export const LEVEL_LABEL = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' };
@@ -129,36 +130,12 @@ export function combineMuscles(primary, secondary = []) {
   add(primary, 1); secondary.forEach((m) => add(m, 0.55));
   return W;
 }
-// Déformation du mouvement correct pour illustrer l'erreur la plus fréquente (onglet Erreurs), appliquée en plus
-// de l'animation telle quelle : un décalage de rotation fixe sur certains os, visible pendant tout le mouvement.
-// 4 défauts réutilisables (plutôt que 46 réglages inventés un par un) : chacun illustre le défaut le plus fréquent
-// de sa famille de mouvement. Affiné à l'œil une fois le vrai clip en place, comme pour Squat (déjà vérifié).
-const DEFORM = {
-  kneeCave: { LeftLeg: { z: -0.3 }, RightLeg: { z: 0.3 } }, // genoux qui rentrent (squat, fentes…)
-  backRound: { Spine1: { x: 0.28 }, Spine2: { x: 0.22 } }, // dos qui s'arrondit (hinge, tirage, épaules, cardio/haltéro)
-  elbowFlare: { LeftArm: { z: 0.3 }, RightArm: { z: -0.3 } }, // coudes qui partent trop sur le côté (poussées)
-  elbowDrift: { LeftArm: { x: -0.25 }, RightArm: { x: -0.25 } }, // coudes qui avancent (curl, triceps)
-  hipsDrop: { Spine: { x: 0.25 }, Hips: { x: 0.15 } }, // bassin qui tombe, dos qui perd sa position neutre (abdos)
-};
-// Règle par catégorie + muscle principal : à affiner exercice par exercice une fois son vrai clip disponible,
-// mais couvre tout de suite tout LIBRARY (y compris les exercices à venir) sans réglage manuel par nom.
-function mistakeFor(e) {
-  if (!e) return null;
-  if (e.category === 'jambes') return /Dos|Ischios|Fessiers/.test(e.muscle) ? DEFORM.backRound : DEFORM.kneeCave;
-  if (e.category === 'abdos') return DEFORM.hipsDrop;
-  if (e.category === 'haut') {
-    if (e.muscle === 'Pectoraux') return DEFORM.elbowFlare;
-    if (e.muscle === 'Biceps' || e.muscle === 'Triceps') return DEFORM.elbowDrift;
-    return DEFORM.backRound; // Dos, Épaules
-  }
-  return DEFORM.backRound; // cardio, haltéro
-}
 export function model3D(name, sex = 'M') {
   const base = POSES3D[name], clip = CLIPS[name] || (base ? poseSlug(name) : null); if (!clip) return null;
   // Variante par corps (`F: { indice de pose clé: réglages }`) quand la morphologie l'impose (bras plus courts…).
   const pose = base?.F && sex === 'F' ? { ...base, keys: base.keys.map((k, i) => (base.F[i] ? { ...k, ...base.F[i] } : k)) } : base;
   const e = LIBRARY.find((x) => x.name === name);
-  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, gear: pose?.gear || GEAR[name] || null, symmetric: !pose && !ONE_SIDED.has(name), mistake: mistakeFor(e), name };
+  return { url: BODY[sex === 'F' ? 'F' : 'M'], anim: pose || BUILTIN.has(clip) ? null : `models/anim/${clip}.glb`, pose: pose || null, clip, muscles: combineMuscles(e?.muscle, e?.secondary || []), worked: [e?.muscle, ...(e?.secondary || [])].filter(Boolean), equipment: e?.equipment, gear: pose?.gear || GEAR[name] || null, symmetric: !pose && !ONE_SIDED.has(name), fault: faultOf(e), faultPose: pose ? faultyPose(pose, faultOf(e)) : null, name };
 }
 // Tenues de sport : 3 par sexe. Homme : short seul (torse nu) ; femme : brassière + short. Choix dans la visionneuse,
 // appliqué en recolorant les matériaux du modèle déjà chargé (voir setOutfit dans viewer3d.js).

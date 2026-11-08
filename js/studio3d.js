@@ -11,7 +11,7 @@ export function studioLights(THREE, { shadow = true } = {}) {
   const hemi = new THREE.HemisphereLight(0xdfe3ea, 0x2a2b2e, 0.55);
   const key = new THREE.DirectionalLight(0xfff4e8, 2.6); key.position.set(1.6, 3.6, 2.6);
   if (shadow) {
-    key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 6;
+    key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.002; key.shadow.normalBias = 0.05; key.shadow.radius = 4; // biais forts : sur iPhone (précision réduite) des taches apparaissaient au sol
     Object.assign(key.shadow.camera, { left: -1.6, right: 1.6, top: 1.6, bottom: -1.6, near: 0.5, far: 9 });
   }
   const fill = new THREE.DirectionalLight(0xcfd6e4, 0.45); fill.position.set(-2.5, 1.2, 2.2);
