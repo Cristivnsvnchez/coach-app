@@ -12,7 +12,7 @@ Système de design aligné sur les Human Interface Guidelines d'Apple (iOS) :
 ## css/cycle.css (58 l.)
 TrackMe — styles de la vue cycle (voir DESIGN.md, css/trackme.css).
 
-## css/learn.css (123 l.)
+## css/learn.css (138 l.)
 TrackMe — styles de la vue learn (voir DESIGN.md, css/trackme.css).
 
 ## css/motion.css (51 l.)
@@ -27,7 +27,7 @@ TrackMe — vue Planifier mes repas (calendrier + liste de courses, voir DESIGN.
 ## css/session.css (65 l.)
 TrackMe — écran Séance en direct (voir DESIGN.md, css/trackme.css). Héros palette + cartes d'exercice rayon 24.
 
-## css/v2.css (614 l.)
+## css/v2.css (619 l.)
 TrackMe — Parcours v2 (canevas « TrackMe Parcours v2 ») : jetons, cartes, boutons à flèche, barre d'onglets, feuilles, en-têtes plein cadre à halos (.v2-hero/.v2-leaf) et styles de chaque écran v2. Chargée en dernier.
 
 ## css/today.css (112 l.)
@@ -48,7 +48,7 @@ exports: SYMPTOMS,FLOWS avgCycleLen,cycleSd avgPeriodLen,cycleStartFor phaseOn,n
 Bibliothèque d'exercices (noms français = clés de l'historique ; traduits à l'affichage).
 exports: LIBRARY,EQUIPMENT CATEGORIES,CATEGORY_LABEL findExercise,DEFAULT_PROGRAM
 
-## js/food.js (187 l.)
+## js/food.js (199 l.)
 Aliments : Open Food Facts (code-barres + recherche), cache local dans state.foods.
 exports: lookupBarcode,searchBase searchFood,saveFood entryFor,loadZXing decodeImage,startScan
 
@@ -56,7 +56,7 @@ exports: lookupBarcode,searchBase searchFood,saveFood entryFor,loadZXing decodeI
 Repères ANSES (pur, testé sous Node) : portions de fruits & légumes (5/jour) et de poisson (2/semaine).
 exports: GOALS,getPortions addPortion,weekDates weekTotal,avg7
 
-## js/foods-base.js (240 l.)
+## js/foods-base.js (263 l.)
 Base d'aliments génériques embarquée (recherche instantanée, hors ligne).
 exports: BASE_FOODS
 
@@ -108,9 +108,9 @@ exports: recoveryMap,editedWorkout
 Calculs nutrition / entraînement. Fonctions pures, sans DOM (testées sous Node).
 exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeInitial emaTrend,slope trendSlope,adaptiveTdee bmi,targets applyCustom,idealRange etaDate,milestones reachedOn,milestoneStatus projection,epley1RM nextSet,MUSCLES REFS
 
-## js/shopping.js (156 l.)
+## js/shopping.js (172 l.)
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
-exports: dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
+exports: AISLES,aisleOf,byAisle dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
 ## js/store.js (222 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
@@ -162,7 +162,7 @@ exports: pickExercise,openExercise platesSheet
 Checklist du jour (rendue dans l'onglet Aujourd'hui) + feuille de réglage des habitudes.
 exports: toggleHabits,habitsCells handleHabitClick,handleTaskSubmit
 
-## js/views/learn.js (163 l.)
+## js/views/learn.js (164 l.)
 Vue « Apprendre » : bibliothèque d'apprentissage des mouvements (recherche, niveaux, maîtrise, fiche Étapes / Erreurs / Conseils).
 exports: sessionsWith,dayExercise leave,render openTechnique
 
@@ -174,7 +174,7 @@ exports: needsOnboarding,openOnboarding
 Section « Apparence » du Profil : mode (auto / clair / sombre) et matière (Papier / Brume).
 exports: paletteSection,handlePaletteClick
 
-## js/views/planning.js (265 l.)
+## js/views/planning.js (278 l.)
 Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
 exports: render
 

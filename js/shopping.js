@@ -2,6 +2,22 @@
 // groupés par aliment puis par magasin. Pas d'API externe : le magasin est un champ que l'utilisateur
 // renseigne lui-même sur l'aliment (state.foods[id].store), réutilisé d'une liste à l'autre.
 import { isoDate, parseDate } from './science.js';
+import { BASE_FOODS } from './foods-base.js';
+
+// Rayons, dans l'ordre d'un magasin (les libellés sont traduits dans la vue).
+export const AISLES = ['fruits', 'viandes', 'cremerie', 'boulangerie', 'sale', 'sucre', 'boissons', 'autre'];
+const BASE_AISLE = Object.fromEntries(BASE_FOODS.map((f) => [f.id, f.aisle]));
+// Rayon d'un article : choix fait sur l'article, sinon celui de l'aliment, sinon celui de la base, sinon « autre ».
+export function aisleOf(item, foods = {}) {
+  const a = item.aisle || (item.foodId && (foods[item.foodId]?.aisle || BASE_AISLE[item.foodId]));
+  return AISLES.includes(a) ? a : 'autre';
+}
+// Groupe les articles d'un magasin par rayon, dans l'ordre de AISLES : [[rayon, articles]].
+export function byAisle(items, foods = {}) {
+  const g = {};
+  for (const it of items) (g[aisleOf(it, foods)] ||= []).push(it);
+  return AISLES.filter((a) => g[a]).map((a) => [a, g[a]]);
+}
 
 // N jours consécutifs à partir de `start` (inclus), au format 'YYYY-MM-DD'.
 export function dateRange(start, days = 7) {

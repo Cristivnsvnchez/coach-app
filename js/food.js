@@ -5,7 +5,18 @@ import { BASE_FOODS } from './foods-base.js';
 import { getLang } from './i18n.js';
 
 const OFF = 'https://world.openfoodfacts.org';
-const FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity';
+const FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity,categories_tags';
+
+// Rayon d'un produit Open Food Facts d'après ses catégories (la plus précise trouvée gagne, sinon « autre »).
+const OFF_AISLES = [['boissons', ['en:beverages', 'en:waters', 'en:sodas', 'en:juices']], ['cremerie', ['en:dairies', 'en:cheeses', 'en:yogurts', 'en:eggs', 'en:milks', 'en:butters']],
+  ['viandes', ['en:meats', 'en:fishes', 'en:seafood', 'en:poultries', 'en:hams', 'en:sausages']], ['fruits', ['en:fruits', 'en:vegetables', 'en:fresh-vegetables', 'en:fresh-fruits', 'en:potatoes']],
+  ['boulangerie', ['en:breads', 'en:viennoiseries', 'en:pastries']], ['sucre', ['en:sweet-snacks', 'en:desserts', 'en:chocolates', 'en:biscuits', 'en:confectioneries', 'en:breakfast-cereals', 'en:spreads', 'en:jams']],
+  ['sale', ['en:pastas', 'en:rices', 'en:cereals-and-potatoes', 'en:legumes', 'en:canned-foods', 'en:condiments', 'en:sauces', 'en:salty-snacks', 'en:nuts', 'en:oils', 'en:plant-based-foods']]];
+export function aisleFromOff(tags) {
+  const set = new Set(Array.isArray(tags) ? tags : []);
+  for (const [a, keys] of OFF_AISLES) if (keys.some((k) => set.has(k))) return a;
+  return 'autre';
+}
 
 function fromOff(p) {
   const n = p.nutriments || {};
@@ -17,6 +28,7 @@ function fromOff(p) {
     per100: { kcal: +kcal, p: +(n.proteins_100g || 0), c: +(n.carbohydrates_100g || 0), f: +(n.fat_100g || 0), fib: +(n.fiber_100g || 0) },
     serving: Number(p.serving_quantity) || 100,
     source: 'Open Food Facts',
+    aisle: aisleFromOff(p.categories_tags),
   };
 }
 
@@ -56,7 +68,7 @@ export function searchBase(q, lang = getLang()) {
   }
   hits.sort((a, b) => a[0] - b[0]);
   return hits.slice(0, 12).map(([, b]) => ({
-    id: b.id, name: b.name[lang] || b.name.fr, per100: { ...b.per100 }, serving: b.serving, source: b.source,
+    id: b.id, name: b.name[lang] || b.name.fr, per100: { ...b.per100 }, serving: b.serving, source: b.source, aisle: b.aisle,
   }));
 }
 

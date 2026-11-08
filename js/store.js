@@ -143,7 +143,7 @@ function cleanFields(out) {
   out.habits = objs(out.habits).map((h) => fix(h, ['id'], []));
   out.milestones = objs(out.milestones).map((m) => fix(m, ['id'], ['kg']));
   out.weights = objs(out.weights).map((w) => fix(w, [], ['kg']));
-  out.shoppingList = objs(out.shoppingList).map((s) => fix(s, ['id', 'foodId'], ['grams']));
+  out.shoppingList = objs(out.shoppingList).map((s) => fix(s, ['id', 'foodId', 'aisle'], ['grams']));
   out.favorites = out.favorites.map(ID);
   out.shoppingDone = out.shoppingDone.map(ID);
   for (const d in out.logs) { const l = out.logs[d]; l.meals = meals(l.meals); l.water = NUM(l.water); }
@@ -151,7 +151,7 @@ function cleanFields(out) {
   for (const id in out.foods) {
     const f = out.foods[id];
     if (!f || typeof f !== 'object') { delete out.foods[id]; continue; }
-    fix(f, ['id'], ['serving']);
+    fix(f, ['id', 'aisle'], ['serving']);
     if (f.per100 && typeof f.per100 === 'object') fix(f.per100, [], MACROS);
   }
   if (out.plan) { fix(out.plan, ['id'], []); out.plan.routineIds = out.plan.routineIds.map(ID); out.plan.weekdays = out.plan.weekdays.map(NUM); }

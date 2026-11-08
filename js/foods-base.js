@@ -1,8 +1,10 @@
 // Base d'aliments génériques embarquée (recherche instantanée, hors ligne).
 // Valeurs moyennes pour 100 g, ordre de grandeur Ciqual (ANSES) / USDA. serving = portion typique en g.
 // Ligne : [slug, fr, en, nl, kcal, protéines, glucides, lipides, fibres, portion]
+// '@rayon' : rayon des lignes qui suivent (voir AISLES dans js/shopping.js) ; AISLE_FIX corrige quelques cas.
 const R = [
   // Fruits
+  '@fruits',
   ['banane', 'Banane', 'Banana', 'Banaan', 90, 1.1, 20, 0.3, 2.6, 120],
   ['pomme', 'Pomme', 'Apple', 'Appel', 52, 0.3, 11.5, 0.2, 2.4, 150],
   ['poire', 'Poire', 'Pear', 'Peer', 57, 0.4, 13, 0.1, 3.1, 150],
@@ -26,6 +28,7 @@ const R = [
   ['dattes', 'Dattes', 'Dates', 'Dadels', 280, 2, 65, 0.4, 7, 25],
   ['compote-pomme', 'Compote de pommes', 'Apple sauce', 'Appelmoes', 70, 0.3, 16, 0.2, 1.5, 100],
   // Légumes
+  '@fruits',
   ['tomate', 'Tomate', 'Tomato', 'Tomaat', 18, 0.9, 3.5, 0.2, 1.2, 120],
   ['concombre', 'Concombre', 'Cucumber', 'Komkommer', 12, 0.6, 2, 0.1, 0.7, 100],
   ['carotte', 'Carotte', 'Carrot', 'Wortel', 41, 0.9, 8, 0.2, 2.8, 80],
@@ -50,6 +53,7 @@ const R = [
   ['patate-douce', 'Patate douce cuite', 'Sweet potato, cooked', 'Zoete aardappel, gekookt', 90, 2, 20, 0.2, 3.3, 150],
   ['ratatouille', 'Ratatouille', 'Ratatouille', 'Ratatouille', 55, 1, 5, 3, 2, 200],
   // Féculents
+  '@sale',
   ['riz-blanc-cuit', 'Riz blanc cuit', 'White rice, cooked', 'Witte rijst, gekookt', 130, 2.7, 28, 0.3, 0.4, 180],
   ['riz-blanc-cru', 'Riz blanc cru', 'White rice, raw', 'Witte rijst, rauw', 355, 7, 78, 0.7, 1.3, 70],
   ['riz-complet-cuit', 'Riz complet cuit', 'Brown rice, cooked', 'Zilvervliesrijst, gekookt', 123, 2.7, 25, 1, 1.8, 180],
@@ -73,6 +77,7 @@ const R = [
   ['tofu', 'Tofu nature', 'Tofu', 'Tofu', 120, 12, 2, 7, 1, 100],
   ['houmous', 'Houmous', 'Hummus', 'Hummus', 230, 7, 14, 16, 5, 40],
   // Pains & céréales
+  '@boulangerie',
   ['pain-blanc', 'Pain blanc / baguette', 'White bread / baguette', 'Wit brood / stokbrood', 270, 9, 55, 1.2, 3, 50],
   ['pain-complet', 'Pain complet', 'Whole wheat bread', 'Volkorenbrood', 250, 10, 43, 3, 7, 35],
   ['pain-mie', 'Pain de mie', 'Sandwich bread', 'Tarwebrood (sandwichbrood)', 265, 8, 49, 3.5, 2.5, 30],
@@ -89,6 +94,7 @@ const R = [
   ['granola', 'Granola', 'Granola', 'Granola', 450, 9, 62, 18, 6, 40],
   ['galette-riz', 'Galette de riz soufflé', 'Rice cake', 'Rijstwafel', 385, 8, 82, 2.5, 3, 9],
   // Produits laitiers
+  '@cremerie',
   ['lait-demi-ecreme', 'Lait demi-écrémé', 'Semi-skimmed milk', 'Halfvolle melk', 46, 3.3, 4.8, 1.6, 0, 200],
   ['lait-entier', 'Lait entier', 'Whole milk', 'Volle melk', 64, 3.3, 4.8, 3.6, 0, 200],
   ['lait-ecreme', 'Lait écrémé', 'Skimmed milk', 'Magere melk', 34, 3.4, 4.9, 0.1, 0, 200],
@@ -106,6 +112,7 @@ const R = [
   ['riz-au-lait', 'Riz au lait', 'Rice pudding', 'Rijstpap', 120, 3, 20, 3, 0.2, 125],
   ['glace', 'Glace', 'Ice cream', 'Roomijs', 205, 3.5, 24, 10.5, 0.5, 70],
   // Fromages
+  '@cremerie',
   ['emmental', 'Emmental', 'Emmental', 'Emmentaler', 380, 28, 0.5, 29, 0, 30],
   ['gouda', 'Gouda', 'Gouda', 'Gouda', 356, 25, 2, 27, 0, 30],
   ['edam', 'Edam', 'Edam', 'Edammer', 330, 26, 1, 25, 0, 30],
@@ -120,11 +127,13 @@ const R = [
   ['fromage-frais-tartiner', 'Fromage à tartiner', 'Cream cheese', 'Smeerkaas', 250, 6, 4, 23, 0, 20],
   ['boursin', 'Fromage frais ail et fines herbes', 'Garlic herb cream cheese', 'Kruidenroomkaas', 380, 5, 3, 38, 0, 20],
   // Œufs
+  '@cremerie',
   ['oeuf', 'Œuf entier', 'Egg', 'Ei', 143, 12.5, 0.7, 10, 0, 60],
   ['oeuf-dur', 'Œuf dur', 'Hard-boiled egg', 'Hardgekookt ei', 150, 12.5, 1, 10.5, 0, 60],
   ['blanc-oeuf', "Blanc d'œuf", 'Egg white', 'Eiwit', 48, 10.5, 0.7, 0.2, 0, 33],
   ['omelette', 'Omelette', 'Omelette', 'Omelet', 170, 11, 1, 13.5, 0, 120],
   // Viandes
+  '@viandes',
   ['poulet-blanc', 'Blanc de poulet cuit', 'Chicken breast, cooked', 'Kipfilet, gebakken', 165, 31, 0, 3.6, 0, 120],
   ['poulet-cuisse', 'Cuisse de poulet cuite', 'Chicken thigh, cooked', 'Kippenbout, gebakken', 210, 26, 0, 11, 0, 120],
   ['dinde', 'Blanc de dinde cuit', 'Turkey breast, cooked', 'Kalkoenfilet, gebakken', 150, 30, 0, 2.5, 0, 120],
@@ -137,6 +146,7 @@ const R = [
   ['veau', 'Escalope de veau cuite', 'Veal cutlet, cooked', 'Kalfsschnitzel, gebakken', 170, 30, 0, 5, 0, 120],
   ['lardons', 'Lardons cuits', 'Bacon bits, cooked', 'Spekblokjes, gebakken', 370, 25, 1, 29, 0, 30],
   // Poissons
+  '@viandes',
   ['saumon', 'Saumon cuit', 'Salmon, cooked', 'Zalm, gegaard', 210, 23, 0, 13, 0, 125],
   ['saumon-fume', 'Saumon fumé', 'Smoked salmon', 'Gerookte zalm', 180, 22, 0, 10, 0, 50],
   ['thon-conserve', 'Thon au naturel (conserve)', 'Tuna in water, canned', 'Tonijn op water, blik', 110, 25, 0, 1, 0, 100],
@@ -148,6 +158,7 @@ const R = [
   ['colin', 'Colin / merlu cuit', 'White fish, cooked', 'Witte vis, gegaard', 100, 21, 0, 1.5, 0, 130],
   ['surimi', 'Surimi', 'Surimi', 'Surimi', 95, 8, 12, 0.5, 0, 60],
   // Charcuterie
+  '@viandes',
   ['jambon-blanc', 'Jambon blanc', 'Cooked ham', 'Gekookte ham', 110, 19, 1, 3.5, 0, 40],
   ['jambon-cru', 'Jambon cru', 'Dry-cured ham', 'Rauwe ham', 200, 27, 0.5, 10, 0, 30],
   ['saucisson-sec', 'Saucisson sec', 'Dry sausage', 'Droge worst', 450, 25, 2, 38, 0, 20],
@@ -157,6 +168,7 @@ const R = [
   ['pate', 'Pâté de campagne', 'Pâté', 'Paté', 300, 13, 2, 27, 0, 30],
   ['blanc-dinde-tranche', 'Dinde en tranches', 'Sliced turkey', 'Kalkoenfilet, plakjes', 105, 20, 1, 2, 0, 40],
   // Oléagineux & graines
+  '@sale',
   ['amandes', 'Amandes', 'Almonds', 'Amandelen', 600, 21, 7, 52, 12, 30],
   ['noix', 'Noix', 'Walnuts', 'Walnoten', 690, 15, 7, 65, 6.7, 30],
   ['noisettes', 'Noisettes', 'Hazelnuts', 'Hazelnoten', 650, 15, 7, 61, 10, 30],
@@ -168,6 +180,7 @@ const R = [
   ['graines-lin', 'Graines de lin', 'Flax seeds', 'Lijnzaad', 530, 18, 29, 42, 27, 10],
   ['graines-tournesol', 'Graines de tournesol', 'Sunflower seeds', 'Zonnebloempitten', 580, 21, 12, 48, 8.6, 20],
   // Matières grasses
+  '@cremerie',
   ['huile-olive', "Huile d'olive", 'Olive oil', 'Olijfolie', 900, 0, 0, 100, 0, 10],
   ['huile-colza', 'Huile de colza', 'Rapeseed oil', 'Koolzaadolie', 900, 0, 0, 100, 0, 10],
   ['huile-tournesol', 'Huile de tournesol', 'Sunflower oil', 'Zonnebloemolie', 900, 0, 0, 100, 0, 10],
@@ -176,6 +189,7 @@ const R = [
   ['mayonnaise', 'Mayonnaise', 'Mayonnaise', 'Mayonaise', 700, 1.2, 2, 76, 0, 15],
   ['vinaigrette', 'Vinaigrette', 'Vinaigrette', 'Vinaigrette', 400, 0.3, 4, 42, 0, 15],
   // Boissons
+  '@boissons',
   ['eau', 'Eau', 'Water', 'Water', 0, 0, 0, 0, 0, 250],
   ['cafe', 'Café noir', 'Black coffee', 'Zwarte koffie', 2, 0.1, 0, 0, 0, 150],
   ['cafe-lait', 'Café au lait', 'Coffee with milk', 'Koffie verkeerd', 30, 1.7, 2.5, 1.3, 0, 200],
@@ -194,6 +208,7 @@ const R = [
   ['whisky', 'Spiritueux (whisky, vodka)', 'Spirits (whisky, vodka)', 'Sterke drank (whisky, wodka)', 230, 0, 0, 0, 0, 40],
   ['boisson-energetique', 'Boisson énergisante', 'Energy drink', 'Energiedrank', 45, 0, 11, 0, 0, 250],
   // Snacks, sucreries & desserts
+  '@sucre',
   ['chocolat-noir', 'Chocolat noir 70 %', 'Dark chocolate 70%', 'Pure chocolade 70%', 560, 8, 35, 40, 11, 20],
   ['chocolat-lait', 'Chocolat au lait', 'Milk chocolate', 'Melkchocolade', 540, 7, 57, 31, 2, 20],
   ['pate-tartiner', 'Pâte à tartiner chocolat-noisette', 'Chocolate hazelnut spread', 'Chocoladepasta', 540, 6, 58, 31, 3, 15],
@@ -216,6 +231,7 @@ const R = [
   ['ketchup', 'Ketchup', 'Ketchup', 'Ketchup', 110, 1.2, 25, 0.1, 0.5, 15],
   ['moutarde', 'Moutarde', 'Mustard', 'Mosterd', 100, 6, 5, 6, 3, 10],
   // Plats simples
+  '@autre',
   ['pizza', 'Pizza margherita', 'Margherita pizza', 'Pizza margherita', 250, 11, 33, 8, 2, 150],
   ['hamburger', 'Hamburger', 'Hamburger', 'Hamburger', 255, 13, 25, 11, 1.5, 200],
   ['kebab', 'Kebab / döner', 'Doner kebab', 'Döner kebab', 215, 13, 20, 9, 1.5, 300],
@@ -234,7 +250,14 @@ const R = [
   ['sirop-erable', "Sirop d'érable", 'Maple syrup', 'Ahornsiroop', 260, 0, 67, 0.1, 0, 20],
 ];
 
-// Exposé au format aliment de l'app (id, name par langue, per100, serving, source).
-export const BASE_FOODS = R.map(([slug, fr, en, nl, kcal, p, c, f, fib, serving]) => (
-  { id: 'base:' + slug, name: { fr, en, nl }, per100: { kcal, p, c, f, fib }, serving, source: 'base' }
-));
+// Rayons qui ne suivent pas leur section (pommes de terre au rayon frais, huiles en épicerie, sirop en sucré).
+const AISLE_FIX = { 'pomme-de-terre-cuite': 'fruits', 'pomme-de-terre-crue': 'fruits', 'patate-douce': 'fruits',
+  'huile-olive': 'sale', 'huile-colza': 'sale', 'huile-tournesol': 'sale', 'thon-huile': 'sale', sardines: 'sale', 'sirop-erable': 'sucre' };
+
+// Exposé au format aliment de l'app (id, name par langue, per100, serving, source, aisle).
+let aisle = 'autre';
+export const BASE_FOODS = R.flatMap((row) => {
+  if (typeof row === 'string') { aisle = row.slice(1); return []; }
+  const [slug, fr, en, nl, kcal, p, c, f, fib, serving] = row;
+  return [{ id: 'base:' + slug, name: { fr, en, nl }, per100: { kcal, p, c, f, fib }, serving, source: 'base', aisle: AISLE_FIX[slug] || aisle }];
+});

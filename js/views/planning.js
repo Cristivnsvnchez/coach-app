@@ -7,7 +7,7 @@ import { esc, fmt, fmtDate, nav, group, sheet, toast } from '../ui.js';
 import { icon } from '../icons.js';
 import { t, register } from '../i18n.js';
 import { MEALS, openAddFood } from './addfood.js';
-import { regenerate, knownStores, byStore, listToText, tripFor, tripDates, assignTrips, aggregateTrip, visibleTrips, tripDay, tripMealDates, remapShopDay } from '../shopping.js';
+import { AISLES, aisleOf, byAisle, regenerate, knownStores, byStore, listToText, tripFor, tripDates, assignTrips, aggregateTrip, visibleTrips, tripDay, tripMealDates, remapShopDay } from '../shopping.js';
 
 register({
   en: {
@@ -23,7 +23,8 @@ register({
     'Partager la liste': 'Share the list', 'Liste copiée': 'List copied', 'Tout est acheté.': 'Everything is bought.',
     'Article supprimé': 'Item removed', 'Retiré du planning': 'Removed from plan',
     '1 repas': '1 meal', '{n} repas': '{n} meals', 'Déj.': 'Bkf.', 'Midi': 'Lunch', 'Dîn.': 'Din.', 'Coll.': 'Snk.', 'Courses {d}': 'Shopping {d}',
-    '{n} articles · {s} magasins': '{n} items · {s} stores', 'Ouvre la liste pour la générer depuis tes repas.': 'Open the list to build it from your meals.',
+    '{n} articles · {s} magasins': '{n} items · {s} stores', 'Rayon': 'Aisle', 'Fruits et légumes': 'Fruit and vegetables', 'Viandes et poissons': 'Meat and fish',
+    'Crèmerie et œufs': 'Dairy and eggs', 'Boulangerie': 'Bakery', 'Épicerie salée': 'Savoury groceries', 'Épicerie sucrée': 'Sweet groceries', 'Boissons': 'Drinks', 'Autre': 'Other', 'Ouvre la liste pour la générer depuis tes repas.': 'Open the list to build it from your meals.',
   },
   nl: {
     'Planifier mes repas': 'Maaltijden plannen', 'Aucun repas prévu.': 'Nog geen maaltijd gepland.',
@@ -38,9 +39,14 @@ register({
     'Partager la liste': 'Lijst delen', 'Liste copiée': 'Lijst gekopieerd', 'Tout est acheté.': 'Alles is gekocht.',
     'Article supprimé': 'Artikel verwijderd', 'Retiré du planning': 'Uit planning verwijderd',
     '1 repas': '1 maaltijd', '{n} repas': '{n} maaltijden', 'Déj.': 'Ontb.', 'Midi': 'Lunch', 'Dîn.': 'Diner', 'Coll.': 'Tussend.', 'Courses {d}': 'Boodschappen {d}',
-    '{n} articles · {s} magasins': '{n} artikelen · {s} winkels', 'Ouvre la liste pour la générer depuis tes repas.': 'Open de lijst om ze uit je maaltijden te maken.',
+    '{n} articles · {s} magasins': '{n} artikelen · {s} winkels', 'Rayon': 'Afdeling', 'Fruits et légumes': 'Groente en fruit', 'Viandes et poissons': 'Vlees en vis',
+    'Crèmerie et œufs': 'Zuivel en eieren', 'Boulangerie': 'Bakkerij', 'Épicerie salée': 'Hartige kruidenierswaren', 'Épicerie sucrée': 'Zoete kruidenierswaren', 'Boissons': 'Dranken', 'Autre': 'Overig', 'Ouvre la liste pour la générer depuis tes repas.': 'Open de lijst om ze uit je maaltijden te maken.',
   },
 });
+
+const AISLE_LABEL = { fruits: 'Fruits et légumes', viandes: 'Viandes et poissons', cremerie: 'Crèmerie et œufs', boulangerie: 'Boulangerie',
+  sale: 'Épicerie salée', sucre: 'Épicerie sucrée', boissons: 'Boissons', autre: 'Autre' };
+const aisleSelect = (cur) => `<label class="cell field"><span>${t('Rayon')}</span><select name="aisle">${AISLES.map((a) => `<option value="${a}" ${a === cur ? 'selected' : ''}>${t(AISLE_LABEL[a])}</option>`).join('')}</select></label>`;
 
 let date = null;
 
@@ -136,7 +142,9 @@ function openShoppingList() {
   const itemRow = (it) => `<li class="cell pl-row"><button class="se-chk pl-check" data-check="${esc(it.id)}" aria-pressed="${it.checked}" aria-label="${esc(it.name)}">${it.checked ? icon('check') : ''}</button>
       <button class="grow pl-name ${it.checked ? 'pl-done' : ''}" data-store="${esc(it.id)}"><span class="t">${esc(it.name)}</span><span class="s">${esc(it.store || t('Magasin'))}</span></button>
       ${it.grams ? `<span class="v2-sm num">${fmt(it.grams)} g</span>` : ''}</li>`;
-  const storeGroup = ([store, items]) => group(esc(store || t('Non classé')), `<ul class="cells">${items.map(itemRow).join('')}</ul>`);
+  // Un groupe par magasin, puis un sous-groupe par rayon (ordre d'un magasin : frais d'abord, boissons et divers à la fin).
+  const storeGroup = ([store, items]) => group(esc(store || t('Non classé')), byAisle(items, state.foods).map(([a, list]) =>
+    `<p class="pl-aisle">${t(AISLE_LABEL[a])}</p><ul class="cells">${list.map(itemRow).join('')}</ul>`).join(''));
   const dayNames = Array.from({ length: 7 }, (_, i) => fmtDate(isoDate(new Date(2026, 10, 1 + i, 12)), { weekday: 'long' })); // 1er nov. 2026 = dimanche
   const nth = (id) => (id.includes('~') ? ` (${id.split('~')[1]})` : '');
   const tabLabel = (id) => (tripDay(id) === now ? t("Aujourd'hui") : fmtDate(tripDay(id), { weekday: 'short', day: 'numeric', month: 'short' })) + nth(id);
@@ -225,7 +233,8 @@ function editItem(item, redraw) {
     ${group('', `<div class="cells">
       ${item.auto ? '' : `<label class="cell field"><span>${t("Nom de l'article")}</span><input name="name" value="${esc(item.name)}"></label>`}
       <label class="cell field"><span>${t('Magasin')}</span>
-      <input name="store" list="pl-stores" value="${esc(item.store || '')}" placeholder="${t('Ex : Albert Heijn')}"></label></div>`)}
+      <input name="store" list="pl-stores" value="${esc(item.store || '')}" placeholder="${t('Ex : Albert Heijn')}"></label>
+      ${aisleSelect(aisleOf(item, state.foods))}</div>`)}
     <datalist id="pl-stores">${stores.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
     <button class="btn filled large" data-a="save">${t('Enregistrer')}</button>
     ${group('', `<div class="cells"><div class="cell action destructive" data-a="del" role="button">${t('Supprimer')}</div></div>`)}`, () => redraw());
@@ -234,7 +243,9 @@ function editItem(item, redraw) {
     const name = s.querySelector('[name=name]')?.value.trim();
     if (name) item.name = name;
     item.store = v;
-    if (item.foodId && state.foods[item.foodId]) state.foods[item.foodId].store = v; // réutilisé la prochaine fois
+    const aisle = s.querySelector('[name=aisle]').value;
+    if (AISLES.includes(aisle)) item.aisle = aisle;
+    if (item.foodId && state.foods[item.foodId]) { state.foods[item.foodId].store = v; if (AISLES.includes(aisle)) state.foods[item.foodId].aisle = aisle; } // réutilisés la prochaine fois
     save(); s.close();
   };
   s.querySelector('[data-a=del]').onclick = () => {
@@ -252,14 +263,16 @@ function addManualItem(tr, redraw) {
     ${group('', `<div class="cells">
       <label class="cell field"><span>${t("Nom de l'article")}</span><input name="name" required></label>
       <label class="cell field"><span>${t('Quantité (g, facultatif)')}</span><input name="g" type="number" inputmode="decimal"></label>
-      <label class="cell field"><span>${t('Magasin')}</span><input name="store" list="pl-stores" placeholder="${t('Ex : Albert Heijn')}"></label></div>`)}
+      <label class="cell field"><span>${t('Magasin')}</span><input name="store" list="pl-stores" placeholder="${t('Ex : Albert Heijn')}"></label>
+      ${aisleSelect('autre')}</div>`)}
     <datalist id="pl-stores">${storeOptions().map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
     <button class="btn filled large" data-a="add">${t('Ajouter')}</button>`, () => redraw());
   s.querySelector('[data-a=add]').onclick = () => {
     const name = s.querySelector('[name=name]').value.trim();
     if (!name) return;
     const store = s.querySelector('[name=store]').value.trim();
-    state.shoppingList.push({ id: uid(), foodId: null, name, grams: +s.querySelector('[name=g]').value || 0, store, checked: false, auto: false, trip: tr });
+    const aisle = s.querySelector('[name=aisle]').value;
+    state.shoppingList.push({ id: uid(), foodId: null, name, grams: +s.querySelector('[name=g]').value || 0, store, aisle: AISLES.includes(aisle) ? aisle : 'autre', checked: false, auto: false, trip: tr });
     save(); toast(t('Article ajouté')); s.close();
   };
 }

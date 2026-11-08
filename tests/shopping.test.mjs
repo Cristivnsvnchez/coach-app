@@ -155,3 +155,27 @@ test('remapShopDay : samedi → dimanche, les listes futures suivent ; liste du 
   assert.equal(plan['2026-11-10'].midi[0].trip, '2026-11-08');
   assert.deepEqual(list.map((x) => x.trip), ['2026-11-08', '2026-11-05', '2026-10-31']);
 });
+
+test('rayons : base embarquée, choix sur l\'article, aliment, ordre d\'un magasin', async () => {
+  const { AISLES, aisleOf, byAisle } = await import('../js/shopping.js');
+  const { BASE_FOODS } = await import('../js/foods-base.js');
+  assert.ok(BASE_FOODS.every((f) => AISLES.includes(f.aisle)));
+  assert.equal(aisleOf({ foodId: 'base:banane' }), 'fruits');
+  assert.equal(aisleOf({ foodId: 'base:pomme-de-terre-crue' }), 'fruits');
+  assert.equal(aisleOf({ foodId: 'base:huile-olive' }), 'sale');
+  assert.equal(aisleOf({ foodId: 'base:banane', aisle: 'sucre' }), 'sucre'); // choix manuel prioritaire
+  assert.equal(aisleOf({ foodId: 'off:1' }, { 'off:1': { aisle: 'boissons' } }), 'boissons');
+  assert.equal(aisleOf({ name: 'Papier toilette' }), 'autre');
+  assert.equal(aisleOf({ aisle: '<b>x' }), 'autre'); // valeur inconnue ignorée
+  const g = byAisle([{ name: 'Eau', aisle: 'boissons' }, { foodId: 'base:banane' }, { name: 'Sel', aisle: 'sale' }]);
+  assert.deepEqual(g.map(([a]) => a), ['fruits', 'sale', 'boissons']);
+});
+
+test('rayons : produit Open Food Facts rangé d\'après ses catégories', async () => {
+  globalThis.localStorage ??= { getItem: () => null, setItem() {}, removeItem() {} };
+  const { aisleFromOff } = await import('../js/food.js');
+  assert.equal(aisleFromOff(['en:plant-based-foods', 'en:beverages', 'en:sodas']), 'boissons');
+  assert.equal(aisleFromOff(['en:dairies', 'en:yogurts']), 'cremerie');
+  assert.equal(aisleFromOff(['en:plant-based-foods', 'en:pastas']), 'sale');
+  assert.equal(aisleFromOff(undefined), 'autre');
+});
