@@ -1,5 +1,5 @@
 // Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
-import { load, state, flush, save, dayLog, today as todayIso } from './store.js';
+import { load, state, flush, save, dayLog, today as todayIso, requestPersistence } from './store.js';
 import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { applyTheme, applyScheme, wordmark } from './theme.js';
@@ -122,6 +122,7 @@ try { const s = sessionStorage.getItem('tab'); if (!saved && s in VIEWS) saved =
 tab = '';
 go(saved || 'today', undefined, { push: false });
 history.replaceState({ tab }, '', '#' + tab);
+requestPersistence(); // protège les données contre l'effacement par iOS quand la place manque
 if (needsOnboarding()) openOnboarding(() => { applyTheme(state.settings.palette, state.settings.shape, state.settings.surface); go('today'); startupNudges(); });
 else startupNudges();
 

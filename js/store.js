@@ -222,3 +222,15 @@ export function recentFoods(limit = 12) {
   }
   return out;
 }
+
+// Stockage persistant : demande à iOS / au navigateur de ne pas effacer les données pour faire de la place.
+// Résultat : 'persisted' (déjà protégé), 'granted' (accordé maintenant), 'denied', 'unsupported'. Jamais d'erreur.
+export let storageStatus = null;
+export async function requestPersistence(nav = globalThis.navigator) {
+  const st = nav?.storage;
+  if (!st?.persist) return (storageStatus = 'unsupported');
+  try {
+    if (await st.persisted?.()) return (storageStatus = 'persisted');
+    return (storageStatus = (await st.persist()) ? 'granted' : 'denied');
+  } catch { return (storageStatus = 'denied'); }
+}

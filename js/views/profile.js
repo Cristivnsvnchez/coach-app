@@ -1,6 +1,6 @@
 // Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 import * as S from '../science.js';
-import { state, save, flush, replace, recordWeight, latestWeight } from '../store.js';
+import { state, save, flush, replace, recordWeight, latestWeight, storageStatus, requestPersistence } from '../store.js';
 import { applyTheme, applyScheme } from '../theme.js';
 import { current } from '../metrics.js';
 import { esc, fmt, fmtDate, toast, nav, group, sheet } from '../ui.js';
@@ -8,8 +8,8 @@ import { icon } from '../icons.js';
 import { t, getLang, setLang, LANGS, register } from '../i18n.js';
 
 register({
-  en: { 'Objectif et calories': 'Goal and calories', 'Programme': 'Program', 'Suivi du cycle': 'Cycle tracking', 'Activé': 'On', 'Désactivé': 'Off', 'Aucun': 'None', 'il y a {n} jours': '{n} days ago', "aujourd'hui": 'today', 'Jamais': 'Never', '{a} ans': '{a} y', 'Homme': 'Man', 'Femme': 'Woman', 'Apparence': 'Appearance', 'Thème': 'Theme' },
-  nl: { 'Objectif et calories': 'Doel en calorieën', 'Programme': 'Programma', 'Suivi du cycle': 'Cyclus volgen', 'Activé': 'Aan', 'Désactivé': 'Uit', 'Aucun': 'Geen', 'il y a {n} jours': '{n} dagen geleden', "aujourd'hui": 'vandaag', 'Jamais': 'Nooit', '{a} ans': '{a} j', 'Homme': 'Man', 'Femme': 'Vrouw', 'Apparence': 'Uiterlijk', 'Thème': 'Thema' },
+  en: { 'Objectif et calories': 'Goal and calories', 'Programme': 'Program', 'Suivi du cycle': 'Cycle tracking', 'Activé': 'On', 'Désactivé': 'Off', 'Aucun': 'None', 'il y a {n} jours': '{n} days ago', "aujourd'hui": 'today', 'Jamais': 'Never', '{a} ans': '{a} y', 'Homme': 'Man', 'Femme': 'Woman', 'Apparence': 'Appearance', 'Thème': 'Theme', 'Stockage protégé': 'Protected storage', 'Oui': 'Yes', 'Non': 'No', "iOS ne l'effacera pas pour faire de la place.": "iOS won't delete it to free up space.", "iOS peut l'effacer s'il manque de place : sauvegarde régulièrement.": 'iOS may delete it when space runs low: back up regularly.', 'Non pris en charge par ce navigateur : sauvegarde régulièrement.': 'Not supported by this browser: back up regularly.' },
+  nl: { 'Objectif et calories': 'Doel en calorieën', 'Programme': 'Programma', 'Suivi du cycle': 'Cyclus volgen', 'Activé': 'Aan', 'Désactivé': 'Uit', 'Aucun': 'Geen', 'il y a {n} jours': '{n} dagen geleden', "aujourd'hui": 'vandaag', 'Jamais': 'Nooit', '{a} ans': '{a} j', 'Homme': 'Man', 'Femme': 'Vrouw', 'Apparence': 'Uiterlijk', 'Thème': 'Thema', 'Stockage protégé': 'Beschermde opslag', 'Oui': 'Ja', 'Non': 'Nee', "iOS ne l'effacera pas pour faire de la place.": 'iOS wist ze niet om ruimte vrij te maken.', "iOS peut l'effacer s'il manque de place : sauvegarde régulièrement.": 'iOS kan ze wissen bij te weinig ruimte: maak regelmatig een back-up.', 'Non pris en charge par ce navigateur : sauvegarde régulièrement.': 'Niet ondersteund door deze browser: maak regelmatig een back-up.' },
 });
 import { paletteSection, handlePaletteClick } from './palette.js';
 import { exportBackup } from '../install.js';
@@ -24,6 +24,15 @@ function resetAfterReplace(data) {
   clearActive(); // mémoire + stockage : sinon la séance effacée réapparaît dans Sport
   applyTheme(state.settings.palette, state.settings.shape, state.settings.surface);
   applyScheme(state.settings.scheme);
+  requestPersistence(); // la protection du stockage suit les données restaurées
+}
+
+// Stockage protégé : oui / non, avec la conséquence ; rien tant que la réponse du navigateur n'est pas connue.
+function storageCell() {
+  if (!storageStatus) return '';
+  const ok = storageStatus === 'persisted' || storageStatus === 'granted';
+  const sub = ok ? t("iOS ne l'effacera pas pour faire de la place.") : storageStatus === 'unsupported' ? t('Non pris en charge par ce navigateur : sauvegarde régulièrement.') : t("iOS peut l'effacer s'il manque de place : sauvegarde régulièrement.");
+  return `<div class="cell with-icon"><span class="badge ${ok ? 'bg-green' : 'bg-orange'}">${icon(ok ? 'check' : 'info')}</span><span class="grow"><span class="t">${t('Stockage protégé')}</span><span class="s" style="white-space:normal">${sub}</span></span><span class="val">${ok ? t('Oui') : t('Non')}</span></div>`;
 }
 
 export function render(root, go) {
@@ -81,6 +90,7 @@ export function render(root, go) {
     </form>
     <div id="pf-backup"></div>${group(t('Sauvegarde'), `<div class="cells">
       <div class="cell tap with-icon" data-a="export" role="button"><span class="badge bg-blue">${icon('share')}</span><span class="grow"><span class="t">${t('Sauvegarder mes données')}</span><span class="s">${state.lastBackup ? t('Dernière sauvegarde : {d}', { d: fmtDate(state.lastBackup, { day: 'numeric', month: 'long' }) }) : t('Jamais sauvegardé · vers Fichiers ou iCloud Drive')}</span></span>${icon('chevronRight', { cls: 'chev' })}</div>
+      ${storageCell()}
       <label class="cell field"><span>${t('Me le rappeler')}</span><select name="backupEvery" data-backup-every>${[[7, t('Chaque semaine')], [30, t('Chaque mois')], [0, t('Jamais')]].map(([v, l]) => `<option value="${v}" ${v === (state.settings.backupEvery ?? 7) ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell tap with-icon"><span class="badge bg-green">${icon('download')}</span><span class="grow">${t('Importer')}</span>${icon('chevronRight', { cls: 'chev' })}<input type="file" accept="application/json" hidden data-a="import"></label>
     </div>`, t('Tes données sont uniquement sur ce téléphone. Exporte-les régulièrement (Fichiers / iCloud Drive).'))}
