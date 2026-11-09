@@ -36,8 +36,8 @@ TrackMe — vue Journal (today). Fond var(--bg), cartes var(--cell) rayon 24, pa
 ## css/trackme.css (323 l.)
 TrackMe : couche de style au-dessus de app.css (voir DESIGN.md).
 
-## js/app.js (155 l.)
-Point d'entrée TrackMe : menu (Journal, Séances, « + », Poids, Apprendre ; le « + » ouvre 4 actions rapides : repas, pesée, séance, eau), routes, thème, onboarding, service worker.
+## js/app.js (156 l.)
+Point d'entrée TrackMe : menu (capsule + « + » central), routes, thème palette, onboarding, service worker.
 exports: go
 
 ## js/cycle.js (102 l.)
@@ -112,9 +112,9 @@ exports: KCAL_PER_KG,PAL GOALS,isProfileComplete parseDate,isoDate bmr,tdeeIniti
 Liste de courses (pure, testée sous Node) : agrège les repas prévus (mealPlan) sur une période,
 exports: AISLES,aisleOf,byAisle dateRange,regenerate tripFor,tripDates knownStores,byStore listToText,tripDay todayTrip,nextScheduled assignTrips,aggregateTrip tripMealDates,visibleTrips remapShopDay
 
-## js/store.js (224 l.)
+## js/store.js (236 l.)
 État persistant dans localStorage (données uniquement sur le téléphone).
-exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay recordWeight,latestWeight recentFoods
+exports: SCHEMA,state load,save flush,replace today,dayLog planDay,uid sum,intakesByDay recordWeight,latestWeight recentFoods,storageStatus requestPersistence
 
 ## js/technique.js (651 l.)
 Fiches technique (apprentissage) : niveau, étapes, erreurs fréquentes, conseils en FR / EN / NL + pictogramme SVG au trait.
@@ -202,7 +202,7 @@ exports: paletteSection,handlePaletteClick
 Vue « Planifier mes repas » : calendrier des repas prévus (distinct du Journal = repas mangés) + liste de
 exports: render
 
-## js/views/profile.js (194 l.)
+## js/views/profile.js (204 l.)
 Onglet Profil : langue, données perso, objectif, clé API, sauvegarde, références.
 exports: render
 
